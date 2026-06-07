@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>glassbottles — agents</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ocean-deep: #0A1628; --ocean-mid: #0D2137;
+      --seafoam: #4ECDC4; --sand: #F7E7CE;
+      --coral: #FF6B6B; --glass: rgba(255,255,255,0.08);
+      --foam: rgba(255,255,255,0.04);
+    }
+    body { background: var(--ocean-deep); color: var(--sand); font-family: 'DM Sans', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Header ── */
+    header { padding: 10px 16px; border-bottom: 1px solid var(--glass); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    header h1 { font-size: 14px; font-weight: 700; color: var(--seafoam); }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #444; transition: background .3s; }
+    .conn-dot.live { background: var(--seafoam); box-shadow: 0 0 5px var(--seafoam); }
+    .header-status { font-size: 11px; opacity: .4; margin-left: auto; }
+
+    /* ── Layout: agent sidebar | main | file explorer ── */
+    .layout { display: flex; flex: 1; min-height: 0; }
+
+    /* ── Agent Sidebar ── */
+    .agent-sidebar { width: 190px; flex-shrink: 0; border-right: 1px solid var(--glass); overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+    .agent-btn { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px; cursor: pointer; background: none; border: none; color: var(--sand); text-align: left; width: 100%; transition: background .12s; }
+    .agent-btn:hover { background: var(--foam); }
+    .agent-btn.active { background: var(--glass); }
+    .agent-btn .emoji { font-size: 16px; flex-shrink: 0; }
+    .agent-btn .info .name { font-size: 12px; font-weight: 600; }
+    .agent-btn .info .role { font-size: 10px; opacity: .45; }
+    .status-pip { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; flex-shrink: 0; background: #333; }
+    .status-pip.running { background: var(--seafoam); animation: blink 1s infinite; }
+    .status-pip.error { background: var(--coral); }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    /* ── Main (agent panels) ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .panel-header { padding: 10px 16px; border-bottom: 1px solid var(--glass); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .panel-header .big-emoji { font-size: 20px; }
+    .panel-header h2 { font-size: 14px; font-weight: 700; }
+    .panel-header .role-tag { font-size: 11px; opacity: .45; }
+    .panel-header .run-status { margin-left: auto; font-size: 11px; opacity: .55; font-family: monospace; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .quick-tasks { padding: 6px 16px; border-bottom: 1px solid var(--glass); display: flex; gap: 5px; flex-wrap: wrap; flex-shrink: 0; }
+    .quick-btn { background: var(--foam); border: 1px solid var(--glass); color: var(--sand); border-radius: 20px; padding: 3px 10px; font-size: 10px; cursor: pointer; transition: border-color .12s; white-space: nowrap; }
+    .quick-btn:hover { border-color: var(--seafoam); color: var(--seafoam); }
+
+    .task-bar { padding: 8px 16px; border-bottom: 1px solid var(--glass); display: flex; gap: 6px; flex-shrink: 0; }
+    .task-input { flex: 1; background: var(--ocean-mid); border: 1px solid var(--glass); border-radius: 7px; padding: 7px 11px; color: var(--sand); font-size: 12px; font-family: inherit; outline: none; transition: border-color .15s; }
+    .task-input:focus { border-color: var(--seafoam); }
+    .task-input::placeholder { opacity: .35; }
+    .run-btn { background: var(--coral); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity .15s; }
+    .run-btn:hover { opacity: .85; }
+    .run-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    .panels { flex: 1; min-height: 0; position: relative; }
+    .panel { display: none; position: absolute; inset: 0; flex-direction: column; }
+    .panel.active { display: flex; }
+
+    /* Two-pane: output | activity */
+    .split { display: flex; flex: 1; min-height: 0; }
+    .output-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--glass); min-width: 0; }
+    .pane-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; opacity: .35; padding: 6px 14px; border-bottom: 1px solid var(--glass); flex-shrink: 0; }
+    .output-scroll { flex: 1; overflow-y: auto; padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+    .output-scroll::-webkit-scrollbar, .activity-scroll::-webkit-scrollbar, .log-scroll::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar { width: 3px; }
+    .output-scroll::-webkit-scrollbar-thumb, .activity-scroll::-webkit-scrollbar-thumb, .log-scroll::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb { background: var(--glass); border-radius: 2px; }
+
+    .activity-pane { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; }
+    .activity-scroll { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .act-item { background: var(--ocean-mid); border-radius: 5px; padding: 5px 8px; }
+    .act-item .act-tool { font-size: 10px; color: var(--seafoam); font-family: monospace; margin-bottom: 2px; }
+    .act-item .act-detail { font-size: 10px; opacity: .55; font-family: monospace; word-break: break-all; }
+    .act-item.tool-call { border-left: 2px solid var(--seafoam); }
+    .act-item.tool-result { border-left: 2px solid #333; }
+    .act-item.done { border-left: 2px solid var(--coral); }
+
+    .log-toggle { border-top: 1px solid var(--glass); display: flex; flex-direction: column; flex-shrink: 0; height: 160px; }
+    .log-scroll { flex: 1; overflow-y: auto; padding: 6px 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6; opacity: .6; white-space: pre-wrap; word-break: break-word; }
+
+    /* ── File Explorer ── */
+    .file-explorer { width: 280px; flex-shrink: 0; border-left: 1px solid var(--glass); display: flex; flex-direction: column; min-height: 0; }
+    .explorer-header { padding: 10px 14px; border-bottom: 1px solid var(--glass); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .explorer-header span { font-size: 12px; font-weight: 600; }
+    .explorer-toggle { margin-left: auto; background: none; border: none; color: var(--sand); opacity: .5; cursor: pointer; font-size: 14px; }
+    .explorer-toggle:hover { opacity: 1; }
+
+    .tree-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+    .tree-item { display: flex; align-items: center; padding: 3px 10px 3px 0; cursor: pointer; font-size: 11px; gap: 4px; user-select: none; transition: background .1s; position: relative; }
+    .tree-item:hover { background: var(--foam); }
+    .tree-item:hover .tag-btn { opacity: 1; }
+    .tree-item.selected { background: var(--glass); }
+    .tree-item .indent { flex-shrink: 0; }
+    .tree-item .icon { flex-shrink: 0; font-size: 12px; width: 16px; text-align: center; }
+    .tree-item .filename { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
+    .tree-item.dir .filename { font-weight: 600; opacity: 1; }
+    .tag-btn { opacity: 0; background: none; border: none; color: var(--seafoam); font-size: 11px; cursor: pointer; padding: 0 4px; transition: opacity .15s; flex-shrink: 0; }
+    .tag-pills { display: flex; gap: 3px; flex-wrap: wrap; margin-left: 2px; flex-shrink: 0; }
+    .tag-pill { font-size: 9px; padding: 1px 5px; border-radius: 10px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+
+    /* File viewer */
+    .file-viewer { border-top: 1px solid var(--glass); flex-shrink: 0; height: 240px; display: flex; flex-direction: column; }
+    .file-viewer .pane-label { display: flex; align-items: center; justify-content: space-between; }
+    .file-viewer .pane-label span { font-size: 10px; opacity: .5; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+    .file-content { flex: 1; overflow-y: auto; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6; white-space: pre; word-break: normal; opacity: .8; }
+    .file-content::-webkit-scrollbar { width: 3px; height: 3px; }
+    .file-content::-webkit-scrollbar-thumb { background: var(--glass); }
+
+    /* Tag modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--ocean-mid); border: 1px solid var(--glass); border-radius: 10px; padding: 20px; width: 300px; display: flex; flex-direction: column; gap: 14px; }
+    .modal h3 { font-size: 14px; font-weight: 700; }
+    .modal .path-display { font-family: monospace; font-size: 10px; opacity: .5; word-break: break-all; }
+    .modal input { background: var(--ocean-deep); border: 1px solid var(--glass); border-radius: 6px; padding: 8px 10px; color: var(--sand); font-size: 12px; outline: none; width: 100%; }
+    .modal input:focus { border-color: var(--seafoam); }
+    .color-picker { display: flex; gap: 8px; }
+    .color-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .1s; }
+    .color-swatch.selected { border-color: white; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-actions button { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-cancel { background: var(--foam); color: var(--sand); }
+    .btn-add { background: var(--seafoam); color: var(--ocean-deep); }
+    .existing-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* @ file autocomplete */
+    .at-dropdown { display: none; position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; background: var(--ocean-mid); border: 1px solid var(--seafoam); border-radius: 8px; z-index: 200; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+    .at-dropdown.open { display: block; }
+    .at-dropdown::-webkit-scrollbar { width: 3px; }
+    .at-dropdown::-webkit-scrollbar-thumb { background: var(--glass); }
+    .at-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 11px; font-family: 'JetBrains Mono', monospace; transition: background .08s; }
+    .at-item:hover, .at-item.focused { background: var(--glass); }
+    .at-item .at-icon { font-size: 12px; flex-shrink: 0; }
+    .at-item .at-name { color: var(--seafoam); flex-shrink: 0; }
+    .at-item .at-dir { opacity: .4; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-bar { position: relative; }
+
+    /* Tag color map */
+    .tag-seafoam { background: rgba(78,205,196,.25); color: #4ECDC4; border: 1px solid rgba(78,205,196,.4); }
+    .tag-coral { background: rgba(255,107,107,.25); color: #FF6B6B; border: 1px solid rgba(255,107,107,.4); }
+    .tag-sand { background: rgba(247,231,206,.2); color: #F7E7CE; border: 1px solid rgba(247,231,206,.35); }
+    .tag-purple { background: rgba(167,139,250,.25); color: #a78bfa; border: 1px solid rgba(167,139,250,.4); }
+    .tag-yellow { background: rgba(250,204,21,.2); color: #facc15; border: 1px solid rgba(250,204,21,.35); }
+    .tag-blue { background: rgba(96,165,250,.2); color: #60a5fa; border: 1px solid rgba(96,165,250,.35); }
+
+    /* ── Permission banner ── */
+    .perm-banner { display: none; flex-shrink: 0; border-bottom: 2px solid var(--coral); background: rgba(255,107,107,.08); padding: 10px 16px; gap: 10px; align-items: flex-start; animation: perm-pulse 2s ease-in-out infinite; }
+    .perm-banner.visible { display: flex; }
+    @keyframes perm-pulse { 0%,100%{border-color:var(--coral)} 50%{border-color:rgba(255,107,107,.3)} }
+    .perm-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .perm-body { flex: 1; min-width: 0; }
+    .perm-title { font-size: 11px; font-weight: 700; color: var(--coral); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 4px; }
+    .perm-tool  { font-size: 12px; font-weight: 600; color: var(--sand); margin-bottom: 4px; }
+    .perm-input { font-family: 'JetBrains Mono', monospace; font-size: 10px; opacity: .6; white-space: pre-wrap; word-break: break-all; max-height: 60px; overflow-y: auto; background: rgba(0,0,0,.25); border-radius: 4px; padding: 4px 7px; }
+    .perm-actions { display: flex; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+    .perm-approve { background: var(--seafoam); color: var(--ocean-deep); border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .perm-approve:hover { opacity: .85; }
+    .perm-deny   { background: var(--coral); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .perm-deny:hover { opacity: .85; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<header>
+  <div class="conn-dot" id="conn-dot"></div>
+  <h1>🫙 glassbottles agents</h1>
+  <span class="header-status" id="header-status">connecting…</span>
+</header>
+
+<div class="layout">
+  <!-- Agent sidebar -->
+  <aside class="agent-sidebar" id="agent-sidebar"></aside>
+
+  <!-- Main agent panels -->
+  <div class="main">
+    <div class="panel-header" id="panel-header">
+      <span class="big-emoji" id="ph-emoji"></span>
+      <div><div id="ph-name" style="font-size:14px;font-weight:700"></div><div class="role-tag" id="ph-role"></div></div>
+      <div class="run-status" id="ph-status">idle</div>
+    </div>
+    <div class="quick-tasks" id="quick-tasks"></div>
+    <div class="task-bar">
+      <div id="at-dropdown" class="at-dropdown"></div>
+      <input class="task-input" id="task-input" placeholder="Assign a task… (type @ to reference a file)" oninput="onTaskInput(event)" onkeydown="onTaskKey(event)" />
+      <button class="run-btn" id="run-btn" onclick="runAgent()">▶ Run</button>
+    </div>
+    <div class="panels" id="panels"></div>
+  </div>
+
+  <!-- File explorer -->
+  <div class="file-explorer" id="file-explorer">
+    <div class="explorer-header">
+      <span>📁 Project Files</span>
+      <button class="explorer-toggle" onclick="toggleExplorer()" title="Collapse">◀</button>
+    </div>
+    <div class="tree-scroll" id="tree-scroll"></div>
+    <div class="file-viewer" id="file-viewer" style="display:none">
+      <div class="pane-label">
+        <div>File Preview</div>
+        <span id="preview-path"></span>
+      </div>
+      <div class="file-content" id="file-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tag modal -->
+<div class="modal-overlay" id="tag-modal">
+  <div class="modal">
+    <h3>Tag this file</h3>
+    <div class="path-display" id="modal-path"></div>
+    <input id="tag-input" placeholder="Tag name (e.g. review, blocked, done)" onkeydown="onTagKey(event)" />
+    <div class="color-picker" id="color-picker"></div>
+    <div id="existing-tags-container" style="display:none">
+      <div class="pane-label" style="padding:0 0 6px 0">Existing tags</div>
+      <div class="existing-tags" id="existing-tags"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTagModal()">Cancel</button>
+      <button class="btn-add" onclick="addTag()">Add Tag</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const AGENTS = {
+  cherry: { name: 'Cherry', emoji: '🧑‍🎨', role: 'UI/UX Designer', quickTasks: [
+    'Design the BottleCanvas component — SVG/CSS glass bottle shape + idle wave animation spec',
+    'Write the ThrowAnimation keyframe spec — arc into ocean, 800ms cubic-bezier',
+    'Design ReceivedBottle reveal — words fade in staggered 40ms each',
+  ]},
+  bella: { name: 'Bella', emoji: '🧑‍💻', role: 'Frontend Engineer', quickTasks: [
+    'Build BottleCanvas component with idle bottle-bob animation using Framer Motion',
+    'Build AppShell and BottomNav layout components',
+    'Build DailyTimer — countdown to midnight UTC reset',
+  ]},
+  felix: { name: 'Felix', emoji: '🧑‍🔧', role: 'Backend Engineer', quickTasks: [
+    'Write POST /api/bottles/send route with atomic quota check',
+    'Write GET /api/bottles/today — return sent/received status for current user',
+    'Review 002_rls_policies.sql for race conditions and bypass risks',
+  ]},
+  shiv: { name: 'Shiv', emoji: '🛠️', role: 'DevOps Engineer', quickTasks: [
+    'Create supabase/config.toml for local CLI setup',
+    'Add vitest.config.ts for unit testing in apps/web',
+    'Verify ci.yml and deploy.yml are complete and correct',
+  ]},
+  nagoya: { name: 'Nagoya', emoji: '📋', role: 'Product Manager', quickTasks: [
+    'Define Sprint 1 user stories with full acceptance criteria',
+    'Write edge case analysis: no receiver available today',
+    'Define onboarding flow: US-001 through first bottle throw',
+  ]},
+  khasi: { name: 'Khasi', emoji: '🔍', role: 'Code Reviewer', quickTasks: [
+    'Review apps/web/middleware.ts for auth security issues',
+    'Audit supabase/migrations/002_rls_policies.sql for bypass risks',
+    'Check Sprint 0 scaffold for TypeScript strict violations',
+  ]},
+  kitty: { name: 'Kitty', emoji: '📝', role: 'Docs & Changelog Agent', quickTasks: [
+    'Update .claude/CLAUDE.md with latest architecture decisions from all agent logs',
+    'Append CHANGELOG.md entry for latest push to main',
+    'Sync agent roster table in CLAUDE.md with current sprint status',
+  ]},
+}
+
+const TAG_COLORS = [
+  { id: 'seafoam', hex: '#4ECDC4' },
+  { id: 'coral',   hex: '#FF6B6B' },
+  { id: 'yellow',  hex: '#facc15' },
+  { id: 'purple',  hex: '#a78bfa' },
+  { id: 'blue',    hex: '#60a5fa' },
+  { id: 'sand',    hex: '#F7E7CE' },
+]
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+const st = {
+  active: 'cherry',
+  statuses: {}, tasks: {}, logs: {}, outputs: {}, activities: {},
+  perms: {},   // key → { id, tool, input } | null
+  tree: [],
+  tags: {},
+  expandedDirs: new Set(),
+  selectedFile: null,
+  tagModalPath: null,
+  tagColor: 'seafoam',
+  explorerOpen: true,
+}
+
+Object.keys(AGENTS).forEach(k => {
+  st.statuses[k] = 'idle'; st.tasks[k] = null
+  st.logs[k] = '(loading…)'; st.outputs[k] = ''; st.activities[k] = []
+  st.perms[k] = null
+})
+
+// ── Render agent sidebar ─────────────────────────────────────────────────────
+
+function renderAgentSidebar() {
+  document.getElementById('agent-sidebar').innerHTML = Object.entries(AGENTS).map(([key, a]) => `
+    <button class="agent-btn ${key === st.active ? 'active' : ''}" onclick="selectAgent('${key}')">
+      <span class="emoji">${a.emoji}</span>
+      <div class="info"><div class="name">${a.name}</div><div class="role">${a.role}</div></div>
+      <div class="status-pip ${st.statuses[key]}" id="pip-${key}"></div>
+    </button>
+  `).join('')
+}
+
+function renderPanels() {
+  document.getElementById('panels').innerHTML = Object.keys(AGENTS).map(key => `
+    <div class="panel ${key === st.active ? 'active' : ''}" id="panel-${key}">
+      <div class="perm-banner" id="perm-banner-${key}">
+        <span class="perm-icon">🔐</span>
+        <div class="perm-body">
+          <div class="perm-title">Tool permission required</div>
+          <div class="perm-tool" id="perm-tool-${key}"></div>
+          <div class="perm-input" id="perm-input-${key}"></div>
+        </div>
+        <div class="perm-actions">
+          <button class="perm-approve" onclick="respondPerm('${key}', true)">✓ Approve</button>
+          <button class="perm-deny"    onclick="respondPerm('${key}', false)">✕ Deny</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="output-pane">
+          <div class="pane-label">Live output</div>
+          <div class="output-scroll" id="output-${key}">${st.outputs[key] ? esc(st.outputs[key]) : '<span style="opacity:.3">Assign a task to start…</span>'}</div>
+        </div>
+        <div class="activity-pane">
+          <div class="pane-label">Activity</div>
+          <div class="activity-scroll" id="activity-${key}">${st.activities[key].map(renderAct).join('')}</div>
+        </div>
+      </div>
+      <div class="log-toggle">
+        <div class="pane-label">Agent log — ${AGENTS[key].log}</div>
+        <div class="log-scroll" id="log-${key}">${esc(st.logs[key])}</div>
+      </div>
+    </div>
+  `).join('')
+}
+
+function renderAct(act) {
+  if (act.type === 'tool_call') return `<div class="act-item tool-call"><div class="act-tool">▶ ${esc(act.tool)}</div><div class="act-detail">${esc(JSON.stringify(act.input).slice(0,100))}</div></div>`
+  if (act.type === 'tool_result') return `<div class="act-item tool-result"><div class="act-tool">◀ result</div><div class="act-detail">${esc(String(act.result||'').slice(0,80))}</div></div>`
+  if (act.type === 'done') return `<div class="act-item done"><div class="act-tool">✓ done</div></div>`
+  return ''
+}
+
+function updatePanelHeader(key) {
+  const a = AGENTS[key]
+  document.getElementById('ph-emoji').textContent = a.emoji
+  document.getElementById('ph-name').textContent = a.name
+  document.getElementById('ph-role').textContent = a.role
+  const s = st.statuses[key]
+  document.getElementById('ph-status').textContent = s === 'running' ? `⚡ ${st.tasks[key]?.slice(0,60) ?? 'working…'}` : s === 'error' ? '✗ error' : 'idle'
+  const btn = document.getElementById('run-btn')
+  btn.disabled = s === 'running'
+  btn.textContent = s === 'running' ? '⚡ Running…' : '▶ Run'
+  document.getElementById('quick-tasks').innerHTML = a.quickTasks.map(t =>
+    `<button class="quick-btn" onclick="setTask(${JSON.stringify(t)})">${t.split(' ').slice(0,5).join(' ')}…</button>`
+  ).join('')
+}
+
+function selectAgent(key) {
+  st.active = key
+  document.querySelectorAll('.agent-btn').forEach(el => el.classList.remove('active'))
+  document.querySelectorAll(`[onclick="selectAgent('${key}')"]`).forEach(el => el.classList.add('active'))
+  document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'))
+  document.getElementById(`panel-${key}`)?.classList.add('active')
+  updatePanelHeader(key)
+  document.getElementById('task-input').value = ''
+}
+
+function setTask(t) { document.getElementById('task-input').value = t; document.getElementById('task-input').focus() }
+
+// ── Permission handling ──────────────────────────────────────────────────────
+
+function showPerm(key, perm) {
+  st.perms[key] = perm
+  const banner = document.getElementById(`perm-banner-${key}`)
+  if (!banner) return
+  document.getElementById(`perm-tool-${key}`).textContent  = perm.tool
+  document.getElementById(`perm-input-${key}`).textContent = typeof perm.input === 'object'
+    ? JSON.stringify(perm.input, null, 2)
+    : String(perm.input)
+  banner.classList.add('visible')
+  // Switch to that agent so user sees it
+  if (st.active !== key) selectAgent(key)
+}
+
+function clearPerm(key) {
+  st.perms[key] = null
+  const banner = document.getElementById(`perm-banner-${key}`)
+  if (banner) banner.classList.remove('visible')
+}
+
+async function respondPerm(key, approved) {
+  clearPerm(key)
+  await fetch(`/api/agents/${key}/permission`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approved }),
+  })
+}
+
+// ── @ file autocomplete ──────────────────────────────────────────────────────
+
+const atState = { open: false, focusIdx: -1, matches: [], atStart: -1 }
+
+function flattenTree(nodes, out = []) {
+  for (const n of nodes) {
+    out.push(n)
+    if (n.children) flattenTree(n.children, out)
+  }
+  return out
+}
+
+function onTaskInput(e) {
+  const inp = e.target
+  const val = inp.value
+  const pos = inp.selectionStart
+
+  // Find last @ before cursor
+  const before = val.slice(0, pos)
+  const atIdx = before.lastIndexOf('@')
+  if (atIdx === -1 || (atIdx > 0 && /\S/.test(val[atIdx - 1]))) {
+    closeAt(); return
+  }
+  const query = before.slice(atIdx + 1).toLowerCase()
+
+  const files = flattenTree(st.tree)
+  atState.matches = files.filter(f =>
+    f.name.toLowerCase().includes(query) || f.path.toLowerCase().includes(query)
+  ).slice(0, 20)
+  atState.atStart = atIdx
+  atState.focusIdx = atState.matches.length ? 0 : -1
+  renderAtDropdown()
+}
+
+function renderAtDropdown() {
+  const dd = document.getElementById('at-dropdown')
+  if (!atState.matches.length) { closeAt(); return }
+  atState.open = true
+  dd.className = 'at-dropdown open'
+  dd.innerHTML = ''
+  atState.matches.forEach((f, i) => {
+    const dir = f.path.includes('/') ? f.path.split('/').slice(0, -1).join('/') + '/' : ''
+    const item = document.createElement('div')
+    item.className = 'at-item' + (i === atState.focusIdx ? ' focused' : '')
+
+    const icon = document.createElement('span')
+    icon.className = 'at-icon'
+    icon.textContent = f.type === 'dir' ? '📁' : fileIcon(f.ext)
+
+    const name = document.createElement('span')
+    name.className = 'at-name'
+    name.textContent = f.name   // textContent — never innerHTML
+
+    const dirSpan = document.createElement('span')
+    dirSpan.className = 'at-dir'
+    dirSpan.textContent = dir   // textContent — never innerHTML
+
+    item.appendChild(icon)
+    item.appendChild(name)
+    item.appendChild(dirSpan)
+
+    // Capture i by value; no inline handler string
+    item.addEventListener('mousedown', () => selectAt(i))
+    item.addEventListener('mouseover', () => { atState.focusIdx = i; renderAtDropdown() })
+
+    dd.appendChild(item)
+  })
+}
+
+function closeAt() {
+  atState.open = false; atState.matches = []; atState.atStart = -1; atState.focusIdx = -1
+  document.getElementById('at-dropdown').className = 'at-dropdown'
+}
+
+function selectAt(idx) {
+  const f = atState.matches[idx]
+  if (!f) return
+  const inp = document.getElementById('task-input')
+  const val = inp.value
+  const pos = inp.selectionStart
+  const before = val.slice(0, atState.atStart)
+  const after = val.slice(pos)
+  const insert = `@${f.path}`
+  inp.value = before + insert + after
+  const newPos = before.length + insert.length
+  inp.setSelectionRange(newPos, newPos)
+  inp.focus()
+  closeAt()
+}
+
+function onTaskKey(e) {
+  if (atState.open) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); atState.focusIdx = Math.min(atState.focusIdx + 1, atState.matches.length - 1); renderAtDropdown(); return }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); atState.focusIdx = Math.max(atState.focusIdx - 1, 0); renderAtDropdown(); return }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectAt(atState.focusIdx); return }
+    if (e.key === 'Escape') { closeAt(); return }
+  }
+  if (e.key === 'Enter' && !atState.open) runAgent()
+}
+
+async function runAgent() {
+  const key = st.active
+  if (st.statuses[key] === 'running') return
+  const task = document.getElementById('task-input').value.trim()
+  if (!task) return
+  document.getElementById('task-input').value = ''
+  st.outputs[key] = ''; st.activities[key] = []
+  const outEl = document.getElementById(`output-${key}`)
+  const actEl = document.getElementById(`activity-${key}`)
+  if (outEl) outEl.innerHTML = ''; if (actEl) actEl.innerHTML = ''
+  await fetch(`/api/agents/${key}/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task }) })
+}
+
+// ── File Explorer ────────────────────────────────────────────────────────────
+
+function toggleExplorer() {
+  st.explorerOpen = !st.explorerOpen
+  const ex = document.getElementById('file-explorer')
+  const btn = ex.querySelector('.explorer-toggle')
+  if (st.explorerOpen) {
+    ex.style.width = '280px'; btn.textContent = '◀'
+    ex.querySelector('.tree-scroll').style.display = ''
+  } else {
+    ex.style.width = '32px'; btn.textContent = '▶'
+    ex.querySelector('.tree-scroll').style.display = 'none'
+    document.getElementById('file-viewer').style.display = 'none'
+  }
+}
+
+async function loadTree() {
+  const res = await fetch('/api/files/tree')
+  st.tree = await res.json()
+  renderTree()
+}
+
+function renderTree() {
+  const scroll = document.getElementById('tree-scroll')
+  scroll.innerHTML = ''
+  renderNodes(st.tree, scroll, 0)
+}
+
+function renderNodes(nodes, container, depth) {
+  for (const node of nodes) {
+    const el = document.createElement('div')
+    el.className = `tree-item ${node.type}`
+    if (st.selectedFile === node.path) el.classList.add('selected')
+
+    // indent
+    const indentDiv = document.createElement('div')
+    indentDiv.className = 'indent'
+    indentDiv.style.width = (depth * 12) + 'px'
+    el.appendChild(indentDiv)
+
+    // icon — emoji only, no user data
+    const iconSpan = document.createElement('span')
+    iconSpan.className = 'icon'
+    iconSpan.textContent = node.type === 'dir'
+      ? (st.expandedDirs.has(node.path) ? '📂' : '📁')
+      : fileIcon(node.ext)
+    el.appendChild(iconSpan)
+
+    // filename — textContent, never innerHTML
+    const nameSpan = document.createElement('span')
+    nameSpan.className = 'filename'
+    nameSpan.textContent = node.name
+    el.appendChild(nameSpan)
+
+    // tag pills — DOM construction; color validated against whitelist
+    const pillsDiv = document.createElement('div')
+    pillsDiv.className = 'tag-pills'
+    for (const t of (st.tags[node.path] || [])) {
+      const safeColor = TAG_COLORS.some(c => c.id === t.color) ? t.color : 'seafoam'
+      const pill = document.createElement('span')
+      pill.className = `tag-pill tag-${safeColor}`
+      pill.title = 'Click to remove'
+      pill.textContent = '@' + t.label
+      pill.addEventListener('click', (e) => removeTag(e, node.path, t.label))
+      pillsDiv.appendChild(pill)
+    }
+    el.appendChild(pillsDiv)
+
+    // add-tag button — path stored in closure, never in HTML attribute
+    const tagBtn = document.createElement('button')
+    tagBtn.className = 'tag-btn'
+    tagBtn.title = 'Add tag'
+    tagBtn.textContent = '@'
+    tagBtn.addEventListener('click', (e) => openTagModal(e, node.path))
+    el.appendChild(tagBtn)
+
+    el.addEventListener('click', () => {
+      if (node.type === 'dir') toggleDir(node.path)
+      else openFile(node.path, node.name)
+    })
+
+    container.appendChild(el)
+
+    if (node.type === 'dir' && st.expandedDirs.has(node.path) && node.children?.length) {
+      renderNodes(node.children, container, depth + 1)
+    }
+  }
+}
+
+function fileIcon(ext) {
+  const map = { ts:'🟦', tsx:'⚛️', js:'🟨', jsx:'⚛️', css:'🎨', json:'📋', md:'📝', sql:'🗄️', yml:'⚙️', yaml:'⚙️', toml:'⚙️', env:'🔑', sh:'🔧', mjs:'🟨', html:'🌐' }
+  return map[ext] || '📄'
+}
+
+function toggleDir(path) {
+  if (st.expandedDirs.has(path)) st.expandedDirs.delete(path)
+  else st.expandedDirs.add(path)
+  renderTree()
+}
+
+async function openFile(path, name) {
+  st.selectedFile = path
+  renderTree()
+  const viewer = document.getElementById('file-viewer')
+  viewer.style.display = 'flex'
+  viewer.style.flexDirection = 'column'
+  document.getElementById('preview-path').textContent = path
+  document.getElementById('file-content').textContent = 'Loading…'
+  const res = await fetch(`/api/files/content?path=${encodeURIComponent(path)}`)
+  const data = await res.json()
+  document.getElementById('file-content').textContent = data.content
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────────
+
+function openTagModal(e, path) {
+  e.stopPropagation()
+  st.tagModalPath = path
+  st.tagColor = 'seafoam'
+  document.getElementById('modal-path').textContent = path
+  document.getElementById('tag-input').value = ''
+  renderColorPicker()
+  renderExistingTags(path)
+  document.getElementById('tag-modal').classList.add('open')
+  setTimeout(() => document.getElementById('tag-input').focus(), 50)
+}
+
+function closeTagModal() {
+  document.getElementById('tag-modal').classList.remove('open')
+  st.tagModalPath = null
+}
+
+function renderColorPicker() {
+  document.getElementById('color-picker').innerHTML = TAG_COLORS.map(c =>
+    `<div class="color-swatch ${c.id === st.tagColor ? 'selected' : ''}"
+      style="background:${c.hex}"
+      onclick="selectColor('${c.id}')" title="${c.id}"></div>`
+  ).join('')
+}
+
+function selectColor(id) {
+  st.tagColor = id
+  renderColorPicker()
+}
+
+function renderExistingTags(path) {
+  const tags = st.tags[path] || []
+  const container = document.getElementById('existing-tags-container')
+  if (!tags.length) { container.style.display = 'none'; return }
+  container.style.display = ''
+  const listEl = document.getElementById('existing-tags')
+  listEl.innerHTML = ''
+  for (const t of tags) {
+    const safeColor = TAG_COLORS.some(c => c.id === t.color) ? t.color : 'seafoam'
+    const pill = document.createElement('span')
+    pill.className = `tag-pill tag-${safeColor}`
+    pill.title = 'Click to remove'
+    pill.textContent = '@' + t.label + ' ✕'
+    pill.addEventListener('click', (e) => removeTag(e, path, t.label))
+    listEl.appendChild(pill)
+  }
+}
+
+function onTagKey(e) { if (e.key === 'Enter') addTag() }
+
+async function addTag() {
+  const label = document.getElementById('tag-input').value.trim()
+  if (!label || !st.tagModalPath) return
+  // Match server whitelist: alphanumeric, space, dot, hyphen, max 40 chars
+  if (!/^[\w .\-]{1,40}$/.test(label)) {
+    const inp = document.getElementById('tag-input')
+    inp.style.borderColor = 'var(--coral)'
+    inp.title = 'Letters, numbers, spaces, dots and hyphens only (max 40)'
+    setTimeout(() => { inp.style.borderColor = ''; inp.title = '' }, 2000)
+    return
+  }
+  await fetch('/api/tags', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: st.tagModalPath, tag: label, color: st.tagColor }),
+  })
+  closeTagModal()
+}
+
+async function removeTag(e, path, label) {
+  e.stopPropagation()
+  await fetch('/api/tags', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, tag: label }),
+  })
+}
+
+async function loadTags() {
+  const res = await fetch('/api/tags')
+  st.tags = await res.json()
+  renderTree()
+}
+
+// ── SSE ──────────────────────────────────────────────────────────────────────
+
+function connect() {
+  const es = new EventSource('/api/stream')
+
+  es.onopen = () => {
+    document.getElementById('conn-dot').classList.add('live')
+    document.getElementById('header-status').textContent = 'live'
+  }
+
+  es.onmessage = (e) => {
+    const ev = JSON.parse(e.data)
+
+    if (ev.type === 'init') {
+      Object.entries(ev.logs).forEach(([k, c]) => {
+        st.logs[k] = c
+        const el = document.getElementById(`log-${k}`)
+        if (el) { el.textContent = c; el.scrollTop = el.scrollHeight }
+      })
+      Object.entries(ev.statuses).forEach(([k, s]) => setStatus(k, s))
+      if (ev.perms) Object.entries(ev.perms).forEach(([k, p]) => { if (p) showPerm(k, p) })
+      updatePanelHeader(st.active)
+    }
+
+    if (ev.type === 'log_update') {
+      st.logs[ev.agent] = ev.content
+      const el = document.getElementById(`log-${ev.agent}`)
+      if (el) { el.textContent = ev.content; el.scrollTop = el.scrollHeight }
+    }
+
+    if (ev.type === 'agent_status') {
+      setStatus(ev.agent, ev.status); st.tasks[ev.agent] = ev.task
+      if (ev.agent === st.active) updatePanelHeader(st.active)
+    }
+
+    if (ev.type === 'agent_output') {
+      st.outputs[ev.agent] = (st.outputs[ev.agent] || '') + ev.text
+      const el = document.getElementById(`output-${ev.agent}`)
+      if (el) { el.textContent = st.outputs[ev.agent]; el.scrollTop = el.scrollHeight }
+    }
+
+    if (ev.type === 'tool_call' || ev.type === 'tool_result') {
+      st.activities[ev.agent].push(ev)
+      const el = document.getElementById(`activity-${ev.agent}`)
+      if (el) { el.innerHTML = st.activities[ev.agent].map(renderAct).join(''); el.scrollTop = el.scrollHeight }
+      // Refresh tree if files were written
+      if (ev.type === 'tool_call' && ev.tool === 'Write') setTimeout(loadTree, 500)
+    }
+
+    if (ev.type === 'agent_done') {
+      st.activities[ev.agent].push({ type: 'done' })
+      const el = document.getElementById(`activity-${ev.agent}`)
+      if (el) { el.innerHTML = st.activities[ev.agent].map(renderAct).join(''); el.scrollTop = el.scrollHeight }
+      // Refresh tree after agent finishes
+      setTimeout(loadTree, 1000)
+    }
+
+    if (ev.type === 'permission_request') {
+      showPerm(ev.agent, { id: ev.id, tool: ev.tool, input: ev.input })
+    }
+
+    if (ev.type === 'permission_resolved') {
+      clearPerm(ev.agent)
+    }
+
+    if (ev.type === 'tags_update') {
+      st.tags = ev.tags
+      renderTree()
+    }
+  }
+
+  es.onerror = () => {
+    document.getElementById('conn-dot').classList.remove('live')
+    document.getElementById('header-status').textContent = 'reconnecting…'
+    setTimeout(connect, 3000)
+  }
+}
+
+function setStatus(key, status) {
+  st.statuses[key] = status
+  const pip = document.getElementById(`pip-${key}`)
+  if (pip) pip.className = `status-pip ${status}`
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  renderAgentSidebar()
+  renderPanels()
+  updatePanelHeader(st.active)
+  connect()
+
+  // Load agent data
+  try {
+    const data = await fetch('/api/agents').then(r => r.json())
+    Object.entries(data).forEach(([key, a]) => {
+      st.logs[key] = a.log; st.statuses[key] = a.status; st.tasks[key] = a.task
+      const el = document.getElementById(`log-${key}`)
+      if (el) { el.textContent = a.log; el.scrollTop = el.scrollHeight }
+      setStatus(key, a.status)
+    })
+    updatePanelHeader(st.active)
+  } catch(_) {}
+
+  // Load file tree + tags in parallel
+  await Promise.all([loadTree(), loadTags()])
+}
+
+init()
+
+document.addEventListener('click', e => {
+  if (atState.open && !e.target.closest('#at-dropdown') && !e.target.closest('#task-input')) closeAt()
+})
+</script>
+</body>
+</html>

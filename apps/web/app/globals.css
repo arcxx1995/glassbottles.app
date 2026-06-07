@@ -1,0 +1,49 @@
+/* Fonts loaded via next/font/google in app/layout.tsx — no @import needed. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ocean-deep: #0A1628;
+  --color-ocean-mid: #0D2137;
+  --color-seafoam: #4ECDC4;
+  --color-sand: #F7E7CE;
+  --color-coral: #FF6B6B;
+  --color-glass: rgba(255, 255, 255, 0.08);
+  --color-foam: rgba(255, 255, 255, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-ocean-deep);
+  color: var(--color-sand);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-seafoam);
+  color: var(--color-ocean-deep);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ocean-mid);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-seafoam);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sand);
+}

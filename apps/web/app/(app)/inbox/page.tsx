@@ -1,0 +1,93 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import { Mail } from 'lucide-react'
+import { useAppSelector } from '@/store'
+import { selectUser } from '@/store/authSlice'
+import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
+import ReceivedBottle from '@/components/bottle/ReceivedBottle'
+
+export default function InboxPage() {
+  const user = useAppSelector(selectUser)
+
+  const { data: bottles, isLoading } = useGetReceivedBottlesQuery(undefined, {
+    skip: !user?.id,
+  })
+
+  const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
+
+  return (
+    <div className="flex flex-col min-h-screen pt-14">
+      {/* Header */}
+      <div className="px-5 mb-6">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-2xl text-sand">Inbox</h1>
+          {unreadCount > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-5 h-5 rounded-full bg-coral text-ocean-deep font-ui
+                         font-semibold text-[10px] flex items-center justify-center"
+            >
+              {unreadCount}
+            </motion.span>
+          )}
+        </div>
+        <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
+      </div>
+
+      {/* Loading skeletons */}
+      {isLoading && (
+        <div className="flex flex-col gap-4 px-0">
+          {[1, 0.7, 0.4].map((opacity, i) => (
+            <div
+              key={i}
+              className="mx-4 h-40 rounded-3xl bg-ocean-mid animate-pulse"
+              style={{ opacity }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && (!bottles || bottles.length === 0) && (
+        <motion.div
+          className="flex flex-col items-center justify-center flex-1 gap-5 text-center px-8 pt-16"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="w-16 h-16 rounded-full bg-ocean-mid flex items-center justify-center">
+            <Mail size={26} className="text-sand/20" strokeWidth={1.5} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="font-ui text-sand/40 text-sm">No bottles yet</p>
+            <p className="font-ui text-xs text-sand/25 leading-relaxed">
+              Throw one first — the ocean returns the favour.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Bottle list */}
+      {!isLoading && bottles && bottles.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {bottles.map((bottle, i) => (
+            <motion.div
+              key={bottle.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                delay: i * 0.06,
+                duration: 0.35,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+            >
+              <ReceivedBottle bottle={bottle} />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

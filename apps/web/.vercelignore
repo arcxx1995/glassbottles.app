@@ -1,0 +1,8 @@
+node_modules
+.next
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+coverage

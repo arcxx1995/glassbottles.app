@@ -1,0 +1,21 @@
+{
+  "name": "glassbottles",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter web dev",
+    "dashboard": "node apps/dashboard/server.mjs",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r exec rm -rf .next node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

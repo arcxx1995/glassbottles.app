@@ -1,6 +1,6 @@
 # AGENT_LOG_FELIX.md — Backend Engineer
 
-> Felix's decisions on schema, API routes, edge functions, and WhatsApp integration.
+> Felix's decisions on schema, API routes, and edge functions.
 
 ## Initialization
 **Agent**: Felix  
@@ -253,8 +253,38 @@ Dashboard is localhost-only (`app.listen(PORT, '127.0.0.1')`). CSRF already bloc
 
 **HANDOFF → BELLA**: `AuthProvider` is now in `app/layout.tsx` inside `ReduxProvider`. All `useAppSelector(selectUser)` calls will now work correctly after page load. The `isLoading` state in authSlice is `true` until the bootstrap completes — you may want to gate render in `AppShell` on `!isLoading` to prevent flashes. Currently the middleware guards the route but there's a brief moment before Redux hydrates.
 
-**HANDOFF → KHASI**: Review migrations 008, 009, 010 — specifically:
-1. Migration 008: confirm `REPLICA IDENTITY FULL` doesn't cause performance issues at expected bottle volume; confirm publication idempotency logic is correct for Supabase managed Postgres.
-2. Migration 009: confirm RLS deny-all on `whatsapp_otp_pending` is correct — no explicit policy = deny all for authenticated role? Or does Supabase default to allow? (Should be deny-by-default with RLS enabled + no policy.)
-3. Migration 010: confirm `gen_random_bytes` + hex approach for CSPRNG OTP generation is correct; confirm `set search_path = public, extensions` is the right way to reference pgcrypto functions in SECURITY DEFINER context on Supabase.
-4. Review `verify-otp` route: confirm the 5-attempt lockout logic is correct and not bypassable via concurrent requests (race: two requests could both see `attempts=4` before either increments). Consider adding `WHERE attempts < 5` to the OTP fetch itself as an atomic guard.
+**HANDOFF → KHASI**: Review migration 008 — confirm `REPLICA IDENTITY FULL` doesn't cause performance issues at expected bottle volume; confirm publication idempotency logic is correct for Supabase managed Postgres.
+
+---
+
+## 2026-06-07 Session 7
+**Agent**: Felix
+**Task**: Remove all WhatsApp functionality from the backend — no backwards compat, no feature flags
+
+**Files Deleted**:
+- `supabase/migrations/009_whatsapp_otp.sql`
+- `supabase/migrations/010_verify_whatsapp_otp_fn.sql`
+- `supabase/functions/send-whatsapp/index.ts` + parent directory
+- `apps/web/app/api/whatsapp/register/route.ts` + parent directory
+- `apps/web/app/api/whatsapp/verify-otp/route.ts` + parent directory
+- `apps/web/app/api/whatsapp/` directory (now empty)
+- `apps/web/lib/whatsapp/client.ts` + parent directory
+
+**Files Modified**:
+- `supabase/migrations/001_init_schema.sql` — removed `whatsapp_number`, `whatsapp_verified` columns from `profiles`; removed entire `whatsapp_logs` table block
+- `supabase/migrations/002_rls_policies.sql` — removed `ALTER TABLE whatsapp_logs ENABLE ROW LEVEL SECURITY` and the `whatsapp_logs` section heading + comment
+- `supabase/migrations/006_match_retry_cron.sql` — removed WhatsApp gap comment block at top; removed `-- prefer whatsapp_verified` comment in receiver query; changed `ORDER BY p.whatsapp_verified DESC, RANDOM()` to `ORDER BY RANDOM()`; simplified COMMENT ON FUNCTION
+- `supabase/migrations/007_pg_net_notify.sql` — full rewrite: removed pg_net HTTP call, GUC vars, and all WhatsApp logic; preserves matching logic from 006; simplified COMMENT ON FUNCTION
+- `supabase/functions/match-bottle/index.ts` — removed `whatsapp_verified` from `select('id')`; removed `.order('whatsapp_verified', ...)` call; removed Step 5 "Fire-and-forget WhatsApp notification" block
+- `apps/web/app/api/profile/route.ts` — removed `validateE164` import; removed `whatsapp_number`/`whatsapp_verified` from GET and PATCH `select()` calls; removed WhatsApp number update block from PATCH handler; removed all WhatsApp-referencing comments; updated route comment blocks
+- `supabase/seed.sql` — updated commented profiles INSERT to remove `whatsapp_number`/`whatsapp_verified` columns and test data
+
+**Decisions Made**:
+- Hard delete, no feature flags, no backwards compat stubs — codebase was pre-production
+- `whatsapp_logs` table removed from schema entirely (was service-role-only anyway)
+- `profiles` table now contains only `id`, `timezone`, `created_at`, `last_active` — cleaner
+- `match-bottle` receiver query now randomises without any whatsapp preference ordering — fair distribution is correct default
+- `007_pg_net_notify.sql` retains its filename (migration order must not be disturbed) but is now a pure SQL retry function redefine
+
+**Verification**:
+`grep -r "whatsapp|WhatsApp" ... --include="*.ts" --include="*.tsx" --include="*.sql"` returned exit 1 (zero matches) after cleanup.

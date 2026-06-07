@@ -4,7 +4,6 @@
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bottles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_quotas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.whatsapp_logs ENABLE ROW LEVEL SECURITY;
 
 -- ─── profiles ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +48,3 @@ CREATE POLICY "daily_quotas: read own" ON public.daily_quotas
   FOR SELECT USING (auth.uid() = user_id);
 
 -- No client INSERT/UPDATE — edge function uses service role
-
--- ─── whatsapp_logs ────────────────────────────────────────────────────────────
-
--- No policies = deny all client access (service role bypasses RLS)

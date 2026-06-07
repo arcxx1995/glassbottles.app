@@ -4,8 +4,6 @@
 -- Profiles: extends Supabase auth.users
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  whatsapp_number TEXT,
-  whatsapp_verified BOOLEAN DEFAULT FALSE,
   timezone TEXT DEFAULT 'UTC',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_active TIMESTAMPTZ
@@ -37,17 +35,6 @@ CREATE TABLE public.daily_quotas (
   PRIMARY KEY (user_id, date)
 );
 COMMENT ON TABLE public.daily_quotas IS 'Quota resets implicitly: each new date produces a new row.';
-
--- WhatsApp delivery log: service role only, no client access
-CREATE TABLE public.whatsapp_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  bottle_id UUID REFERENCES bottles(id),
-  receiver_id UUID REFERENCES profiles(id),
-  status TEXT CHECK (status IN ('queued', 'sent', 'delivered', 'failed')),
-  meta JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-COMMENT ON TABLE public.whatsapp_logs IS 'Delivery receipts from Meta WhatsApp Cloud API. No client access.';
 
 -- Indexes
 CREATE INDEX idx_bottles_sender_id ON bottles(sender_id);

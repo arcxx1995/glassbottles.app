@@ -13,7 +13,7 @@
  *      re-fetch profile or clear user.
  *
  * Why fetch /api/profile and not use the auth.User object directly?
- *   - auth.User has email + id, but not whatsapp_number / timezone etc.
+ *   - auth.User has email + id, but not timezone etc.
  *   - The Redux authSlice uses the Profile type for user, which has those fields.
  *   - Components (settings, bottom nav badge) need Profile shape.
  *   - Profile is fetched via authApi RTK Query; we dispatch the result into authSlice
@@ -78,8 +78,6 @@ export default function AuthProvider({
         dispatch(
           setUser({
             id: user.id,
-            whatsapp_number: null,
-            whatsapp_verified: false,
             timezone: 'UTC',
             created_at: user.created_at ?? new Date().toISOString(),
             last_active: null,

@@ -210,6 +210,35 @@ All Sprint 1–4 tasks assigned to Bella are complete. No open frontend items.
 
 ---
 
+## Session 6 — 2026-06-07 — WhatsApp Removal
+
+**Task**: Remove all WhatsApp functionality from the frontend. No backwards compat, no feature flags.
+
+### Files Deleted
+
+| File | Reason |
+|---|---|
+| `store/api/notificationApi.ts` | 100% WhatsApp — entire file deleted |
+
+### Files Updated
+
+| File | Change |
+|---|---|
+| `types/index.ts` | Removed `whatsapp_number: string \| null` and `whatsapp_verified: boolean` from `Profile`; removed `WhatsAppLog` interface entirely |
+| `store/api/authApi.ts` | Removed `whatsapp_number?: string \| null` from `UpdateProfileRequest` |
+| `store/index.ts` | Removed `notificationApi` import, reducer registration, and middleware concat |
+| `app/(app)/settings/page.tsx` | Full rewrite — stripped all WhatsApp state, hooks, handlers, `maskPhone`, and the WhatsApp card; only Settings header + Sign Out button remain |
+| `components/providers/AuthProvider.tsx` | Removed `whatsapp_number: null` and `whatsapp_verified: false` from fallback `setUser` call; updated JSDoc comment ("but not whatsapp_number / timezone etc." → "but not timezone etc.") |
+
+### Key decisions
+
+- **settings/page.tsx**: Complete rewrite (not surgical edit) — the WhatsApp card was ~140 lines out of 170; nearly the entire component was WhatsApp logic. Result is a clean 42-line file.
+- **notificationApi.ts**: Deleted outright per instructions. No stubs, no empty exports.
+- **Remaining backend files**: `app/api/whatsapp/register/route.ts`, `app/api/whatsapp/verify-otp/route.ts`, `lib/whatsapp/client.ts`, and the `whatsapp_*` fields in `app/api/profile/route.ts` were not touched — they are outside the specified frontend scope.
+- **TS**: All WhatsApp references in the six specified files are gone. The `Profile` type no longer carries `whatsapp_number` or `whatsapp_verified`, which will cause compile errors in any other file that reads those fields — those files are backend routes and are outside this changeset.
+
+---
+
 ## Session 3 — 2026-06-07 — Sprint Completion
 
 **Built**: notificationApi, WhatsApp masking + opt-out, RTK void cleanup, font dedup.

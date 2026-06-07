@@ -13,11 +13,11 @@ BEGIN
   -- Create test users first via: supabase auth user create
   -- Then replace these UUIDs with the actual ones from `supabase auth users list`
   --
-  -- INSERT INTO public.profiles (id, whatsapp_number, whatsapp_verified)
+  -- INSERT INTO public.profiles (id)
   -- VALUES
-  --   ('00000000-0000-0000-0000-000000000001', '+919999999991', TRUE),
-  --   ('00000000-0000-0000-0000-000000000002', '+919999999992', TRUE),
-  --   ('00000000-0000-0000-0000-000000000003', NULL, FALSE);
+  --   ('00000000-0000-0000-0000-000000000001'),
+  --   ('00000000-0000-0000-0000-000000000002'),
+  --   ('00000000-0000-0000-0000-000000000003');
   --
   -- INSERT INTO public.bottles (sender_id, message, day_key)
   -- VALUES (

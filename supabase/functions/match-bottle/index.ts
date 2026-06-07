@@ -53,14 +53,10 @@ Deno.serve(async (req) => {
   ]
 
   // Step 2b: find a receiver not in the exclusion set.
-  // Prefer whatsapp_verified=true so the notification fires immediately.
-  // Select only id — whatsapp_number is looked up server-side by send-whatsapp,
-  // never passed through this function (minimise phone number exposure in memory).
   const { data: receiver } = await supabase
     .from('profiles')
-    .select('id, whatsapp_verified')
+    .select('id')
     .not('id', 'in', `(${excludedIds.join(',')})`)
-    .order('whatsapp_verified', { ascending: false })
     .limit(1)
     .maybeSingle()
 
@@ -97,19 +93,6 @@ Deno.serve(async (req) => {
     { user_id: receiver.id, date: bottle.day_key, has_received: true },
     { onConflict: 'user_id,date' }
   )
-
-  // ── 5. Fire-and-forget WhatsApp notification ──────────────────────────────────
-  //
-  // Pass only bottle_id + receiver_id. send-whatsapp looks up whatsapp_number
-  // server-side and validates ownership — caller-supplied numbers are never trusted.
-  // Never return receiver_id to this function's caller (sender must not learn who
-  // received their bottle).
-  await supabase.functions.invoke('send-whatsapp', {
-    body: {
-      bottle_id,
-      receiver_id: receiver.id,
-    },
-  })
 
   return new Response(
     JSON.stringify({ matched: true }),

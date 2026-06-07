@@ -9,12 +9,6 @@
 --   available day." This cron closes that gap by retrying every hour in SQL,
 --   without a round-trip to the edge runtime.
 --
--- WhatsApp notification gap:
---   Bottles matched via this SQL function do NOT automatically trigger a WhatsApp
---   notification (pg_cron → SQL, no HTTP call). This is a known v1 limitation.
---   TODO v2: add a pg_net call here, or a DB trigger on bottles.received_at
---   going NULL → non-NULL to invoke the send-whatsapp edge function via pg_net.
-
 CREATE OR REPLACE FUNCTION public.retry_unmatched_bottles()
 RETURNS INTEGER  -- returns count of bottles newly matched
 LANGUAGE plpgsql
@@ -38,7 +32,6 @@ BEGIN
     -- Find one eligible receiver:
     --   • not the sender
     --   • has not already received a bottle on this bottle's day_key
-    --   • prefer whatsapp_verified (for eventual notification)
     --   • RANDOM() tie-break to spread load across users
     SELECT p.id
     INTO   v_receiver_id
@@ -51,7 +44,7 @@ BEGIN
                AND  dq.date    = v_bottle.day_key
                AND  dq.has_received = TRUE
            )
-    ORDER BY p.whatsapp_verified DESC, RANDOM()
+    ORDER BY RANDOM()
     LIMIT 1;
 
     -- No eligible receiver right now — leave bottle queued, try again next hour
@@ -92,4 +85,4 @@ SELECT cron.schedule(
 
 COMMENT ON FUNCTION public.retry_unmatched_bottles() IS
   'Hourly retry: match any bottles that had no eligible receiver at send time. '
-  'Called by pg_cron. WhatsApp notification not fired from this path (v1 limitation).';
+  'Called by pg_cron.';

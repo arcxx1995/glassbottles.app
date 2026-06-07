@@ -1,7 +1,5 @@
 export interface Profile {
   id: string
-  whatsapp_number: string | null
-  whatsapp_verified: boolean
   timezone: string
   created_at: string
   last_active: string | null
@@ -32,15 +30,6 @@ export interface DailyQuota {
   date: string
   has_sent: boolean
   has_received: boolean
-}
-
-export interface WhatsAppLog {
-  id: string
-  bottle_id: string
-  receiver_id: string
-  status: 'queued' | 'sent' | 'delivered' | 'failed'
-  meta: Record<string, unknown>
-  created_at: string
 }
 
 export type BottleSendStatus = 'idle' | 'composing' | 'throwing' | 'thrown'

@@ -6,7 +6,6 @@ import bottleReducer from './bottleSlice'
 import uiReducer from './uiSlice'
 import { bottleApi } from './api/bottleApi'
 import { authApi } from './api/authApi'
-import { notificationApi } from './api/notificationApi'
 
 export const store = configureStore({
   reducer: {
@@ -15,13 +14,11 @@ export const store = configureStore({
     ui: uiReducer,
     [bottleApi.reducerPath]: bottleApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
-    [notificationApi.reducerPath]: notificationApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(bottleApi.middleware)
-      .concat(authApi.middleware)
-      .concat(notificationApi.middleware),
+      .concat(authApi.middleware),
 })
 
 export type RootState = ReturnType<typeof store.getState>

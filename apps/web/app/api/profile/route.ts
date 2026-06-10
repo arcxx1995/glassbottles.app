@@ -60,8 +60,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (timezone !== undefined) {
-    if (typeof timezone !== 'string' || timezone.length > 64) {
-      return NextResponse.json({ error: 'Invalid timezone' }, { status: 400 })
+    // Validate format before length: only IANA timezone characters allowed.
+    // Pattern: letters, digits, underscores, forward-slashes, plus, hyphens.
+    // Rejects any HTML/script payload — stored XSS mitigation.
+    if (typeof timezone !== 'string' || !/^[A-Za-z_/+\-]{1,64}$/.test(timezone)) {
+      return NextResponse.json({ error: 'Invalid timezone format' }, { status: 400 })
     }
     update.timezone = timezone
   }

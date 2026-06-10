@@ -6,6 +6,19 @@ const supabase = createClient(
 )
 
 Deno.serve(async (req) => {
+  // ── 0. Caller auth — service role key required ────────────────────────────
+  // This function uses the service role client and must only be callable by
+  // trusted internal callers (api/bottles/send, pg_cron retry). Any HTTP
+  // client that does not present the service role key is rejected immediately.
+  const authHeader = req.headers.get('Authorization')
+  const token = authHeader?.replace('Bearer ', '')
+  if (token !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 })
   }

@@ -29,6 +29,16 @@ const ThrowAnimation = dynamic(
   () => import('@/components/bottle/ThrowAnimation'),
   { ssr: false }
 )
+// BottleSVG is a pure SVG atom — safe for SSR, no canvas dependency.
+// loading fallback: 80×120 transparent placeholder prevents layout shift
+// while the chunk loads (Souryadeep: avoid flash on thrown state mount).
+const BottleSVGDynamic = dynamic(
+  () => import('@/components/bottle/ThrowAnimation').then((m) => ({ default: m.BottleSVG })),
+  {
+    ssr: false,
+    loading: () => <div style={{ width: 80, height: 120 }} aria-hidden="true" />,
+  }
+)
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -179,15 +189,28 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <motion.div
-                  className="w-24 h-24 rounded-full bg-seafoam/8 flex items-center justify-center"
-                  animate={{ scale: [1, 1.04, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <span className="text-5xl select-none" role="img" aria-label="bottle">
-                    🫙
-                  </span>
-                </motion.div>
+                {/* Bottle SVG with ambient glow ring — consistent with BottleCanvas */}
+                <div className="relative flex items-center justify-center" aria-hidden="true">
+                  {/* Outer glow pulse */}
+                  <motion.div
+                    className="absolute rounded-full pointer-events-none"
+                    style={{
+                      width: 120,
+                      height: 120,
+                      background: 'radial-gradient(circle, rgba(78,205,196,0.10) 0%, transparent 70%)',
+                    }}
+                    animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0.3, 0.7] }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  {/* Bottle — uses canonical SVG, glowing (seafoam tint) */}
+                  {/* Bob values match tailwind.config.ts bottle-bob token: y -10px, ±1.2deg, 3.2s */}
+                  <motion.div
+                    animate={{ y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2] }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 1] }}
+                  >
+                    <BottleSVGDynamic glowing width={80} height={120} />
+                  </motion.div>
+                </div>
 
                 <div className="flex flex-col gap-2">
                   <p className="font-display text-2xl text-sand">Bottle sent</p>

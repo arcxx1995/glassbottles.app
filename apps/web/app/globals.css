@@ -4,15 +4,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design tokens as CSS custom properties ──────────────────────────────── */
 :root {
   --color-ocean-deep: #0A1628;
-  --color-ocean-mid: #0D2137;
-  --color-seafoam: #4ECDC4;
-  --color-sand: #F7E7CE;
-  --color-coral: #FF6B6B;
-  --color-glass: rgba(255, 255, 255, 0.08);
-  --color-foam: rgba(255, 255, 255, 0.04);
+  --color-ocean-mid:  #0D2137;
+  --color-seafoam:    #4ECDC4;
+  --color-sand:       #F7E7CE;
+  --color-coral:      #FF6B6B;
+  --color-glass:      rgba(255, 255, 255, 0.08);
+  --color-foam:       rgba(255, 255, 255, 0.04);
+
+  /* Spacing rhythm — 4px base grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Motion — timing functions */
+  --ease-throw:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-quart:  cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-back:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Motion — Framer spring presets (document only; used in component code)
+     --spring-reveal-bottle: stiffness 80,  damping 12  (slow, physical)
+     --spring-banner:        stiffness 320, damping 28  (snappy notification)
+  */
 }
+
+/* ─── Base reset ──────────────────────────────────────────────────────────── */
 
 * {
   box-sizing: border-box;
@@ -21,29 +43,68 @@
 body {
   background-color: var(--color-ocean-deep);
   color: var(--color-sand);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--font-ui, 'DM Sans'), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Text selection ──────────────────────────────────────────────────────── */
 
 ::selection {
   background-color: var(--color-seafoam);
   color: var(--color-ocean-deep);
 }
 
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-ocean-mid);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-seafoam);
-  border-radius: 3px;
+  background: rgba(78, 205, 196, 0.25);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-sand);
+  background: rgba(78, 205, 196, 0.50);
+}
+
+/* ─── Skeleton shimmer utility ────────────────────────────────────────────── */
+/* Usage: add class="skeleton" to any loading placeholder element           */
+/* Override --skeleton-bg to match the parent surface                        */
+
+@layer utilities {
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-ocean-mid);
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+/* ─── Focus ring system ───────────────────────────────────────────────────── */
+/* All interactive elements: use focus-visible, not focus                     */
+
+:focus-visible {
+  outline: 2px solid var(--color-seafoam);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

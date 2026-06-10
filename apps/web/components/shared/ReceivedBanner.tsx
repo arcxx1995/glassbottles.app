@@ -57,7 +57,7 @@ export default function ReceivedBanner() {
           className="fixed top-4 left-1/2 z-[100] w-[calc(100%-2rem)] max-w-sm
                      -translate-x-1/2 flex items-center gap-3
                      bg-ocean-mid border border-seafoam/20 rounded-2xl
-                     px-4 py-3.5 shadow-lg shadow-black/30
+                     px-4 py-3.5 shadow-banner
                      text-left cursor-pointer"
           aria-live="assertive"
           aria-atomic="true"

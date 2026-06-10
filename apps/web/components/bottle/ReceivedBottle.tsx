@@ -20,7 +20,7 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative bg-ocean-mid rounded-3xl border border-white/5 p-6 mx-4"
+      className="relative bg-ocean-mid rounded-card border border-border-subtle p-6 mx-4 shadow-card"
     >
       {/* Read indicator dot */}
       {!bottle.is_read && (

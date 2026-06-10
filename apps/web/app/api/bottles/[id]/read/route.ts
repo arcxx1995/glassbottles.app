@@ -26,6 +26,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Missing bottle id' }, { status: 400 })
   }
 
+  // Validate UUID format before touching the DB — rejects path traversal attempts,
+  // oversized inputs, and non-UUID strings without an unnecessary Supabase round-trip.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) {
+    return NextResponse.json({ error: 'Invalid bottle id' }, { status: 400 })
+  }
+
   // Idempotent: only update when is_read = false; skip silently if already read.
   // RLS "receiver marks read or reported" policy ensures receiver_id = auth.uid().
   const { error } = await supabase

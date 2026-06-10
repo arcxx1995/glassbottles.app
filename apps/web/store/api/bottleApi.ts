@@ -32,7 +32,9 @@ export const bottleApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['BottleStatus'],
+      // Invalidate both status (quota + sent bottle) and the ambient counter so the
+      // "X bottles in the ocean" display refreshes immediately after a successful throw.
+      invalidatesTags: ['BottleStatus', 'BottleCount'],
     }),
     // Route derives identity from session cookie — no userId param needed.
     getReceivedBottles: builder.query<Bottle[], void>({

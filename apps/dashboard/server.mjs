@@ -128,7 +128,8 @@ app.post('/api/agents/:key/run', (req, res) => {
   agentTask[key]   = task
   broadcast({ type: 'agent_status', agent: key, status: 'running', task })
 
-  // Build spawn args — include --allowedTools if user pre-approved specific tools
+  // Build spawn args — task passed as positional arg after '--' so --add-dir
+  // doesn't consume it, and stdin stays open for permission responses.
   const spawnArgs = [
     '--agent', key,
     '--print',
@@ -137,17 +138,16 @@ app.post('/api/agents/:key/run', (req, res) => {
     '--add-dir', PROJECT_ROOT,
   ]
   if (tools.length) spawnArgs.push('--allowedTools', tools.join(','))
+  spawnArgs.push('--', task)
 
   const proc = spawn('claude', spawnArgs, {
     cwd: PROJECT_ROOT,
     env: { ...process.env, CLAUDE_CODE_DASHBOARD: '1' },
+    stdio: ['pipe', 'pipe', 'pipe'],
   })
 
-  // Pass task via stdin — avoids --add-dir variadic consuming positional arg
-  proc.stdin.write(task)
-  proc.stdin.end()
-
   agentProcs[key] = proc
+  // stdin left open — written to only when a permission response is needed
 
   let buffer = ''
 
@@ -217,6 +217,7 @@ app.post('/api/agents/:key/run', (req, res) => {
   })
 
   proc.on('close', code => {
+    try { proc.stdin.destroy() } catch (_) {}
     agentProcs[key]  = null
     pendingPerms[key] = null
     agentStatus[key] = code === 0 ? 'idle' : 'error'

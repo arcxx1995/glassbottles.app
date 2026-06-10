@@ -77,10 +77,13 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (insertError) {
-    // RLS policy violation (quota exceeded, race condition) or check constraint
+    // RLS policy violation (quota exceeded, race condition), check constraint,
+    // or UNIQUE (sender_id, day_key) violation from a concurrent duplicate send.
+    // All three map to "already sent today" from the client's perspective.
     if (
       insertError.code === '42501' || // RLS violation
-      insertError.code === '23514'    // CHECK constraint violation
+      insertError.code === '23514' || // CHECK constraint violation
+      insertError.code === '23505'    // UNIQUE violation (concurrent duplicate send)
     ) {
       return NextResponse.json(
         { error: 'Already sent a bottle today. Come back tomorrow.' },

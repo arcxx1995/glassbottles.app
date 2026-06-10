@@ -128,3 +128,78 @@ Add these in: GitHub repo → Settings → Secrets and variables → Actions
 
 **Sprint 4**: Complete
 **Sprint 5**: Complete
+
+---
+
+## [2026-06-11] Session 3
+**Agent**: Manikant
+**Task**: Stage, commit, and push large multi-session changeset to origin/main
+
+### Security Check
+- Confirmed `.env.local` is listed in `.gitignore` (line 11)
+- Confirmed `.env.local` did NOT appear in `git status` output
+- Confirmed no secrets files appeared in staged diff — only `apps/web/next-env.d.ts` matched `env` grep, which is the Next.js types declaration file (safe, generated, not a secrets file)
+
+### What Was Staged (214 files)
+All files staged by explicit path — no `git add -A` or `git add .` used.
+
+Groups staged:
+- `.claude/tags.json` — updated agent tag metadata
+- `.claude/skills/impeccable/` — impeccable skill tree (new, 83 files)
+- `.github/skills/impeccable/` — mirror of impeccable skill in .github (83 files)
+- `.impeccable/live/config.json` — live session config
+- `.rtk/filters.toml` — RTK filter config
+- Agent logs: AGENT_LOG_AKHILESH.md (new), AGENT_LOG_ARPAN.md (new), AGENT_LOG_CHERRY.md (modified), AGENT_LOG_ISHAN.md (renamed from BELLA), AGENT_LOG_KUSHAL.md (new), AGENT_LOG_MANIKANT.md (renamed from SHIV), AGENT_LOG_SOURYADEEP.md (new)
+- Deleted: AGENT_LOG_FELIX.md, AGENT_LOG_KHASI.md, AGENT_LOG_NAGOYA.md
+- CLAUDE.md, DESIGN.md, MASTER_PROMPT.md, PRODUCT.md
+- `apps/dashboard/server.mjs` — dashboard updates
+- `apps/web/app/(app)/home/loading.tsx`, `inbox/loading.tsx`, `settings/loading.tsx` — skeleton migration (Ishan)
+- `apps/web/app/(app)/home/page.tsx` — BottleSVG bob+glow thrown state (Souryadeep)
+- `apps/web/app/(app)/settings/page.tsx` — rebuilt settings (Souryadeep)
+- `apps/web/app/api/bottles/[id]/read/route.ts`, `report/route.ts` — UUID validation (Kushal)
+- `apps/web/app/api/bottles/count/route.ts` — service role client (Kushal)
+- `apps/web/app/api/bottles/send/route.ts` — 23505 → 429 (Kushal)
+- `apps/web/app/api/profile/route.ts` — IANA timezone regex (Kushal)
+- `apps/web/app/globals.css` — CSS custom properties, skeleton utility (Souryadeep)
+- `apps/web/app/page.tsx` — landing page TS Variants fix (Souryadeep)
+- `apps/web/components/bottle/ReceivedBottle.tsx` — design tokens (Ishan)
+- `apps/web/components/shared/BottleSkeleton.tsx` — skeleton utility
+- `apps/web/components/shared/ReceivedBanner.tsx` — shadow-banner token (Ishan)
+- `apps/web/middleware.ts` — auth redirect from sign-in/sign-up to /home (Ishan)
+- `apps/web/next-env.d.ts` — generated Next.js types declaration
+- `apps/web/store/api/bottleApi.ts` — BottleCount cache invalidation (Kushal)
+- `apps/web/tailwind.config.ts` — full design system expansion (Souryadeep)
+- `apps/web/tsconfig.tsbuildinfo` — TS build cache
+- `scripts/dashboard.sh` — dashboard helper script
+- `supabase/config.toml` — security hardening (Kushal)
+- `supabase/functions/match-bottle/index.ts` — service role auth + security (Kushal)
+- `supabase/migrations/009_revoke_public_retry.sql` — revoke PUBLIC execute on retry fn (Kushal)
+
+### Commit
+- SHA: `9fe8aef`
+- Branch: `main` (1 commit ahead of origin/main before push attempt)
+- Message: "feat: multi-session changeset — agent renames, security hardening, design system, frontend polish"
+
+### Push Result
+**BLOCKED** — authentication failure. Remote is configured as HTTPS (`https://github.com/arcxx1995/glassbottles.app.git`). GitHub no longer accepts password auth over HTTPS; a PAT or SSH key is required.
+
+Additional checks performed:
+- SSH key: not configured for this machine (`Permission denied (publickey)`)
+- GitHub CLI (`gh`): not installed
+- macOS keychain: no stored GitHub credentials
+
+### Action Required
+To push, one of the following must be done by the user:
+1. Switch remote to SSH: `git remote set-url origin git@github.com:arcxx1995/glassbottles.app.git` — then add an SSH key to the GitHub account
+2. Use a GitHub PAT: `git remote set-url origin https://<PAT>@github.com/arcxx1995/glassbottles.app.git`
+3. Install and authenticate `gh`: `brew install gh && gh auth login` — then push via `gh`
+
+Commit `9fe8aef` is safe locally and ready to push once auth is resolved.
+
+**Infrastructure Status**:
+| Component | Status |
+|---|---|
+| All changes staged (214 files) | Done |
+| Security check (.env.local absent) | Passed |
+| Commit created | Done (9fe8aef) |
+| Push to origin/main | Blocked — auth required |

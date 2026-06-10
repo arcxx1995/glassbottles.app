@@ -107,6 +107,22 @@ Deno.serve(async (req) => {
     { onConflict: 'user_id,date' }
   )
 
+  // ── 5. Fire-and-forget: notify receiver by email ──────────────────────────
+  // Invoke notify-receiver with the service role key so it accepts the call.
+  // Failures are swallowed — the pg_cron retry path in migration 011 will
+  // also attempt notification for any bottle where email_notified_at IS NULL.
+  const notifyUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-receiver`
+  fetch(notifyUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ bottle_id: bottle_id }),
+  }).catch((err) => {
+    console.error('[match-bottle] notify-receiver invoke failed:', err?.message)
+  })
+
   return new Response(
     JSON.stringify({ matched: true }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }

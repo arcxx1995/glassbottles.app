@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { bottleApi } from '@/store/api/bottleApi'
-import { setShowReceivedBanner, setShowDeliveredBanner } from '@/store/uiSlice'
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 
 /**
@@ -13,19 +12,14 @@ import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
  *
  * Mounts once in the (app) layout. Subscribes to the user's private Broadcast
  * topic `user:<uuid>` — events are sent by the `notify_bottle_matched()`
- * database trigger (migration 015) when a bottle transitions unmatched → matched:
+ * database trigger (migration 015) when a bottle transitions unmatched → matched.
  *
- * - `bottle_received` — a bottle arrived in this user's inbox. Invalidates the
- *   RTK Query cache + shows the ReceivedBanner toast.
- * - `bottle_delivered` — the user's own sent bottle was matched. Shows the
- *   persistent "delivered" toast and invalidates BottleStatus — the refetched
- *   sailingBottles array no longer contains the bottle, so it leaves the sea.
- *
- * SECURITY: broadcast replaced postgres_changes here on purpose. WALRUS
- * payloads carried whole rows (including sender_id/receiver_id) to anyone
- * passing the RLS row check — a devtools-level anonymity leak. The broadcast
- * payload contains only what the trigger sends (a bottle id), and the RLS
- * policy on realtime.messages restricts each client to its own topic.
+ * Realtime is ONLY a cache-refresh hint here — it makes the UI react quickly
+ * when the socket happens to be alive. It does not own any user-facing state:
+ * the Received/Delivered banners derive from server state (unread bottle /
+ * unacked delivery, migration 016) and surface on any refetch path — realtime
+ * invalidation, the slow fallback poll, navigation, or reload. A missed event
+ * delays a notification; it can never lose one.
  *
  * Returns null — no UI.
  */
@@ -51,18 +45,16 @@ export default function RealtimeBottleListener() {
       channel = supabase
         .channel(`user:${user.id}`, { config: { private: true } })
         .on('broadcast', { event: 'bottle_received' }, () => {
-          // Bottle matched to this user — refresh inbox + status
+          // A bottle arrived — refetch inbox + status; ReceivedBanner derives
+          // its visibility from the refetched unread state.
           dispatch(
             bottleApi.util.invalidateTags(['BottleStatus', 'ReceivedBottles'])
           )
-          // Show in-app toast banner
-          dispatch(setShowReceivedBanner(true))
         })
         .on('broadcast', { event: 'bottle_delivered' }, () => {
-          // Persistent toast — stays on the sailing screen until dismissed
-          dispatch(setShowDeliveredBanner(true))
-          // Refetch status: the matched bottle drops out of sailingBottles,
-          // so it animates out of the sea (a bottle vanishes).
+          // A sent bottle was matched — refetch status; DeliveredBanner derives
+          // from unackedDelivered, and the matched bottle drops out of
+          // sailingBottles (it animates out of the sea).
           dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
         .subscribe()

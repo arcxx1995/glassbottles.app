@@ -12,7 +12,6 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import { useAppDispatch } from '@/store'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Provider } from 'react-redux'
@@ -21,7 +20,7 @@ import { configureStore } from '@reduxjs/toolkit'
 // Slices
 import authReducer from '@/store/authSlice'
 import bottleReducer from '@/store/bottleSlice'
-import uiReducer, { setShowReceivedBanner, setShowDeliveredBanner } from '@/store/uiSlice'
+import uiReducer from '@/store/uiSlice'
 import { bottleApi } from '@/store/api/bottleApi'
 import { authApi } from '@/store/api/authApi'
 
@@ -85,8 +84,7 @@ function makeMockStore({
       ui: {
         isReportModalOpen: false,
         activeBottleId: null,
-        showReceivedBanner: false,
-        showDeliveredBanner: false,
+        receivedBannerDismissedForId: null,
       },
     },
   })
@@ -192,14 +190,10 @@ function SailingControls({
   onDeliver: () => void
   count: number
 }) {
-  const dispatch = useAppDispatch()
   return (
     <button
       disabled={count === 0}
-      onClick={() => {
-        onDeliver()
-        dispatch(setShowDeliveredBanner(true))
-      }}
+      onClick={onDeliver}
       className="px-7 py-3 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
                  text-sm tracking-wide transition-all duration-150 active:scale-[0.97]
                  hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
@@ -212,6 +206,7 @@ function SailingControls({
 function SailingPanel() {
   const [store] = useState(() => makeMockStore({ sendStatus: 'thrown' }))
   const [bottles, setBottles] = useState<SailingBottleItem[]>(INITIAL_SAILING)
+  const [showDelivered, setShowDelivered] = useState(false)
 
   const deliverOne = useCallback(() => {
     setBottles((prev) => {
@@ -219,12 +214,16 @@ function SailingPanel() {
       const i = Math.floor(Math.random() * prev.length)
       return prev.filter((_, idx) => idx !== i)
     })
+    setShowDelivered(true)
   }, [])
 
   return (
     <Provider store={store}>
       {/* Persistent toast — lives on the sailing screen until dismissed */}
-      <DeliveredBannerDynamic />
+      <DeliveredBannerDynamic
+        previewVisible={showDelivered}
+        onPreviewDismiss={() => setShowDelivered(false)}
+      />
 
       {/* Full-viewport sea background */}
       <SailingSea bottles={bottles} />
@@ -286,35 +285,32 @@ function ReceivedPanel() {
   )
 }
 
-function ReceivedBannerTriggerButton() {
-  const dispatch = useAppDispatch()
-  return (
-    <button
-      onClick={() => dispatch(setShowReceivedBanner(true))}
-      className="px-8 py-3.5 rounded-2xl bg-seafoam text-ocean-deep font-ui
-                 font-semibold text-sm tracking-wide transition-all duration-150
-                 active:scale-[0.97] hover:brightness-110"
-    >
-      Trigger banner
-    </button>
-  )
-}
-
 function ReceivedBannerPanel() {
-  const store = makeMockStore({ sendStatus: 'idle' })
+  const [store] = useState(() => makeMockStore({ sendStatus: 'idle' }))
+  const [show, setShow] = useState(false)
   return (
     <Provider store={store}>
       {/* ReceivedBanner is fixed-position — renders top-right of the viewport */}
-      <ReceivedBannerDynamic />
+      <ReceivedBannerDynamic
+        previewVisible={show}
+        onPreviewDismiss={() => setShow(false)}
+      />
       <div className="flex flex-col items-center gap-6 text-center pt-16 px-4">
         <div className="flex flex-col gap-1">
           <p className="font-display text-xl text-sand">Received toast</p>
           <p className="font-ui text-sm text-sand/50 max-w-[260px] leading-relaxed">
-            Fires when a bottle is delivered to you live. Auto-dismisses after 5
-            seconds. Tap to go to inbox (real nav).
+            Shows while an unread bottle waits in your inbox. Persists until
+            read or dismissed. Tap to go to inbox (real nav).
           </p>
         </div>
-        <ReceivedBannerTriggerButton />
+        <button
+          onClick={() => setShow(true)}
+          className="px-8 py-3.5 rounded-2xl bg-seafoam text-ocean-deep font-ui
+                     font-semibold text-sm tracking-wide transition-all duration-150
+                     active:scale-[0.97] hover:brightness-110"
+        >
+          Trigger banner
+        </button>
       </div>
     </Provider>
   )

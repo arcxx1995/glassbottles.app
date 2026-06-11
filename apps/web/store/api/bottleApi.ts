@@ -11,11 +11,22 @@ export interface SailingBottle {
   day_key: string
 }
 
+/** A sent bottle that was matched but whose "delivered" toast the sender has
+ *  not yet acknowledged. Drives the persistent DeliveredBanner. No receiver
+ *  fields — anonymity enforced at the RPC level. */
+export interface UnackedDeliveredBottle {
+  id: string
+  sent_at: string
+  received_at: string
+  day_key: string
+}
+
 export interface TodayBottleStatus {
   quota: DailyQuota
   sentBottle: Bottle | null
   receivedBottle: Bottle | null
   sailingBottles: SailingBottle[]
+  unackedDelivered: UnackedDeliveredBottle[]
 }
 
 export interface SendBottleRequest {
@@ -67,6 +78,19 @@ export const bottleApi = createApi({
       },
       providesTags: ['ReceivedBottles'],
     }),
+    // Sender dismisses the "Your bottle found someone" toast. Persisted in the
+    // DB (delivered_ack_at) so the dismissal holds across reloads and devices.
+    ackDeliveredBottles: builder.mutation<void, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ack_delivered_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['BottleStatus'],
+    }),
     markBottleRead: builder.mutation<void, string>({
       query: (bottleId) => ({
         url: `/bottles/${bottleId}/read`,
@@ -109,4 +133,5 @@ export const {
   useMarkBottleReadMutation,
   useReportBottleMutation,
   useGetBottleCountQuery,
+  useAckDeliveredBottlesMutation,
 } = bottleApi

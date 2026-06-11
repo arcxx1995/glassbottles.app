@@ -1,29 +1,75 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useAppDispatch, useAppSelector } from '@/store'
+import { useAppSelector } from '@/store'
+import { selectUser } from '@/store/authSlice'
 import {
-  selectShowDeliveredBanner,
-  setShowDeliveredBanner,
-} from '@/store/uiSlice'
+  useGetTodayBottleStatusQuery,
+  useAckDeliveredBottlesMutation,
+} from '@/store/api/bottleApi'
+
+interface DeliveredBannerProps {
+  /** Preview-only: render regardless of server state (/preview page). */
+  previewVisible?: boolean
+  onPreviewDismiss?: () => void
+}
 
 /**
  * DeliveredBanner
  *
- * Persistent top-right toast shown when one of the user's own bottles is matched
- * to a stranger (RealtimeBottleListener sender channel dispatches
- * setShowDeliveredBanner(true)).
+ * Persistent toast: one of the user's sent bottles was matched to a stranger.
  *
- * Unlike ReceivedBanner, this does NOT auto-dismiss — it stays on the sailing
- * screen until the user taps the X. There is nothing to open (it's your own sent
- * bottle), so the only action is dismiss.
+ * Visibility DERIVES from server state — a bottle with received_at set and
+ * delivered_ack_at NULL exists (migration 016) — not from catching a Realtime
+ * event. Missed broadcasts, reloads and other devices all converge on the same
+ * truth: the toast shows until the sender explicitly dismisses it, and the
+ * dismissal is persisted in the database (ack_delivered_bottles RPC), so it
+ * never re-announces an already-acknowledged delivery.
  *
  * Rendered once in (app)/layout.tsx.
  */
-export default function DeliveredBanner() {
-  const dispatch = useAppDispatch()
-  const isVisible = useAppSelector(selectShowDeliveredBanner)
+export default function DeliveredBanner({
+  previewVisible,
+  onPreviewDismiss,
+}: DeliveredBannerProps = {}) {
+  const user = useAppSelector(selectUser)
+  // Hide instantly on dismiss; the DB ack + refetch confirm in the background.
+  const [acking, setAcking] = useState(false)
+
+  const { data: status } = useGetTodayBottleStatusQuery(undefined, {
+    skip: !user?.id || previewVisible !== undefined,
+  })
+  const [ackDelivered] = useAckDeliveredBottlesMutation()
+
+  const hasUnacked = (status?.unackedDelivered ?? []).length > 0
+
+  // Release the local hide only once the refetched status confirms the ack —
+  // prevents a flash-back between mutation success and refetch completion,
+  // while keeping the banner armed for future deliveries.
+  useEffect(() => {
+    if (!hasUnacked && acking) setAcking(false)
+  }, [hasUnacked, acking])
+
+  const isVisible =
+    previewVisible !== undefined
+      ? previewVisible
+      : hasUnacked && !acking
+
+  function handleDismiss() {
+    if (previewVisible !== undefined) {
+      onPreviewDismiss?.()
+      return
+    }
+    setAcking(true)
+    // Persist the ack; invalidation refetches status and hasUnacked goes false
+    // (the effect above then releases the local hide). On failure, release
+    // immediately so the (still true) toast returns.
+    ackDelivered()
+      .unwrap()
+      .catch(() => setAcking(false))
+  }
 
   return (
     <AnimatePresence>
@@ -62,7 +108,7 @@ export default function DeliveredBanner() {
           </div>
 
           <button
-            onClick={() => dispatch(setShowDeliveredBanner(false))}
+            onClick={handleDismiss}
             aria-label="Dismiss"
             className="shrink-0 -mr-1 p-1.5 rounded-full text-sand/40
                        hover:text-sand hover:bg-white/5 transition-colors"

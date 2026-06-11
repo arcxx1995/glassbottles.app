@@ -4,18 +4,20 @@ import type { RootState } from './index'
 interface UIState {
   isReportModalOpen: boolean
   activeBottleId: string | null
-  /** Session-local dismissal of the ReceivedBanner, keyed by bottle id.
-   *  Banner visibility itself derives from server state (an unread received
-   *  bottle exists) — this only hides the toast until reload. The truth
-   *  (is_read) lives in the database; a reload resurfaces the banner if the
-   *  bottle is still unread. A *different* unread bottle re-shows it. */
-  receivedBannerDismissedForId: string | null
+  /** Session-local dismissals of the ReceivedBanner, keyed by bottle id.
+   *  Banner visibility derives from server state (an unread received bottle
+   *  exists) — this only hides the toast until reload. The truth (is_read)
+   *  lives in the database; a reload resurfaces the banner while any bottle is
+   *  still unread. Tracked as a SET so that with multiple unread bottles,
+   *  dismissing one still surfaces the next (a single id silently buried the
+   *  rest — debug report bug 7). */
+  receivedBannerDismissedIds: string[]
 }
 
 const initialState: UIState = {
   isReportModalOpen: false,
   activeBottleId: null,
-  receivedBannerDismissedForId: null,
+  receivedBannerDismissedIds: [],
 }
 
 export const uiSlice = createSlice({
@@ -34,7 +36,9 @@ export const uiSlice = createSlice({
       state.activeBottleId = action.payload
     },
     dismissReceivedBanner(state, action: PayloadAction<string>) {
-      state.receivedBannerDismissedForId = action.payload
+      if (!state.receivedBannerDismissedIds.includes(action.payload)) {
+        state.receivedBannerDismissedIds.push(action.payload)
+      }
     },
   },
 })
@@ -50,7 +54,7 @@ export const selectIsReportModalOpen = (state: RootState) =>
   state.ui.isReportModalOpen
 export const selectActiveBottleId = (state: RootState) =>
   state.ui.activeBottleId
-export const selectReceivedBannerDismissedForId = (state: RootState) =>
-  state.ui.receivedBannerDismissedForId
+export const selectReceivedBannerDismissedIds = (state: RootState) =>
+  state.ui.receivedBannerDismissedIds
 
 export default uiSlice.reducer

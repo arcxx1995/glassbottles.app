@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import {
-  selectReceivedBannerDismissedForId,
+  selectReceivedBannerDismissedIds,
   dismissReceivedBanner,
 } from '@/store/uiSlice'
 import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
@@ -42,17 +42,19 @@ export default function ReceivedBanner({
   const dispatch = useAppDispatch()
   const router = useRouter()
   const user = useAppSelector(selectUser)
-  const dismissedForId = useAppSelector(selectReceivedBannerDismissedForId)
+  const dismissedIds = useAppSelector(selectReceivedBannerDismissedIds)
 
   const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id || previewVisible !== undefined,
   })
-  const unread = bottles?.find((b) => !b.is_read)
+  // All unread, and the next one not yet dismissed this session. With several
+  // unread bottles, dismissing one advances to the next instead of hiding all.
+  const unreadList = bottles?.filter((b) => !b.is_read) ?? []
+  const unread = unreadList.find((b) => !dismissedIds.includes(b.id))
+  const unreadCount = unreadList.length
 
   const isVisible =
-    previewVisible !== undefined
-      ? previewVisible
-      : Boolean(unread) && unread!.id !== dismissedForId
+    previewVisible !== undefined ? previewVisible : Boolean(unread)
 
   function hide() {
     if (previewVisible !== undefined) {
@@ -105,10 +107,14 @@ export default function ReceivedBanner({
 
             <div className="flex-1 min-w-0">
               <p className="font-ui text-sm font-medium text-sand leading-snug">
-                A bottle found you
+                {unreadCount > 1
+                  ? `${unreadCount} bottles found you`
+                  : 'A bottle found you'}
               </p>
               <p className="font-ui text-xs text-sand/45 mt-0.5">
-                Tap to read your message
+                {unreadCount > 1
+                  ? 'Tap to read your messages'
+                  : 'Tap to read your message'}
               </p>
             </div>
           </button>

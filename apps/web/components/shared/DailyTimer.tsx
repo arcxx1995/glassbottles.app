@@ -8,10 +8,14 @@ interface TimeLeft {
   seconds: number
 }
 
-function getTimeUntilMidnightUTC(): TimeLeft {
+// Counts down to the user's LOCAL midnight — the daily quota resets on the
+// user's local day (migration 019), anchored on the browser timezone that
+// AuthProvider persists to profiles.timezone. setHours(24,…) rolls to the next
+// local midnight regardless of zone.
+function getTimeUntilLocalMidnight(): TimeLeft {
   const now = new Date()
   const midnight = new Date()
-  midnight.setUTCHours(24, 0, 0, 0)
+  midnight.setHours(24, 0, 0, 0)
   const diff = midnight.getTime() - now.getTime()
 
   return {
@@ -29,9 +33,9 @@ export default function DailyTimer() {
   const [time, setTime] = useState<TimeLeft | null>(null)
 
   useEffect(() => {
-    setTime(getTimeUntilMidnightUTC())
+    setTime(getTimeUntilLocalMidnight())
     const interval = setInterval(() => {
-      setTime(getTimeUntilMidnightUTC())
+      setTime(getTimeUntilLocalMidnight())
     }, 1000)
     return () => clearInterval(interval)
   }, [])

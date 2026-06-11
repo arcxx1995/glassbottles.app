@@ -1,6 +1,7 @@
 export interface Profile {
   id: string
   timezone: string
+  email_notifications: boolean
   created_at: string
   last_active: string | null
 }

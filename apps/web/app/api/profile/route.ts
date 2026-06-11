@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest) {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, timezone, created_at, last_active')
+    .select('id, timezone, email_notifications, created_at, last_active')
     .eq('id', user.id)
     .single()
 
@@ -53,7 +53,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { timezone } = body as { timezone?: string }
+  const { timezone, email_notifications } = body as {
+    timezone?: string
+    email_notifications?: boolean
+  }
 
   const update: Record<string, unknown> = {
     last_active: new Date().toISOString(),
@@ -62,18 +65,26 @@ export async function PATCH(req: NextRequest) {
   if (timezone !== undefined) {
     // Validate format before length: only IANA timezone characters allowed.
     // Pattern: letters, digits, underscores, forward-slashes, plus, hyphens.
-    // Rejects any HTML/script payload — stored XSS mitigation.
+    // Rejects any HTML/script payload — stored XSS mitigation. Also guards the
+    // per-user day model: an invalid tz would make user_local_date() throw.
     if (typeof timezone !== 'string' || !/^[A-Za-z_/+\-]{1,64}$/.test(timezone)) {
       return NextResponse.json({ error: 'Invalid timezone format' }, { status: 400 })
     }
     update.timezone = timezone
   }
 
+  if (email_notifications !== undefined) {
+    if (typeof email_notifications !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid email_notifications' }, { status: 400 })
+    }
+    update.email_notifications = email_notifications
+  }
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .update(update)
     .eq('id', user.id)
-    .select('id, timezone, created_at, last_active')
+    .select('id, timezone, email_notifications, created_at, last_active')
     .single()
 
   if (error) {

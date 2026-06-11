@@ -84,7 +84,7 @@ function makeMockStore({
       ui: {
         isReportModalOpen: false,
         activeBottleId: null,
-        receivedBannerDismissedForId: null,
+        receivedBannerDismissedIds: [],
       },
     },
   })

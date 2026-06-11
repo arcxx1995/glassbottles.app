@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
   setSendStatus,
   setThrowAnimating,
+  setMessage,
   selectSendStatus,
   selectMessage,
 } from '@/store/bottleSlice'
@@ -28,6 +29,7 @@ export default function HomePage() {
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
+  const [sendError, setSendError] = useState(false)
 
   // Restore send state after page refresh — a user who already sent today
   // should land on the sailing sea, not the "Your bottle awaits" idle screen.
@@ -54,19 +56,40 @@ export default function HomePage() {
     }
   }, [todayStatus, hasSent, atCeiling, sendStatus, dispatch])
 
+  // Set when a send fails so the drop animation does NOT resolve into the
+  // sailing sea (debug report bug 9). Without this, every failed throw flashed
+  // thrown → sailing → idle before settling back.
+  const sendFailedRef = useRef(false)
+
   async function handleThrow() {
+    sendFailedRef.current = false
+    setSendError(false)
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
       await sendBottle({ message }).unwrap()
+      // Success — clear the draft so the editor isn't pre-filled with the sent
+      // message on the next idle screen (debug report bug 8).
+      dispatch(setMessage(''))
     } catch {
-      // Drop animation completes regardless — Felix's route handles the error
+      sendFailedRef.current = true
+      setSendError(true)
+      // If the drop already finished (it set 'thrown'), correct back to idle.
+      dispatch(setThrowAnimating(false))
+      dispatch(setSendStatus('idle'))
     }
   }
 
   // Fired when the bottle finishes dropping off the pier into the sea.
   function handleDropComplete() {
     dispatch(setThrowAnimating(false))
+    // Don't transition into the sea if the send failed — stay on idle so the
+    // user can retry with their message intact.
+    if (sendFailedRef.current) {
+      sendFailedRef.current = false
+      dispatch(setSendStatus('idle'))
+      return
+    }
     dispatch(setSendStatus('thrown'))
   }
 
@@ -150,6 +173,14 @@ export default function HomePage() {
                   <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
                     Write something for a stranger. They won&apos;t know it&apos;s you.
                   </p>
+                  {sendError && (
+                    <p
+                      className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                      role="alert"
+                    >
+                      Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                    </p>
+                  )}
                 </div>
 
                 {/* Compose dialog — right side */}

@@ -53,6 +53,24 @@ export default function AuthProvider({
   useEffect(() => {
     const supabase = supabaseRef.current
 
+    // Persist the browser's IANA timezone so the daily reset / quota day is
+    // measured at the user's local midnight (migration 019). Routed through the
+    // PATCH /api/profile endpoint for tz-format validation (an invalid string
+    // would make user_local_date() throw at read time). Fire-and-forget, and
+    // only when the value actually changed — no request on the steady state.
+    const syncTimezone = (profile: Profile) => {
+      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (browserTz && profile.timezone !== browserTz) {
+        void fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timezone: browserTz }),
+        }).catch(() => {
+          /* best-effort — next sign-in retries */
+        })
+      }
+    }
+
     // ── 1. Bootstrap: restore session from cookie (no network round-trip) ────
     // getSession() reads the cookie synchronously — instant restore on reload.
     // Server-side security is covered by middleware calling getUser() on every
@@ -72,11 +90,13 @@ export default function AuthProvider({
       const profile = await fetchProfile()
       if (profile) {
         dispatch(setUser(profile))
+        syncTimezone(profile)
       } else {
         dispatch(
           setUser({
             id: session.user.id,
             timezone: 'UTC',
+            email_notifications: true,
             created_at: session.user.created_at ?? new Date().toISOString(),
             last_active: null,
           })
@@ -97,6 +117,7 @@ export default function AuthProvider({
         const profile = await fetchProfile()
         if (profile) {
           dispatch(setUser(profile))
+          syncTimezone(profile)
         }
       }
     })

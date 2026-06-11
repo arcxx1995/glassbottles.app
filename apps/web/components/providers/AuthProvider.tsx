@@ -53,33 +53,31 @@ export default function AuthProvider({
   useEffect(() => {
     const supabase = supabaseRef.current
 
-    // ── 1. Bootstrap: check if already logged in ──────────────────────────────
+    // ── 1. Bootstrap: restore session from cookie (no network round-trip) ────
+    // getSession() reads the cookie synchronously — instant restore on reload.
+    // Server-side security is covered by middleware calling getUser() on every
+    // request, so skipping the client-side network validation here is safe.
     dispatch(setLoading(true))
 
     void (async () => {
       const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser()
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      if (error || !user) {
+      if (!session?.user) {
         dispatch(clearUser())
         return
       }
 
-      // User authenticated — fetch their full Profile shape
       const profile = await fetchProfile()
       if (profile) {
         dispatch(setUser(profile))
       } else {
-        // Auth session exists but profile fetch failed (e.g., new user before trigger fires)
-        // Still mark as logged in with minimal data so the app doesn't stay loading forever.
-        // Subsequent RTK Query calls will retry /api/profile via authApi.
         dispatch(
           setUser({
-            id: user.id,
+            id: session.user.id,
             timezone: 'UTC',
-            created_at: user.created_at ?? new Date().toISOString(),
+            created_at: session.user.created_at ?? new Date().toISOString(),
             last_active: null,
           })
         )

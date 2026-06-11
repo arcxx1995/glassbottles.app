@@ -4,6 +4,13 @@
   "rules": {
     "no-console": ["error", { "allow": ["warn", "error"] }],
     "@typescript-eslint/no-explicit-any": "error",
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Property[key.name='pollingInterval']",
+        "message": "pollingInterval caused the June 2026 Vercel usage bloat: polling an /api/* route bills a function invocation + provisioned-memory wall-clock time per tick, per open tab, around the clock. Poll ONLY endpoints whose queryFn calls Supabase directly (rpc/select — zero Vercel compute), never a fetchBaseQuery '/api' route. Pair with skipPollingIfUnfocused. If the target is Supabase-direct, add an eslint-disable comment stating so."
+      }
+    ]
   }
 }

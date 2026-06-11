@@ -23,6 +23,7 @@ export default function BottomNav() {
   // only a slow safety net, and hidden tabs don't poll at all.
   const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id,
+    // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
     pollingInterval: 5 * 60_000,
     skipPollingIfUnfocused: true,
   })

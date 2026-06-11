@@ -136,3 +136,12 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 
 Overall average: **60-90% token reduction** on common development operations.
 <!-- /rtk-instructions -->
+
+# Project Rule: No polling against Vercel routes
+
+**Never give an RTK Query hook a `pollingInterval` whose endpoint hits a Vercel `/api/*` route** (i.e., any endpoint defined with `query:` / `fetchBaseQuery`). This pattern caused the June 2026 usage bloat: each tick billed a function invocation plus provisioned-memory wall-clock time, per open tab, 24/7.
+
+- Reads that need freshness: Supabase-direct `queryFn` (RPC or select) — zero Vercel compute. See `store/api/bottleApi.ts`.
+- Live updates: Supabase Realtime broadcast is the primary signal (`RealtimeBottleListener`); polling is only a slow fallback.
+- Any `pollingInterval` must pair with `skipPollingIfUnfocused: true`.
+- Enforced by ESLint (`no-restricted-syntax` in `apps/web/.eslintrc.json`). Supabase-direct polls opt out with an eslint-disable comment stating the target.

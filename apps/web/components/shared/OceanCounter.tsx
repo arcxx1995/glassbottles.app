@@ -21,7 +21,9 @@ export default function OceanCounter() {
 
   const { data } = useGetBottleCountQuery(undefined, {
     skip: !user?.id,
+    // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
     pollingInterval: 5 * 60 * 1000, // 5 minutes
+    skipPollingIfUnfocused: true, // hidden tabs don't poll
   })
 
   if (!data || data.count === 0) return null

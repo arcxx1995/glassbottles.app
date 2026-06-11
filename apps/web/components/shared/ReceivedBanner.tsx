@@ -1,96 +1,133 @@
 'use client'
 
-import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store'
+import { selectUser } from '@/store/authSlice'
 import {
-  selectShowReceivedBanner,
-  setShowReceivedBanner,
+  selectReceivedBannerDismissedIds,
+  dismissReceivedBanner,
 } from '@/store/uiSlice'
+import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
 
-const AUTO_DISMISS_MS = 5000
+interface ReceivedBannerProps {
+  /** Preview-only: render regardless of server state (/preview page). */
+  previewVisible?: boolean
+  onPreviewDismiss?: () => void
+}
 
 /**
  * ReceivedBanner
  *
- * Slide-in toast shown when Supabase Realtime delivers a new bottle to the
- * current user during their session. The RealtimeBottleListener dispatches
- * setShowReceivedBanner(true); this component reads that flag and renders.
+ * Persistent toast: "a bottle is waiting for you, unread".
  *
- * Auto-dismisses after 5 seconds. Tapping navigates to /inbox.
- * Rendered once in (app)/layout.tsx — no duplicates.
+ * Visibility DERIVES from server state — an unread received bottle exists —
+ * not from catching a Realtime event. A missed broadcast, dead websocket or
+ * page reload cannot lose the notification: the next refetch (realtime
+ * invalidation, 5-min poll, navigation) resurfaces it. The toast disappears
+ * for good only when the bottle is actually read (is_read flips in the DB).
+ *
+ * No auto-dismiss. Tap → /inbox (hides for the session); X hides for the
+ * session. Both reappear after reload while the bottle stays unread —
+ * the banner is only ever shown when it is true.
+ *
+ * Shares the getReceivedBottles cache with BottomNav — adds no requests.
+ * Rendered once in (app)/layout.tsx.
  */
-export default function ReceivedBanner() {
+export default function ReceivedBanner({
+  previewVisible,
+  onPreviewDismiss,
+}: ReceivedBannerProps = {}) {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  const isVisible = useAppSelector(selectShowReceivedBanner)
+  const user = useAppSelector(selectUser)
+  const dismissedIds = useAppSelector(selectReceivedBannerDismissedIds)
 
-  // Auto-dismiss
-  useEffect(() => {
-    if (!isVisible) return
-    const timer = setTimeout(() => {
-      dispatch(setShowReceivedBanner(false))
-    }, AUTO_DISMISS_MS)
-    return () => clearTimeout(timer)
-  }, [isVisible, dispatch])
+  const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
+    skip: !user?.id || previewVisible !== undefined,
+  })
+  // All unread, and the next one not yet dismissed this session. With several
+  // unread bottles, dismissing one advances to the next instead of hiding all.
+  const unreadList = bottles?.filter((b) => !b.is_read) ?? []
+  const unread = unreadList.find((b) => !dismissedIds.includes(b.id))
+  const unreadCount = unreadList.length
+
+  const isVisible =
+    previewVisible !== undefined ? previewVisible : Boolean(unread)
+
+  function hide() {
+    if (previewVisible !== undefined) {
+      onPreviewDismiss?.()
+    } else if (unread) {
+      dispatch(dismissReceivedBanner(unread.id))
+    }
+  }
 
   function handleTap() {
-    dispatch(setShowReceivedBanner(false))
+    hide()
     router.push('/inbox')
   }
 
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.button
+        <motion.div
           key="received-banner"
-          initial={{ opacity: 0, y: -72, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -72, scale: 0.95 }}
+          initial={{ opacity: 0, x: 80, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 80, scale: 0.95 }}
           transition={{
             type: 'spring',
-            stiffness: 320,
-            damping: 28,
+            stiffness: 340,
+            damping: 30,
           }}
-          onClick={handleTap}
-          className="fixed top-4 left-1/2 z-[100] w-[calc(100%-2rem)] max-w-sm
-                     -translate-x-1/2 flex items-center gap-3
+          className="fixed top-4 right-4 z-[100] w-80 max-w-[calc(100vw-2rem)]
+                     flex items-center gap-3 overflow-hidden
                      bg-ocean-mid border border-seafoam/20 rounded-2xl
-                     px-4 py-3.5 shadow-banner
-                     text-left cursor-pointer"
+                     px-4 py-3.5 shadow-banner text-left"
           aria-live="assertive"
           aria-atomic="true"
           role="alert"
         >
-          {/* Bottle icon pulse */}
-          <motion.span
-            className="text-2xl select-none shrink-0"
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            role="img"
-            aria-label="glass bottle"
+          <button
+            onClick={handleTap}
+            className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
           >
-            🫙
-          </motion.span>
+            {/* Bottle icon pulse */}
+            <motion.span
+              className="text-2xl select-none shrink-0"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+              role="img"
+              aria-label="glass bottle"
+            >
+              🫙
+            </motion.span>
 
-          <div className="flex-1 min-w-0">
-            <p className="font-ui text-sm font-medium text-sand leading-snug">
-              A bottle found you
-            </p>
-            <p className="font-ui text-xs text-sand/45 mt-0.5">
-              Tap to read your message
-            </p>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-ui text-sm font-medium text-sand leading-snug">
+                {unreadCount > 1
+                  ? `${unreadCount} bottles found you`
+                  : 'A bottle found you'}
+              </p>
+              <p className="font-ui text-xs text-sand/45 mt-0.5">
+                {unreadCount > 1
+                  ? 'Tap to read your messages'
+                  : 'Tap to read your message'}
+              </p>
+            </div>
+          </button>
 
-          {/* Progress bar */}
-          <motion.div
-            className="absolute bottom-0 left-0 h-[2px] bg-seafoam/50 rounded-full"
-            initial={{ width: '100%' }}
-            animate={{ width: '0%' }}
-            transition={{ duration: AUTO_DISMISS_MS / 1000, ease: 'linear' }}
-          />
-        </motion.button>
+          <button
+            onClick={hide}
+            aria-label="Dismiss"
+            className="shrink-0 -mr-1 p-1.5 rounded-full text-sand/40
+                       hover:text-sand hover:bg-white/5 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </motion.div>
       )}
     </AnimatePresence>
   )

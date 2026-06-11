@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
   setSendStatus,
   setThrowAnimating,
-  resetBottleState,
+  setMessage,
   selectSendStatus,
   selectMessage,
 } from '@/store/bottleSlice'
@@ -20,25 +19,8 @@ import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
-
-const BottleCanvas = dynamic(
-  () => import('@/components/bottle/BottleCanvas'),
-  { ssr: false }
-)
-const ThrowAnimation = dynamic(
-  () => import('@/components/bottle/ThrowAnimation'),
-  { ssr: false }
-)
-// BottleSVG is a pure SVG atom — safe for SSR, no canvas dependency.
-// loading fallback: 80×120 transparent placeholder prevents layout shift
-// while the chunk loads (Souryadeep: avoid flash on thrown state mount).
-const BottleSVGDynamic = dynamic(
-  () => import('@/components/bottle/ThrowAnimation').then((m) => ({ default: m.BottleSVG })),
-  {
-    ssr: false,
-    loading: () => <div style={{ width: 80, height: 120 }} aria-hidden="true" />,
-  }
-)
+import SailingSea from '@/components/bottle/SailingSea'
+import PierScene from '@/components/bottle/PierScene'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -47,30 +29,67 @@ export default function HomePage() {
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
+  const [sendError, setSendError] = useState(false)
 
-  // Restore send state after page refresh — without this, a user who already
-  // sent today sees "Your bottle awaits" until they try to throw again.
+  // Restore send state after page refresh — a user who already sent today
+  // should land on the sailing sea, not the "Your bottle awaits" idle screen.
   const { data: todayStatus, isLoading: isStatusLoading } =
     useGetTodayBottleStatusQuery(undefined, { skip: !user?.id })
 
+  // All of the user's undelivered bottles, floating together in the sea.
+  const sailingBottles = todayStatus?.sailingBottles ?? []
+  const hasSent = todayStatus?.quota.has_sent ?? false
+  // status route fetches at most 21 — length 21 means "at or above the ceiling".
+  const atCeiling = sailingBottles.length >= 21
+
+  // Idle (throw entry) shows only when the user hasn't sent today AND the sea
+  // isn't full. Otherwise → sailing. When a bottle is delivered, the realtime
+  // listener invalidates BottleStatus; the refetched count drops below 21 and
+  // this effect flips back to idle automatically (no manual refresh).
   useEffect(() => {
-    if (todayStatus?.quota.has_sent && sendStatus === 'idle') {
+    if (!todayStatus) return
+    const shouldSail = hasSent || atCeiling
+    if (shouldSail && sendStatus === 'idle') {
       dispatch(setSendStatus('thrown'))
+    } else if (!shouldSail && sendStatus === 'thrown') {
+      dispatch(setSendStatus('idle'))
     }
-  }, [todayStatus, sendStatus, dispatch])
+  }, [todayStatus, hasSent, atCeiling, sendStatus, dispatch])
+
+  // Set when a send fails so the drop animation does NOT resolve into the
+  // sailing sea (debug report bug 9). Without this, every failed throw flashed
+  // thrown → sailing → idle before settling back.
+  const sendFailedRef = useRef(false)
 
   async function handleThrow() {
+    sendFailedRef.current = false
+    setSendError(false)
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
       await sendBottle({ message }).unwrap()
+      // Success — clear the draft so the editor isn't pre-filled with the sent
+      // message on the next idle screen (debug report bug 8).
+      dispatch(setMessage(''))
     } catch {
-      // Animation completes regardless — Felix's route handles the actual error
+      sendFailedRef.current = true
+      setSendError(true)
+      // If the drop already finished (it set 'thrown'), correct back to idle.
+      dispatch(setThrowAnimating(false))
+      dispatch(setSendStatus('idle'))
     }
   }
 
-  function handleAnimationComplete() {
+  // Fired when the bottle finishes dropping off the pier into the sea.
+  function handleDropComplete() {
     dispatch(setThrowAnimating(false))
+    // Don't transition into the sea if the send failed — stay on idle so the
+    // user can retry with their message intact.
+    if (sendFailedRef.current) {
+      sendFailedRef.current = false
+      dispatch(setSendStatus('idle'))
+      return
+    }
     dispatch(setSendStatus('thrown'))
   }
 
@@ -80,13 +99,22 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen pt-14 px-5">
+      {/* Full-viewport sea background, present across the whole throw flow so the
+          idle pier, the drop, and the sailing sea share one continuous ocean.
+          Floating bottles only appear once sailing (idle/throwing pass []).
+          Mounted here (not inside the animated stage) so its `fixed` positioning
+          stays relative to the viewport rather than a transformed ancestor. */}
+      {!isInitializing && (
+        <SailingSea bottles={sendStatus === 'thrown' ? sailingBottles : []} />
+      )}
+
       {/* Header */}
-      <div className="w-full max-w-md flex items-center justify-between mb-10">
+      <div className="relative z-10 w-full max-w-md flex items-center justify-between mb-10">
         <h1 className="font-display text-2xl text-sand tracking-tight">
           glassbottles
         </h1>
         <AnimatePresence>
-          {sendStatus === 'thrown' && (
+          {hasSent && (
             <motion.span
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -99,7 +127,18 @@ export default function HomePage() {
       </div>
 
       {/* Stage */}
-      <div className="w-full max-w-md flex flex-col items-center gap-8 flex-1">
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 flex-1">
+
+        {/* Pier persists across idle → throwing so it doesn't remount mid-drop;
+            phase switches to 'dropping' on throw. Sits below the foreground. */}
+        {!isInitializing && sendStatus !== 'thrown' && (
+          <div className="absolute inset-0 z-0">
+            <PierScene
+              phase={sendStatus === 'throwing' ? 'dropping' : 'idle'}
+              onDropComplete={handleDropComplete}
+            />
+          </div>
+        )}
 
         {/* Status loading — prevents "Your bottle awaits" flash */}
         {isInitializing && (
@@ -116,111 +155,91 @@ export default function HomePage() {
         {!isInitializing && (
           <AnimatePresence mode="wait">
 
-            {/* ── IDLE ─────────────────────────────────────── */}
+            {/* ── IDLE — pier + bottle (left), compose dialog (right) ─────
+                The pier itself is rendered persistently above; this layer is the
+                heading, the message editor on the right, and the counter. ── */}
             {sendStatus === 'idle' && (
               <motion.div
                 key="idle"
-                className="flex flex-col items-center gap-8 w-full"
+                className="relative z-10 w-full flex-1 min-h-[460px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.45, ease: 'easeInOut' }}
               >
-                <BottleCanvas />
-                <div className="flex flex-col items-center gap-3 text-center">
+                {/* Heading */}
+                <div className="text-center">
                   <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                  <p className="font-ui text-sm text-sand/50 max-w-[260px] leading-relaxed">
+                  <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
                     Write something for a stranger. They won&apos;t know it&apos;s you.
                   </p>
-                  <button
-                    onClick={() => dispatch(setSendStatus('composing'))}
-                    className="mt-3 px-10 py-4 rounded-2xl bg-coral text-ocean-deep font-ui
-                               font-semibold text-base tracking-wide transition-all duration-150
-                               active:scale-[0.97] hover:brightness-110"
-                  >
-                    Write a message
-                  </button>
+                  {sendError && (
+                    <p
+                      className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                      role="alert"
+                    >
+                      Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                    </p>
+                  )}
                 </div>
-                <OceanCounter />
+
+                {/* Compose dialog — right side */}
+                <div className="absolute top-[84px] right-0 w-[82%] max-w-[300px]">
+                  <MessageEditor onReady={handleThrow} />
+                </div>
+
+                {/* Ambient counter — bottom */}
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
+                  <OceanCounter />
+                </div>
               </motion.div>
             )}
 
-            {/* ── COMPOSING ────────────────────────────────── */}
-            {sendStatus === 'composing' && (
-              <motion.div
-                key="composing"
-                className="flex flex-col items-center gap-6 w-full"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <BottleCanvas />
-                <MessageEditor className="w-full" onReady={handleThrow} />
-                <button
-                  onClick={() => dispatch(resetBottleState())}
-                  className="font-ui text-xs text-sand/30 hover:text-sand/60 transition-colors"
-                >
-                  Cancel
-                </button>
-              </motion.div>
-            )}
-
-            {/* ── THROWING ─────────────────────────────────── */}
-            {sendStatus === 'throwing' && (
-              <motion.div
-                key="throwing"
-                className="flex flex-col items-center w-full"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ThrowAnimation onComplete={handleAnimationComplete} />
-              </motion.div>
-            )}
-
-            {/* ── THROWN ───────────────────────────────────── */}
+            {/* ── SAILING — already threw today. Bottles float in the fixed
+                sea background; this layer is just the foreground copy. ── */}
             {sendStatus === 'thrown' && (
               <motion.div
-                key="thrown"
-                className="flex flex-col items-center gap-10 text-center w-full pt-4"
+                key="sailing"
+                className="flex flex-col items-center gap-8 text-center w-full flex-1 pt-2"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                {/* Bottle SVG with ambient glow ring — consistent with BottleCanvas */}
-                <div className="relative flex items-center justify-center" aria-hidden="true">
-                  {/* Outer glow pulse */}
-                  <motion.div
-                    className="absolute rounded-full pointer-events-none"
-                    style={{
-                      width: 120,
-                      height: 120,
-                      background: 'radial-gradient(circle, rgba(78,205,196,0.10) 0%, transparent 70%)',
-                    }}
-                    animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0.3, 0.7] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  {/* Bottle — uses canonical SVG, glowing (seafoam tint) */}
-                  {/* Bob values match tailwind.config.ts bottle-bob token: y -10px, ±1.2deg, 3.2s */}
-                  <motion.div
-                    animate={{ y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 1] }}
-                  >
-                    <BottleSVGDynamic glowing width={80} height={120} />
-                  </motion.div>
-                </div>
-
+                {/* Heading over the horizon */}
                 <div className="flex flex-col gap-2">
-                  <p className="font-display text-2xl text-sand">Bottle sent</p>
-                  <p className="font-ui text-sm text-sand/50 max-w-[220px] mx-auto leading-relaxed">
-                    Somewhere out there, a stranger will find it.
-                  </p>
+                  {sailingBottles.length === 0 ? (
+                    <>
+                      <p className="font-display text-2xl text-sand">The sea is calm</p>
+                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                        Every bottle you&apos;ve thrown has found a stranger. Come back
+                        tomorrow to send another.
+                      </p>
+                    </>
+                  ) : atCeiling && !hasSent ? (
+                    <>
+                      <p className="font-display text-2xl text-sand">Your sea is full</p>
+                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                        21 bottles still drifting. Throw again once one of them finds a
+                        stranger.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-display text-2xl text-sand">Still sailing</p>
+                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                        {sailingBottles.length} bottle
+                        {sailingBottles.length === 1 ? '' : 's'} drifting through the
+                        ocean, waiting to be found.
+                      </p>
+                    </>
+                  )}
                 </div>
 
-                <DailyTimer />
-                <OceanCounter />
+                {/* Timer + counter pinned toward the bottom, over deep water */}
+                <div className="mt-auto flex flex-col items-center gap-8 pb-2">
+                  <DailyTimer />
+                  <OceanCounter />
+                </div>
               </motion.div>
             )}
 

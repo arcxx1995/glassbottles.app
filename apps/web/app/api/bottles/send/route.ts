@@ -45,7 +45,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD UTC
+  // The "day" is the sender's LOCAL date (migration 019), derived in the DB
+  // from profiles.timezone so the quota check, the bottle day_key default, and
+  // the RLS INSERT policy all reference one identical expression. user_local_today()
+  // resolves auth.uid() server-side — no client-supplied date to drift.
+  const { data: today, error: dateError } = await supabase.rpc('user_local_today')
+
+  if (dateError || !today) {
+    console.error('[bottles/send] user_local_today failed:', dateError?.message)
+    return NextResponse.json({ error: 'Failed to send bottle' }, { status: 500 })
+  }
 
   // ── 4. Server-side quota check (defense-in-depth on top of RLS) ───────────
   const { data: quota } = await supabase
@@ -69,7 +78,8 @@ export async function POST(req: NextRequest) {
     .insert({
       sender_id: user.id,
       message: trimmed,
-      day_key: today,
+      // day_key omitted — its DB DEFAULT is user_local_date(auth.uid())
+      // (migration 019), the same expression the RLS quota check uses.
     })
     .select(
       'id, message, sent_at, received_at, read_at, day_key, is_read, is_reported, is_stale'
@@ -106,6 +116,14 @@ export async function POST(req: NextRequest) {
     // Non-fatal — quota row may already exist; log and continue
     console.error('[bottles/send] quota upsert error:', quotaError.code)
   }
+
+  // Stamp last activity. profiles.last_active was previously dead (never
+  // written); sending is a reliable once-a-day authed interaction, so it is a
+  // cheap, meaningful liveness signal. Fire-and-forget — never blocks the send.
+  void service
+    .from('profiles')
+    .update({ last_active: new Date().toISOString() })
+    .eq('id', user.id)
 
   // ── 7. Fire-and-forget: trigger match-bottle edge function ─────────────────
   service.functions

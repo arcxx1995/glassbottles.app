@@ -18,10 +18,14 @@ export default function BottomNav() {
   const pathname = usePathname()
   const user = useAppSelector(selectUser)
 
-  // Unread count for inbox badge — pollingInterval keeps it live
+  // Unread count for inbox badge. Realtime is the primary signal
+  // (RealtimeBottleListener invalidates this cache on delivery) — polling is
+  // only a slow safety net, and hidden tabs don't poll at all.
   const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id,
-    pollingInterval: 60_000, // refresh every 60s as fallback to Realtime
+    // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
+    pollingInterval: 5 * 60_000,
+    skipPollingIfUnfocused: true,
   })
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 

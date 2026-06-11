@@ -5,16 +5,21 @@ import { createClient } from '@/lib/supabase/client'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { bottleApi } from '@/store/api/bottleApi'
-import { setShowReceivedBanner } from '@/store/uiSlice'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 
 /**
  * RealtimeBottleListener
  *
- * Mounts once in the app layout. Subscribes to UPDATE events on the `bottles`
- * table filtered to the current user's receiver_id. When the edge function
- * assigns the user as a receiver, we invalidate RTK Query cache tags so the
- * inbox and status queries refetch automatically.
+ * Mounts once in the (app) layout. Subscribes to the user's private Broadcast
+ * topic `user:<uuid>` — events are sent by the `notify_bottle_matched()`
+ * database trigger (migration 015) when a bottle transitions unmatched → matched.
+ *
+ * Realtime is ONLY a cache-refresh hint here — it makes the UI react quickly
+ * when the socket happens to be alive. It does not own any user-facing state:
+ * the Received/Delivered banners derive from server state (unread bottle /
+ * unacked delivery, migration 016) and surface on any refetch path — realtime
+ * invalidation, the slow fallback poll, navigation, or reload. A missed event
+ * delays a notification; it can never lose one.
  *
  * Returns null — no UI.
  */
@@ -28,31 +33,38 @@ export default function RealtimeBottleListener() {
     if (!user?.id) return
 
     const supabase = supabaseRef.current
-    const channelName = `bottles:receiver:${user.id}`
+    let channel: RealtimeChannel | null = null
+    let cancelled = false
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bottles',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        () => {
-          // Bottle matched to this user — refresh inbox + status
+    const subscribe = async () => {
+      // Private channels require the realtime socket to carry the user's JWT —
+      // setAuth() pulls the current session token onto the connection.
+      await supabase.realtime.setAuth()
+      if (cancelled) return
+
+      channel = supabase
+        .channel(`user:${user.id}`, { config: { private: true } })
+        .on('broadcast', { event: 'bottle_received' }, () => {
+          // A bottle arrived — refetch inbox + status; ReceivedBanner derives
+          // its visibility from the refetched unread state.
           dispatch(
             bottleApi.util.invalidateTags(['BottleStatus', 'ReceivedBottles'])
           )
-          // Show in-app toast banner
-          dispatch(setShowReceivedBanner(true))
-        }
-      )
-      .subscribe()
+        })
+        .on('broadcast', { event: 'bottle_delivered' }, () => {
+          // A sent bottle was matched — refetch status; DeliveredBanner derives
+          // from unackedDelivered, and the matched bottle drops out of
+          // sailingBottles (it animates out of the sea).
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+        })
+        .subscribe()
+    }
+
+    void subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
     }
   }, [user?.id, dispatch])
 

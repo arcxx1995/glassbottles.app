@@ -34,3 +34,15 @@ Thumbs.db
 npm-debug.log*
 pnpm-debug.log*
 .vercel
+
+# Agent / process artifacts (kept local, not part of product)
+AGENT_LOG_*.md
+MASTER_PROMPT.md
+DESIGN.md
+PRODUCT.md
+
+# Agent runtime memory store
+data/state_store.db/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

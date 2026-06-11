@@ -13,11 +13,18 @@ const ReceivedBanner = dynamic(
   { ssr: false }
 )
 
+// Client-only — persistent "your bottle was delivered" toast
+const DeliveredBanner = dynamic(
+  () => import('@/components/shared/DeliveredBanner'),
+  { ssr: false }
+)
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
       <RealtimeBottleListener />
       <ReceivedBanner />
+      <DeliveredBanner />
       {children}
     </AppShell>
   )

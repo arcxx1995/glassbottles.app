@@ -1,10 +1,32 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { createClient } from '@/lib/supabase/client'
 import type { Bottle, DailyQuota } from '@/types'
+
+/** Lightweight shape for floating bottles — only what the sea renders.
+ *  No message/receiver fields leak; just id (key) and day_key (date label). */
+export interface SailingBottle {
+  id: string
+  message: string
+  sent_at: string
+  day_key: string
+}
+
+/** A sent bottle that was matched but whose "delivered" toast the sender has
+ *  not yet acknowledged. Drives the persistent DeliveredBanner. No receiver
+ *  fields — anonymity enforced at the RPC level. */
+export interface UnackedDeliveredBottle {
+  id: string
+  sent_at: string
+  received_at: string
+  day_key: string
+}
 
 export interface TodayBottleStatus {
   quota: DailyQuota
   sentBottle: Bottle | null
   receivedBottle: Bottle | null
+  sailingBottles: SailingBottle[]
+  unackedDelivered: UnackedDeliveredBottle[]
 }
 
 export interface SendBottleRequest {
@@ -21,9 +43,18 @@ export const bottleApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
   tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount'],
   endpoints: (builder) => ({
-    // Route derives identity from session cookie — no userId param needed.
+    // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
+    // no Vercel Function in the path, so polling costs zero compute. The RPCs
+    // derive identity from auth.uid() and return only anonymity-safe columns.
     getTodayBottleStatus: builder.query<TodayBottleStatus, void>({
-      query: () => '/bottles/status',
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_today_bottle_status')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as TodayBottleStatus }
+      },
       providesTags: ['BottleStatus'],
     }),
     sendBottle: builder.mutation<Bottle, SendBottleRequest>({
@@ -36,10 +67,29 @@ export const bottleApi = createApi({
       // "X bottles in the ocean" display refreshes immediately after a successful throw.
       invalidatesTags: ['BottleStatus', 'BottleCount'],
     }),
-    // Route derives identity from session cookie — no userId param needed.
     getReceivedBottles: builder.query<Bottle[], void>({
-      query: () => '/bottles/received',
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_received_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: (data ?? []) as Bottle[] }
+      },
       providesTags: ['ReceivedBottles'],
+    }),
+    // Sender dismisses the "Your bottle found someone" toast. Persisted in the
+    // DB (delivered_ack_at) so the dismissal holds across reloads and devices.
+    ackDeliveredBottles: builder.mutation<void, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ack_delivered_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['BottleStatus'],
     }),
     markBottleRead: builder.mutation<void, string>({
       query: (bottleId) => ({
@@ -58,7 +108,19 @@ export const bottleApi = createApi({
     // Ambient social proof counter — total bottles thrown today across all users.
     // No PII. Refreshes every 5 minutes; not critical-path.
     getBottleCount: builder.query<BottleCountResponse, void>({
-      query: () => '/bottles/count',
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_todays_bottle_count')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return {
+          data: {
+            count: (data as number | null) ?? 0,
+            date: new Date().toISOString().split('T')[0],
+          },
+        }
+      },
       providesTags: ['BottleCount'],
     }),
   }),
@@ -71,4 +133,5 @@ export const {
   useMarkBottleReadMutation,
   useReportBottleMutation,
   useGetBottleCountQuery,
+  useAckDeliveredBottlesMutation,
 } = bottleApi

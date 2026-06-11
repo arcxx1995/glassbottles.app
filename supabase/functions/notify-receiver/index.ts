@@ -88,6 +88,23 @@ Deno.serve(async (req) => {
     )
   }
 
+  // ── 2b. Honour the receiver's email-notification preference ───────────────
+  // profiles.email_notifications (migration 018). FALSE = the user opted out
+  // in settings; skip the send. NOT stamped as notified — if they re-enable
+  // notifications later, the retry cron can still reach them for this bottle.
+  const { data: pref } = await supabase
+    .from('profiles')
+    .select('email_notifications')
+    .eq('id', bottle.receiver_id)
+    .single()
+
+  if (pref && pref.email_notifications === false) {
+    return new Response(
+      JSON.stringify({ notified: false, reason: 'receiver opted out' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
   // ── 3. Fetch receiver's auth email via admin API ──────────────────────────
   // auth.users is not exposed to the public schema. The admin API (service role)
   // is the correct way to read it. We never log the email.
@@ -106,7 +123,38 @@ Deno.serve(async (req) => {
 
   const receiverEmail = userData.user.email
 
-  // ── 4. Send via Resend HTTP API (no npm package needed in Deno) ──────────
+  // ── 4. Claim the send BEFORE emailing (atomic idempotency) ───────────────
+  // Stamp email_notified_at with an IS NULL guard and read back the affected
+  // row. Exactly one invocation wins the claim; any concurrent caller (edge fn
+  // vs cron) sees 0 rows and bails without sending. This closes the prior
+  // window where send-then-stamp could double-send: if the stamp failed after
+  // a successful send, a retry re-sent. Now the stamp happens first; on send
+  // failure we release it so a later retry can try again.
+  const claimedAt = new Date().toISOString()
+  const { data: claimed, error: claimErr } = await supabase
+    .from('bottles')
+    .update({ email_notified_at: claimedAt })
+    .eq('id', bottle_id)
+    .is('email_notified_at', null)
+    .select('id')
+
+  if (claimErr) {
+    console.error('[notify-receiver] failed to claim send:', claimErr.message)
+    return new Response(
+      JSON.stringify({ notified: false, reason: 'claim failed' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  if (!claimed || claimed.length === 0) {
+    // Another invocation already claimed (and is sending / has sent) this bottle.
+    return new Response(
+      JSON.stringify({ notified: true, reason: 'already claimed' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // ── 5. Send via Resend HTTP API (no npm package needed in Deno) ──────────
   const resendRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -135,28 +183,28 @@ Deno.serve(async (req) => {
       errBody = await resendRes.json()
     } catch { /* non-JSON error body */ }
     console.error('[notify-receiver] Resend error:', resendRes.status, errBody?.message)
+
+    // Release the claim so the retry cron can re-attempt for this bottle.
+    // Guarded to our own claim timestamp so we never clobber a concurrent
+    // claim. If this release itself fails, the bottle stays stamped and the
+    // email is simply not retried — we prefer a missed email over a duplicate.
+    const { error: releaseErr } = await supabase
+      .from('bottles')
+      .update({ email_notified_at: null })
+      .eq('id', bottle_id)
+      .eq('email_notified_at', claimedAt)
+    if (releaseErr) {
+      console.error('[notify-receiver] failed to release claim:', releaseErr.message)
+    }
+
     return new Response(
       JSON.stringify({ notified: false, reason: 'email delivery failed', status: resendRes.status }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     )
   }
 
-  // ── 5. Mark bottle as notified — idempotency stamp ───────────────────────
-  // Only stamp if still NULL (a concurrent invocation could have beaten us
-  // between step 2 and here — the IS NULL guard makes this a safe no-op if so).
-  const { error: stampErr } = await supabase
-    .from('bottles')
-    .update({ email_notified_at: new Date().toISOString() })
-    .eq('id', bottle_id)
-    .is('email_notified_at', null)
-
-  if (stampErr) {
-    // Email was sent but we couldn't stamp. Log it — on retry the idempotency
-    // check will miss (still NULL) and Resend will get a duplicate send.
-    // Resend deduplication is not relied on; this is a known v1 edge case.
-    console.error('[notify-receiver] failed to stamp email_notified_at:', stampErr.message)
-  }
-
+  // Email sent and the claim (step 4) already stamped email_notified_at —
+  // nothing more to persist. The claim-before-send order guarantees at-most-once.
   return new Response(
     JSON.stringify({ notified: true }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }

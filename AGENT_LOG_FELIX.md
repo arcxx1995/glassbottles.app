@@ -99,3 +99,52 @@ Once the MCP tools or API key are available, the steps to run are:
 - `mcp__resend__create-api-key` with `name: "glassbottles-notify"` if absent; store result in Supabase secrets immediately (`supabase secrets set RESEND_API_KEY=<value>`)
 
 ---
+
+## Session 4 — 2026-06-11
+
+### Task: Diagnose and fix magic-link redirect failures
+
+#### Root cause analysis
+
+Five distinct issues found. All must be fixed together — any one of them alone causes the broken redirect.
+
+**Issue 1 — Missing `/auth/callback` route (critical)**
+No `app/auth/callback/route.ts` exists anywhere in the codebase. Supabase magic links using PKCE (the default since `@supabase/ssr`) append `?code=<pkce_code>` to the `emailRedirectTo` URL and require the app to call `supabase.auth.exchangeCodeForSession(code)` server-side. Without this route, the browser lands on a 404 and the session is never established.
+
+**Issue 2 — Wrong `emailRedirectTo` (critical)**
+Both `app/(auth)/sign-in/page.tsx` and `app/(auth)/sign-up/page.tsx` pass `emailRedirectTo: window.location.origin + '/home'` to `signInWithOtp`. This sends the PKCE code to `/home`, which is a React Server Component page with no code-exchange logic. Even if the user lands on `/home`, the session cookie is never written. The correct target is `/auth/callback`.
+
+**Issue 3 — `additional_redirect_urls` missing production URL (critical)**
+`supabase/config.toml` lists only `["https://127.0.0.1:3000"]` in `additional_redirect_urls`. `https://glassbottles.app/auth/callback` is absent. Supabase Auth rejects any `emailRedirectTo` value that is not in the allowlist or equal to `site_url`. On the hosted project (fsjgccmtthbwvcqodmsx.supabase.co) this is a dashboard setting, not a toml setting — see Supabase dashboard action required below.
+
+**Issue 4 — Middleware intercepts `/auth/callback` before code exchange**
+The `/auth/callback` path is not in the middleware matcher, so there is no interception. However, the matcher comment was clarified to make it explicit and permanent — a future developer must not add `/auth/:path*` to the matcher without understanding the consequence (intercepting the callback before code exchange would 401 all magic links).
+
+**Issue 5 — `server.ts` cookies pattern**
+`lib/supabase/server.ts` calls `cookies()` synchronously. This is correct for Next.js 14 and no change is needed.
+
+#### Files changed
+
+- `apps/web/app/auth/callback/route.ts` — **created** (PKCE code exchange handler)
+- `apps/web/app/(auth)/sign-in/page.tsx` — `emailRedirectTo` changed from `/home` to `/auth/callback`
+- `apps/web/app/(auth)/sign-up/page.tsx` — same
+- `supabase/config.toml` — added `"https://glassbottles.app/auth/callback"` to `additional_redirect_urls`
+- `apps/web/middleware.ts` — added comment block clarifying that `/auth/callback` is intentionally excluded from the matcher
+
+#### Supabase dashboard action required (cannot be done via config.toml for hosted project)
+
+`config.toml` controls the local dev CLI only. For the hosted project at `fsjgccmtthbwvcqodmsx.supabase.co`, URL allowlists are set in the dashboard:
+
+1. Go to Authentication > URL Configuration
+2. Set **Site URL** to `https://glassbottles.app`
+3. Add to **Redirect URLs**: `https://glassbottles.app/auth/callback`
+
+Without step 3, Supabase will reject the `emailRedirectTo` value for all production magic links even after the code changes deploy.
+
+#### Security notes
+
+- The callback route validates `?next=` against same-origin (only paths starting with `/` are honoured) — prevents open-redirect.
+- Errors from `exchangeCodeForSession` redirect to `/sign-in?error=auth_failed` — Supabase error messages are not surfaced in the URL or response body.
+- Expired or already-used PKCE codes produce an `auth_failed` redirect, which is the correct UX.
+
+---

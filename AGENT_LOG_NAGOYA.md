@@ -185,3 +185,239 @@ Service worker scope: offline support for this product is limited (all content i
 ---
 
 *Nagoya — 2026-06-11*
+
+---
+
+## Session: 2026-06-11 — Magic Link Auth Redirect Bug (AUTH-BUG-001)
+
+### Context
+
+Felix is debugging a redirect failure after magic link click. I read the full auth surface before writing this: `sign-in/page.tsx`, `sign-up/page.tsx`, `auth/callback/route.ts`, `middleware.ts`, `AuthProvider.tsx`, `lib/supabase/client.ts`, and `store/authSlice.ts`.
+
+---
+
+### AUTH-BUG-001 — Sign-in page sends user to /home, bypassing /auth/callback
+
+**Severity: P0 — Login is broken for all sign-in users**
+
+**Owner: Felix (1-line fix)**
+
+**Root cause:**
+
+`sign-in/page.tsx` line 25 sets:
+```
+emailRedirectTo: `${window.location.origin}/home`
+```
+
+This tells Supabase to redirect the browser straight to `/home` after token verification, bypassing `/auth/callback` entirely. The PKCE code exchange never happens. No session cookie is written. The user arrives at `/home` without a session, middleware sees no user, redirects back to `/sign-in`. Infinite loop.
+
+`sign-up/page.tsx` line 25 is already correct (`/auth/callback`) — only sign-in is broken.
+
+**The fix:**
+
+In `apps/web/app/(auth)/sign-in/page.tsx`, change line 25 from:
+```
+emailRedirectTo: `${window.location.origin}/home`
+```
+to:
+```
+emailRedirectTo: `${window.location.origin}/auth/callback`
+```
+
+That is the entire code change required.
+
+---
+
+### Expected user journey — magic link sign-in (canonical)
+
+**Step 1 — User submits email on /sign-in**
+Client calls `supabase.auth.signInWithOtp()` with `emailRedirectTo: ${origin}/auth/callback`.
+UI transitions to "Check your inbox" state. No session exists yet.
+
+**Step 2 — Supabase sends the email**
+Supabase emails a link pointing to its own auth server with the verified redirect destination embedded:
+`https://<project>.supabase.co/auth/v1/verify?token=...&type=magiclink&redirect_to=https://glassbottles.app/auth/callback`
+
+**Step 3 — User clicks the link**
+Browser hits Supabase Auth server. Supabase verifies the token and redirects to:
+`https://glassbottles.app/auth/callback?code=<pkce_code>`
+The `code=` param in the URL confirms PKCE flow (not implicit/legacy).
+
+**Step 4 — /auth/callback route runs (server-side)**
+`apps/web/app/auth/callback/route.ts` receives the GET request, calls `supabase.auth.exchangeCodeForSession(code)`, and the SSR client writes the session as an HttpOnly cookie on the response. Route redirects browser to `/home` (or the `next` param if present and same-origin).
+
+**Step 5 — Middleware runs on /home**
+`middleware.ts` calls `supabase.auth.getUser()`, which reads the session cookie. User is authenticated. Request passes through.
+
+**Step 6 — Page loads, AuthProvider bootstraps**
+`AuthProvider.tsx` runs `supabase.auth.getUser()` client-side, detects the session, fires `onAuthStateChange` with event `SIGNED_IN`, fetches `/api/profile`, dispatches `setUser(profile)` into Redux. App is fully hydrated and authenticated.
+
+---
+
+### Why the callback route is structurally correct and does not need changes
+
+- `auth/callback/route.ts` correctly handles the PKCE code exchange and writes cookies via the SSR client.
+- The middleware matcher explicitly omits `/auth/callback`, so the unauthenticated callback request passes through without being blocked.
+- The callback route validates the `next` param against same-origin to prevent open redirect.
+- On `exchangeCodeForSession` failure it redirects to `/sign-in?error=auth_failed` — never a 500.
+
+No changes needed in this file.
+
+---
+
+### Why the middleware is not the cause
+
+`middleware.ts` correctly:
+- Redirects unauthenticated users away from `/home`, `/inbox`, `/settings`.
+- Redirects authenticated users away from `/sign-in`, `/sign-up` to `/home`.
+- Excludes `/auth/callback` from its matcher entirely.
+
+The middleware is doing exactly the right thing. It redirects the user back to `/sign-in` because there is no session cookie — because the callback was never called. The middleware is surfacing the bug, not causing it.
+
+---
+
+### Acceptance criteria for AUTH-BUG-001
+
+1. After the fix: clicking the magic link email lands the browser at `https://glassbottles.app/auth/callback?code=<value>`. The URL contains `code=`, not `access_token=`.
+2. The callback route completes without error. A session cookie is visible in DevTools > Application > Cookies after the callback.
+3. Browser is redirected to `/home` after the callback. No redirect to `/sign-in` occurs.
+4. On `/home`, `supabase.auth.getUser()` returns a non-null user on the first call.
+5. `/api/profile` returns HTTP 200 immediately after the callback redirect, not 401.
+6. Navigating back to `/sign-in` while authenticated redirects to `/home` (middleware `isAuthRoute && user` branch fires correctly).
+7. A second click on the same magic link redirects to `/sign-in?error=auth_failed` — codes are single-use.
+8. The fix applies to the same email submitted from mobile browsers. The loop does not occur on iOS Safari or Android Chrome.
+
+---
+
+### Edge cases Felix must verify
+
+**Expired link (>1 hour)**
+`exchangeCodeForSession` will return an error. Route redirects to `/sign-in?error=auth_failed`. The sign-in page does not currently render a user-facing message for this error param. Felix: add a minimal read of `searchParams.get('error')` on the sign-in page to show "Your link expired — request a new one." This is a secondary fix; the loop fix is the priority.
+
+**Already-authenticated user clicks a magic link**
+The callback route exchanges the code (valid operation, does not error), sets a new session cookie, and redirects to `/home`. The middleware then sees an authenticated user and passes through. This is correct behavior — no loop, no error. The user just gets a refreshed session.
+
+**Mobile deep links / in-app browsers**
+When a user opens the magic link from the Gmail app on iOS, the link opens in an in-app browser that may not share cookies with Safari. The session cookie written by the callback is scoped to that in-app browser context. The user may appear logged out when they switch to Safari. This is a known limitation of in-app browser isolation. It is not introduced by this bug or this fix — it pre-exists. Documenting here for awareness; it is a v1.1 problem (universal link / custom URL scheme).
+
+**No Supabase allow-list entry in production**
+`config.toml` only governs local dev. In production, the Supabase dashboard must have `https://glassbottles.app/auth/callback` listed under Authentication > URL Configuration > Redirect URLs. If it is absent, Supabase rejects the redirect regardless of the code fix. Felix must verify this setting in the dashboard for project `fsjgccmtthbwvcqodmsx`. Also confirm the Site URL is set to `https://glassbottles.app`, not a localhost value.
+
+**User submits email but closes the tab before clicking the link**
+No issue. The link is valid for 1 hour. User can open it in any browser context that resolves to the production domain.
+
+---
+
+### Files to investigate / change
+
+| Priority | File | Why |
+|---|---|---|
+| Fix immediately | `apps/web/app/(auth)/sign-in/page.tsx` line 25 | The root cause. One-line change. |
+| Verify in dashboard | Supabase project `fsjgccmtthbwvcqodmsx` > Auth > URL Configuration | Redirect URLs allow-list + Site URL |
+| Secondary fix | `apps/web/app/(auth)/sign-in/page.tsx` | Add `error` searchParam read to surface "link expired" copy |
+| No change needed | `apps/web/app/auth/callback/route.ts` | Structurally correct |
+| No change needed | `apps/web/middleware.ts` | Structurally correct |
+| No change needed | `apps/web/components/providers/AuthProvider.tsx` | `onAuthStateChange` will fire SIGNED_IN correctly once the cookie is set |
+
+---
+
+*Nagoya — 2026-06-11*
+
+---
+
+## Session: 2026-06-11 — Magic Link Auth Flow Spec (for Felix)
+
+### Context
+
+Felix is debugging a redirect failure after magic link click. I read the full auth surface before writing this: `sign-in/page.tsx`, `sign-up/page.tsx`, `auth/callback/route.ts`, `middleware.ts`, `AuthProvider.tsx`, `lib/supabase/client.ts`, `lib/supabase/server.ts`, and `supabase/config.toml`.
+
+The callback route exists and is structurally correct. The middleware explicitly excludes `/auth/callback` from its matcher. The `emailRedirectTo` in both sign-in and sign-up pages points to `${window.location.origin}/home` — which is wrong. See critical finding below.
+
+---
+
+### AUTH-SPEC-001 — Magic Link Redirect Flow
+
+#### The correct end-to-end flow
+
+**Step 1 — User submits email**
+Client calls `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: ... } })`.
+The `emailRedirectTo` value must be `https://glassbottles.app/auth/callback`.
+Currently it is set to `${window.location.origin}/home` — this is the bug.
+
+**Step 2 — Supabase sends the email**
+Supabase Auth emails a magic link. The link format is:
+`https://fsjgccmtthbwvcqodmsx.supabase.co/auth/v1/verify?token=...&type=magiclink&redirect_to=https://glassbottles.app/auth/callback`
+
+Supabase validates that the `redirect_to` value is in the project's allowed redirect list before following it.
+
+**Step 3 — User clicks the link**
+Browser hits the Supabase Auth server. Supabase verifies the token, then redirects the browser to:
+`https://glassbottles.app/auth/callback?code=<pkce_code>`
+(PKCE flow — this is the default for email OTP in the `@supabase/ssr` package.)
+
+**Step 4 — `/auth/callback` route runs**
+`apps/web/app/auth/callback/route.ts` receives the GET request.
+It calls `supabase.auth.exchangeCodeForSession(code)`.
+The SSR client writes the session as an `HttpOnly` cookie on the response.
+On success, the route redirects to `https://glassbottles.app/home`.
+
+**Step 5 — Middleware runs on `/home`**
+`middleware.ts` calls `supabase.auth.getUser()` which reads the session cookie.
+User is authenticated. Middleware passes the request through.
+
+**Step 6 — Page loads, AuthProvider bootstraps**
+`AuthProvider` runs `supabase.auth.getUser()` client-side → detects the session → fetches `/api/profile` → dispatches `setUser(profile)` into Redux. App is fully authenticated.
+
+---
+
+### Critical finding — the bug
+
+Both `sign-in/page.tsx` and `sign-up/page.tsx` pass:
+```
+emailRedirectTo: `${window.location.origin}/home`
+```
+
+This sends the user directly to `/home` after Supabase verifies the token — bypassing `/auth/callback` entirely. The PKCE code is never exchanged. No session cookie is ever written. The user arrives at `/home` without a session, middleware redirects them back to `/sign-in`, and they are stuck in a loop.
+
+The fix is one line in each file:
+```
+emailRedirectTo: `${window.location.origin}/auth/callback`
+```
+
+---
+
+### Secondary finding — Supabase dashboard allow-list
+
+`config.toml` only covers local dev. In production, the Supabase dashboard for project `fsjgccmtthbwvcqodmsx` must have `https://glassbottles.app/auth/callback` listed under Authentication > URL Configuration > Redirect URLs. If it is not there, Supabase will reject the redirect and the link will fail even after the code is fixed.
+
+Felix must verify this in the dashboard. It is not controlled by `config.toml` for the hosted project.
+
+---
+
+### Acceptance criteria — "magic link auth works correctly"
+
+1. Clicking the magic link email lands the browser at `https://glassbottles.app/auth/callback?code=<value>` — the URL contains `code=`, not `access_token=` (confirms PKCE, not implicit flow).
+2. `/auth/callback` route exchanges the code without error and writes a session cookie visible in DevTools > Application > Cookies (`sb-fsjgccmtthbwvcqodmsx-auth-token` or equivalent).
+3. Browser is redirected to `/home` after callback. No intermediate redirect to `/sign-in` occurs.
+4. On `/home`, `supabase.auth.getUser()` returns a user object (not null) on the first call.
+5. `/api/profile` returns 200 (not 401) immediately after the callback redirect.
+6. Hitting the sign-in page while authenticated redirects to `/home` (middleware `isAuthRoute && user` branch fires).
+7. A second click on the same magic link returns `auth_failed` and redirects to `/sign-in?error=auth_failed` — codes are single-use.
+8. On mobile (separate browser tab or in-app browser), the same flow completes without a loop — no user gets stuck on the sign-in page after clicking the email link.
+
+---
+
+### What Felix must do
+
+| # | Action | File / Location |
+|---|---|---|
+| 1 | Change `emailRedirectTo` to `${window.location.origin}/auth/callback` | `apps/web/app/(auth)/sign-in/page.tsx` line 25 |
+| 2 | Same change | `apps/web/app/(auth)/sign-up/page.tsx` line 25 |
+| 3 | Verify `https://glassbottles.app/auth/callback` is in Redirect URLs allow-list | Supabase dashboard → Authentication → URL Configuration |
+| 4 | Verify `https://glassbottles.app` is set as Site URL in the dashboard (not just `http://127.0.0.1:3000` from config.toml which is local-only) | Supabase dashboard → Authentication → URL Configuration |
+
+Items 1 and 2 are the root cause. Items 3 and 4 are required for production to accept the redirect even after the code fix.
+
+---
+
+*Nagoya — 2026-06-11*

@@ -66,19 +66,20 @@ Deno.serve(async (req) => {
   ]
 
   // Step 2b: find a receiver not in the exclusion set.
-  const { data: receiver } = await supabase
+  const { data: receivers } = await supabase
     .from('profiles')
     .select('id')
     .not('id', 'in', `(${excludedIds.join(',')})`)
-    .limit(1)
-    .maybeSingle()
+    .limit(20)
 
-  if (!receiver) {
+  if (!receivers || receivers.length === 0) {
     return new Response(
       JSON.stringify({ matched: false, queued: true, reason: 'no eligible receiver today' }),
       { status: 200 }
     )
   }
+
+  const receiver = receivers[Math.floor(Math.random() * receivers.length)]
 
   // ── 3. Assign receiver — idempotent guard: only update if still unmatched ────
   //

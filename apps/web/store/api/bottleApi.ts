@@ -1,10 +1,20 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { Bottle, DailyQuota } from '@/types'
 
+/** Lightweight shape for floating bottles — only what the sea renders.
+ *  No message/receiver fields leak; just id (key) and day_key (date label). */
+export interface SailingBottle {
+  id: string
+  message: string
+  sent_at: string
+  day_key: string
+}
+
 export interface TodayBottleStatus {
   quota: DailyQuota
   sentBottle: Bottle | null
   receivedBottle: Bottle | null
+  sailingBottles: SailingBottle[]
 }
 
 export interface SendBottleRequest {

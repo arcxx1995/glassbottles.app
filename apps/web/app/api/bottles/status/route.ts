@@ -20,8 +20,8 @@ export async function GET(_req: NextRequest) {
 
   const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD UTC
 
-  // Run all three queries in parallel
-  const [quotaResult, sentResult, receivedResult] = await Promise.all([
+  // Run all four queries in parallel
+  const [quotaResult, sentResult, receivedResult, sailingResult] = await Promise.all([
     supabase
       .from('daily_quotas')
       .select('user_id, date, has_sent, has_received')
@@ -48,6 +48,18 @@ export async function GET(_req: NextRequest) {
       .eq('receiver_id', user.id)
       .eq('day_key', today)
       .maybeSingle(),
+
+    // Sailing bottles: ALL of this user's unmatched bottles, any day.
+    // Unmatched bottles persist indefinitely (migration 012) — they accumulate
+    // across days and float together in the sea on the home screen until matched.
+    // SECURITY: receiver_id intentionally omitted.
+    supabase
+      .from('bottles')
+      .select('id, message, sent_at, day_key')
+      .eq('sender_id', user.id)
+      .is('received_at', null)
+      .eq('is_stale', false)
+      .order('sent_at', { ascending: false }),
   ])
 
   const defaultQuota = {
@@ -61,5 +73,6 @@ export async function GET(_req: NextRequest) {
     quota: quotaResult.data ?? defaultQuota,
     sentBottle: sentResult.data ?? null,
     receivedBottle: receivedResult.data ?? null,
+    sailingBottles: sailingResult.data ?? [],
   })
 }

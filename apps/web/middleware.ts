@@ -67,6 +67,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    /*
+     * Match all routes EXCEPT:
+     *   - /auth/callback  — must be reachable unauthenticated (PKCE code exchange)
+     *   - /_next/          — Next.js internals
+     *   - /favicon.ico
+     */
     '/home',
     '/inbox',
     '/settings',
@@ -76,5 +82,6 @@ export const config = {
     '/api/:path*',
     '/sign-in',
     '/sign-up',
+    // Explicitly NOT listing /auth/callback here keeps it outside the middleware.
   ],
 }

@@ -45,17 +45,17 @@ export default function ReceivedBanner() {
       {isVisible && (
         <motion.button
           key="received-banner"
-          initial={{ opacity: 0, y: -72, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -72, scale: 0.95 }}
+          initial={{ opacity: 0, x: 80, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 80, scale: 0.95 }}
           transition={{
             type: 'spring',
-            stiffness: 320,
-            damping: 28,
+            stiffness: 340,
+            damping: 30,
           }}
           onClick={handleTap}
-          className="fixed top-4 left-1/2 z-[100] w-[calc(100%-2rem)] max-w-sm
-                     -translate-x-1/2 flex items-center gap-3
+          className="fixed top-4 right-4 z-[100] w-80 max-w-[calc(100vw-2rem)]
+                     flex items-center gap-3 overflow-hidden
                      bg-ocean-mid border border-seafoam/20 rounded-2xl
                      px-4 py-3.5 shadow-banner
                      text-left cursor-pointer"
@@ -85,7 +85,7 @@ export default function ReceivedBanner() {
 
           {/* Progress bar */}
           <motion.div
-            className="absolute bottom-0 left-0 h-[2px] bg-seafoam/50 rounded-full"
+            className="absolute bottom-0 left-0 h-[2px] bg-seafoam/50"
             initial={{ width: '100%' }}
             animate={{ width: '0%' }}
             transition={{ duration: AUTO_DISMISS_MS / 1000, ease: 'linear' }}

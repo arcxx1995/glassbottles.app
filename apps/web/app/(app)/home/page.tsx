@@ -20,6 +20,7 @@ import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
+import SailingSea from '@/components/bottle/SailingSea'
 
 const BottleCanvas = dynamic(
   () => import('@/components/bottle/BottleCanvas'),
@@ -28,16 +29,6 @@ const BottleCanvas = dynamic(
 const ThrowAnimation = dynamic(
   () => import('@/components/bottle/ThrowAnimation'),
   { ssr: false }
-)
-// BottleSVG is a pure SVG atom — safe for SSR, no canvas dependency.
-// loading fallback: 80×120 transparent placeholder prevents layout shift
-// while the chunk loads (Souryadeep: avoid flash on thrown state mount).
-const BottleSVGDynamic = dynamic(
-  () => import('@/components/bottle/ThrowAnimation').then((m) => ({ default: m.BottleSVG })),
-  {
-    ssr: false,
-    loading: () => <div style={{ width: 80, height: 120 }} aria-hidden="true" />,
-  }
 )
 
 export default function HomePage() {
@@ -48,8 +39,8 @@ export default function HomePage() {
 
   const [sendBottle] = useSendBottleMutation()
 
-  // Restore send state after page refresh — without this, a user who already
-  // sent today sees "Your bottle awaits" until they try to throw again.
+  // Restore send state after page refresh — a user who already sent today
+  // should land on the sailing sea, not the "Your bottle awaits" idle screen.
   const { data: todayStatus, isLoading: isStatusLoading } =
     useGetTodayBottleStatusQuery(undefined, { skip: !user?.id })
 
@@ -77,6 +68,9 @@ export default function HomePage() {
   // Show skeleton while we wait for server state so we don't flash
   // "Your bottle awaits" to a user who already sent today
   const isInitializing = !!user?.id && isStatusLoading && !todayStatus
+
+  // All of the user's undelivered bottles, floating together in the sea.
+  const sailingBottles = todayStatus?.sailingBottles ?? []
 
   return (
     <div className="flex flex-col items-center min-h-screen pt-14 px-5">
@@ -116,7 +110,7 @@ export default function HomePage() {
         {!isInitializing && (
           <AnimatePresence mode="wait">
 
-            {/* ── IDLE ─────────────────────────────────────── */}
+            {/* ── IDLE — today's throw is still available ───── */}
             {sendStatus === 'idle' && (
               <motion.div
                 key="idle"
@@ -180,44 +174,37 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* ── THROWN ───────────────────────────────────── */}
+            {/* ── SAILING — already threw today; show the sea ── */}
             {sendStatus === 'thrown' && (
               <motion.div
-                key="thrown"
-                className="flex flex-col items-center gap-10 text-center w-full pt-4"
+                key="sailing"
+                className="flex flex-col items-center gap-10 text-center w-full pt-2"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                {/* Bottle SVG with ambient glow ring — consistent with BottleCanvas */}
-                <div className="relative flex items-center justify-center" aria-hidden="true">
-                  {/* Outer glow pulse */}
-                  <motion.div
-                    className="absolute rounded-full pointer-events-none"
-                    style={{
-                      width: 120,
-                      height: 120,
-                      background: 'radial-gradient(circle, rgba(78,205,196,0.10) 0%, transparent 70%)',
-                    }}
-                    animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0.3, 0.7] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  {/* Bottle — uses canonical SVG, glowing (seafoam tint) */}
-                  {/* Bob values match tailwind.config.ts bottle-bob token: y -10px, ±1.2deg, 3.2s */}
-                  <motion.div
-                    animate={{ y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 1] }}
-                  >
-                    <BottleSVGDynamic glowing width={80} height={120} />
-                  </motion.div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <p className="font-display text-2xl text-sand">Bottle sent</p>
-                  <p className="font-ui text-sm text-sand/50 max-w-[220px] mx-auto leading-relaxed">
-                    Somewhere out there, a stranger will find it.
-                  </p>
-                </div>
+                {sailingBottles.length > 0 ? (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <p className="font-display text-2xl text-sand">Still sailing</p>
+                      <p className="font-ui text-sm text-sand/50 max-w-[260px] mx-auto leading-relaxed">
+                        {sailingBottles.length} bottle
+                        {sailingBottles.length === 1 ? '' : 's'} drifting through the
+                        ocean, waiting to be found.
+                      </p>
+                    </div>
+                    <SailingSea bottles={sailingBottles} />
+                  </>
+                ) : (
+                  /* Threw today but every bottle has already found someone */
+                  <div className="flex flex-col gap-2 pt-6">
+                    <p className="font-display text-2xl text-sand">The sea is calm</p>
+                    <p className="font-ui text-sm text-sand/50 max-w-[260px] mx-auto leading-relaxed">
+                      Every bottle you&apos;ve thrown has found a stranger. Come back
+                      tomorrow to send another.
+                    </p>
+                  </div>
+                )}
 
                 <DailyTimer />
                 <OceanCounter />

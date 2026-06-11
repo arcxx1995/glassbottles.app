@@ -69,3 +69,30 @@
 - `AnimatePresence mode="wait"` on the panel swap so exit finishes before the new panel enters — avoids z-fighting between Framer Motion elements.
 - DEV PREVIEW banner uses `bg-coral/90` (not a pseudo-element or overlay) — visible in every scroll position and obviously non-production.
 - No new layout file — the preview page uses `WaveBackground` directly and does not opt into the `(app)` route group layout, so there is no BottomNav or AppShell wrapping it.
+
+## 2026-06-11 — Auth screens rewrite: email/password + Google OAuth + forgot/reset
+
+### Scope
+Replaced magic-link auth (signInWithOtp) with email/password + Google OAuth across all auth screens. Frontend only — backend (Felix) and infra (Shiv) already done.
+
+### Files
+- Rewrote apps/web/app/(auth)/sign-up/page.tsx — signUp({email,password}), confirmation pending state with Resend (60s client cooldown), silent-duplicate trap detection, Google OAuth.
+- Rewrote apps/web/app/(auth)/sign-in/page.tsx — signInWithPassword, Forgot password link, email_not_confirmed → inline Resend, callback ?error= handling (Suspense-wrapped useSearchParams), Google OAuth.
+- Added apps/web/app/(auth)/forgot-password/page.tsx — resetPasswordForEmail with redirectTo=/auth/callback?next=/reset-password; neutral "if an account exists" success copy.
+- Added apps/web/app/(auth)/reset-password/page.tsx — getSession gate (checking/ready/no-session/done phases), updateUser({password}), new+confirm fields, 8-char + match validation.
+- Added apps/web/components/auth/GoogleButton.tsx — official multicolour Google G (inline SVG), white surface, co-equal weight.
+- Added apps/web/components/auth/authShared.tsx — isValidEmail/isValidPassword (min 8), mapAuthError (matches on error.code per Felix's table, generic fallback for same-email-different-method), OrDivider, FieldError/FormError.
+
+### Key decisions
+- Error mapping keyed on error.code, never error.message. Single generic "Incorrect email or password." for invalid_credentials (no branching).
+- Silent-duplicate: signUp success + data.session===null && data.user?.identities?.length===0 → duplicate copy + router.push('/sign-in').
+- Layout: email/password form → OrDivider → Google button (co-equal, not Google-first).
+- Sign-in success: router.refresh() then router.push('/home') to match settings/sign-out pattern.
+- useSearchParams on sign-in requires Suspense boundary (App Router) — split into SignInForm inner component.
+
+### Verification
+- rtk tsc → No errors. rtk lint → No issues.
+
+### Assumptions
+- Added extra error.codes to mapAuthError beyond Felix's table (email_exists, same_password, over_email_send_rate_limit) as defensive aliases; harmless if unused.
+- Resend client cooldown set to 60s to mirror documented server throttle; server error still handled gracefully.

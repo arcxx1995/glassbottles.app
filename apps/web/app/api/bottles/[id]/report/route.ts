@@ -34,12 +34,14 @@ export async function POST(
   }
 
   // Idempotent: ON CONFLICT is implicit since UPDATE is a no-op if is_reported already true.
-  // RLS "receiver marks read or reported" policy ensures receiver_id = auth.uid().
+  // Row scoping comes from the RLS policy "receiver marks read or reported"
+  // (receiver_id = auth.uid()). No explicit .eq('receiver_id') — the column is
+  // not SELECT-granted to authenticated (migration 015), so filtering on it
+  // would fail the column ACL; the policy expression is exempt and authoritative.
   const { error } = await supabase
     .from('bottles')
     .update({ is_reported: true })
     .eq('id', id)
-    .eq('receiver_id', user.id)
 
   if (error) {
     if (error.code === '42501') {

@@ -33,7 +33,10 @@ export async function PATCH(
   }
 
   // Idempotent: only update when is_read = false; skip silently if already read.
-  // RLS "receiver marks read or reported" policy ensures receiver_id = auth.uid().
+  // Row scoping comes from the RLS policy "receiver marks read or reported"
+  // (receiver_id = auth.uid()). No explicit .eq('receiver_id') — the column is
+  // not SELECT-granted to authenticated (migration 015), so filtering on it
+  // would fail the column ACL; the policy expression is exempt and authoritative.
   const { error } = await supabase
     .from('bottles')
     .update({
@@ -41,7 +44,6 @@ export async function PATCH(
       read_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .eq('receiver_id', user.id)
     .eq('is_read', false) // IS NULL guard equivalent for boolean — idempotent
 
   if (error) {

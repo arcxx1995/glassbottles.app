@@ -49,9 +49,13 @@ export async function GET(_req: NextRequest) {
       .eq('day_key', today)
       .maybeSingle(),
 
-    // Sailing bottles: ALL of this user's unmatched bottles, any day.
-    // Unmatched bottles persist indefinitely (migration 012) — they accumulate
-    // across days and float together in the sea on the home screen until matched.
+    // Sailing bottles: this user's unmatched bottles, most recent first.
+    // Unmatched bottles persist indefinitely (migration 012) and accumulate
+    // across days. The Still Sailing sea holds at most 21 — older undelivered
+    // bottles beyond the cap stay in the DB and remain matchable, just unshown.
+    // The 21 cap also gates the idle screen: at 21 the user cannot throw (the
+    // sea is full), so the home page shows sailing instead of the throw entry.
+    // We fetch up to 21 — length === 21 means "at or above the ceiling".
     // SECURITY: receiver_id intentionally omitted.
     supabase
       .from('bottles')
@@ -59,7 +63,8 @@ export async function GET(_req: NextRequest) {
       .eq('sender_id', user.id)
       .is('received_at', null)
       .eq('is_stale', false)
-      .order('sent_at', { ascending: false }),
+      .order('sent_at', { ascending: false })
+      .limit(21),
   ])
 
   const defaultQuota = {

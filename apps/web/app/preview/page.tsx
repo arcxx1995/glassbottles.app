@@ -11,7 +11,7 @@
  * throw on mount (mutations 401 in preview — fine).
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAppDispatch } from '@/store'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -30,16 +30,7 @@ import WaveBackground from '@/components/shared/WaveBackground'
 import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import SailingSea, { type SailingBottleItem } from '@/components/bottle/SailingSea'
-
-const BottleCanvas = dynamic(
-  () => import('@/components/bottle/BottleCanvas'),
-  { ssr: false }
-)
-
-const ThrowAnimation = dynamic(
-  () => import('@/components/bottle/ThrowAnimation'),
-  { ssr: false }
-)
+import PierScene from '@/components/bottle/PierScene'
 
 const ReceivedBottle = dynamic(
   () => import('@/components/bottle/ReceivedBottle'),
@@ -105,7 +96,6 @@ function makeMockStore({
 
 const PANEL_IDS = [
   'idle',
-  'composing',
   'throwing',
   'sailing',
   'received',
@@ -115,9 +105,8 @@ const PANEL_IDS = [
 type PanelId = (typeof PANEL_IDS)[number]
 
 const PANEL_LABELS: Record<PanelId, string> = {
-  'idle': 'Idle',
-  'composing': 'Composing',
-  'throwing': 'Throwing',
+  'idle': 'Idle (Pier)',
+  'throwing': 'Throwing (Drop)',
   'sailing': 'Sailing + Delivery',
   'received': 'Received',
   'received-banner': 'Received Toast',
@@ -129,57 +118,58 @@ function IdlePanel() {
   const store = makeMockStore({ sendStatus: 'idle' })
   return (
     <Provider store={store}>
-      <div className="flex flex-col items-center gap-8 w-full">
-        <BottleCanvas />
-        <div className="flex flex-col items-center gap-3 text-center">
+      {/* Continuous sea behind the pier */}
+      <SailingSea bottles={[]} />
+
+      {/* Pier with the resting bottle */}
+      <div className="fixed inset-0 z-[1]">
+        <PierScene phase="idle" />
+      </div>
+
+      {/* Foreground: heading + compose dialog on the right */}
+      <div className="relative z-10 w-full min-h-[460px]">
+        <div className="text-center">
           <p className="font-display text-xl text-sand">Your bottle awaits</p>
-          <p className="font-ui text-sm text-sand/50 max-w-[260px] leading-relaxed">
+          <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
             Write something for a stranger. They won&apos;t know it&apos;s you.
           </p>
-          <button
-            className="mt-3 px-10 py-4 rounded-2xl bg-coral text-ocean-deep font-ui
-                       font-semibold text-base tracking-wide transition-all duration-150
-                       active:scale-[0.97] hover:brightness-110"
-          >
-            Write a message
-          </button>
+        </div>
+        <div className="absolute top-[84px] right-0 w-[82%] max-w-[300px]">
+          <MessageEditor onReady={() => undefined} />
         </div>
       </div>
     </Provider>
   )
 }
 
-function ComposingPanel() {
-  const store = makeMockStore({
-    sendStatus: 'composing',
-    message: 'Sometimes I wonder if anyone else feels like a stranger in their own life…',
-  })
-  return (
-    <Provider store={store}>
-      <div className="flex flex-col items-center gap-6 w-full">
-        <BottleCanvas />
-        <MessageEditor className="w-full" onReady={() => undefined} />
-        <button className="font-ui text-xs text-sand/30 hover:text-sand/60 transition-colors">
-          Cancel
-        </button>
-      </div>
-    </Provider>
-  )
-}
-
+// Loops idle → drop so the wiggle, slide-out and splash can be inspected.
+// Each cycle remounts the pier in `idle` (initial={false} → present, no slide-in)
+// then flips to `dropping` after a beat.
 function ThrowingPanel() {
-  const [key, setKey] = useState(0)
-  const store = makeMockStore({ sendStatus: 'throwing' })
+  const [store] = useState(() => makeMockStore({ sendStatus: 'throwing' }))
+  const [cycle, setCycle] = useState(0)
+  const [phase, setPhase] = useState<'idle' | 'dropping'>('idle')
+
+  useEffect(() => {
+    setPhase('idle')
+    const t = setTimeout(() => setPhase('dropping'), 1100)
+    return () => clearTimeout(t)
+  }, [cycle])
 
   const handleComplete = useCallback(() => {
-    // Restart the animation after a short pause so it loops in preview
-    setTimeout(() => setKey((k) => k + 1), 600)
+    setTimeout(() => setCycle((c) => c + 1), 700)
   }, [])
 
   return (
     <Provider store={store}>
-      <div className="flex flex-col items-center w-full">
-        <ThrowAnimation key={key} onComplete={handleComplete} />
+      <SailingSea bottles={[]} />
+      <div className="fixed inset-0 z-[1]">
+        <PierScene key={cycle} phase={phase} onDropComplete={handleComplete} />
+      </div>
+      <div className="relative z-10 text-center pt-2">
+        <p className="font-ui text-sm text-sand/60">
+          {phase === 'dropping' ? 'Casting into the ocean…' : 'Bottle waiting…'}
+        </p>
       </div>
     </Provider>
   )
@@ -189,13 +179,11 @@ function ThrowingPanel() {
 // "Simulate a delivery" removes a random bottle (mirrors the real refetch that
 // drops the matched bottle) and fires the delivered banner.
 
-const INITIAL_SAILING: SailingBottleItem[] = [
-  { id: 's1', day_key: '2026-06-11' },
-  { id: 's2', day_key: '2026-06-10' },
-  { id: 's3', day_key: '2026-06-08' },
-  { id: 's4', day_key: '2026-06-05' },
-  { id: 's5', day_key: '2026-06-01' },
-]
+// 21 bottles — the Still Sailing cap (status route limits to 21).
+const INITIAL_SAILING: SailingBottleItem[] = Array.from({ length: 21 }, (_, i) => ({
+  id: `s${i + 1}`,
+  day_key: new Date(Date.now() - i * 2 * 86_400_000).toISOString().slice(0, 10),
+}))
 
 function SailingControls({
   onDeliver,
@@ -238,16 +226,30 @@ function SailingPanel() {
       {/* Persistent toast — lives on the sailing screen until dismissed */}
       <DeliveredBannerDynamic />
 
-      <div className="flex flex-col items-center gap-8 text-center w-full pt-2">
-        <div className="flex flex-col gap-2">
-          <p className="font-display text-2xl text-sand">Still sailing</p>
-          <p className="font-ui text-sm text-sand/50 max-w-[260px] mx-auto leading-relaxed">
-            {bottles.length} bottle{bottles.length === 1 ? '' : 's'} drifting through
-            the ocean, waiting to be found.
-          </p>
-        </div>
+      {/* Full-viewport sea background */}
+      <SailingSea bottles={bottles} />
 
-        <SailingSea bottles={bottles} />
+      {/* Foreground over the sea */}
+      <div className="relative z-10 flex flex-col items-center gap-8 text-center w-full pt-2">
+        <div className="flex flex-col gap-2">
+          {bottles.length >= 21 ? (
+            <>
+              <p className="font-display text-2xl text-sand">Your sea is full</p>
+              <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                21 bottles still drifting. Throw again once one of them finds a
+                stranger.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-2xl text-sand">Still sailing</p>
+              <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                {bottles.length} bottle{bottles.length === 1 ? '' : 's'} drifting
+                through the ocean, waiting to be found.
+              </p>
+            </>
+          )}
+        </div>
 
         <SailingControls onDeliver={deliverOne} count={bottles.length} />
         <DailyTimer />
@@ -322,7 +324,6 @@ function ReceivedBannerPanel() {
 
 const PANELS: Record<PanelId, React.FC> = {
   'idle': IdlePanel,
-  'composing': ComposingPanel,
   'throwing': ThrowingPanel,
   'sailing': SailingPanel,
   'received': ReceivedPanel,
@@ -397,12 +398,14 @@ export default function PreviewPage() {
 
         {/* Panel content */}
         <div className="flex-1 w-full max-w-md mx-auto px-5 pb-20">
+          {/* Opacity-only transition: a `y`/transform here would become the
+              containing block for the sailing panel's fixed sea, boxing it. */}
           <AnimatePresence mode="wait">
             <motion.div
               key={activePanel}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               <ActivePanel />

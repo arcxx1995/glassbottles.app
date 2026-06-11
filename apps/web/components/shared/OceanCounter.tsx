@@ -22,6 +22,7 @@ export default function OceanCounter() {
   const { data } = useGetBottleCountQuery(undefined, {
     skip: !user?.id,
     pollingInterval: 5 * 60 * 1000, // 5 minutes
+    skipPollingIfUnfocused: true, // hidden tabs don't poll
   })
 
   if (!data || data.count === 0) return null

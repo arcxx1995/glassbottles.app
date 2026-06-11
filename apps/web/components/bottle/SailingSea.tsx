@@ -102,7 +102,7 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
           <path d={d} fill={band.fill} />
-          {band.foam && (
+          {'foam' in band && band.foam && (
             <path d={foamD} fill="none" stroke="#4ECDC4" strokeOpacity={0.18} strokeWidth={2} />
           )}
         </svg>

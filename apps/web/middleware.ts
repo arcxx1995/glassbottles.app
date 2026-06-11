@@ -3,6 +3,20 @@ import type { CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // API routes: cheap cookie-presence guard only — no Supabase Auth call.
+  // Every API route performs its own supabase.auth.getUser() (real
+  // verification). Doing getUser() here too meant TWO Auth round-trips per
+  // API request, billed as Fluid provisioned-memory wall-clock time.
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const hasSessionCookie = request.cookies
+      .getAll()
+      .some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'))
+    if (!hasSessionCookie) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -34,8 +48,6 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/inbox') ||
     request.nextUrl.pathname.startsWith('/settings')
 
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
-
   const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
     request.nextUrl.pathname === '/sign-up'
 
@@ -52,14 +64,6 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/home'
     return NextResponse.redirect(redirectUrl)
-  }
-
-  // API routes: centralized 401 for unauthenticated requests.
-  // Each API route still calls auth.getUser() individually (defence-in-depth).
-  // This guard ensures any future route that forgets per-route auth is still protected.
-  // Returns JSON (not a redirect) so clients receive a parseable error response.
-  if (isApiRoute && !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   return supabaseResponse

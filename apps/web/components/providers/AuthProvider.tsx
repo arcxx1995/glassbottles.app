@@ -9,8 +9,8 @@
  * Flow:
  *   1. On mount: call supabase.auth.getUser() → setLoading(true)
  *   2. On success: fetch /api/profile → setUser(profile)
- *   3. On auth state change (sign-in/sign-out via Supabase magic link callback):
- *      re-fetch profile or clear user.
+ *   3. On auth state change (sign-in/sign-out via the Supabase OAuth /
+ *      email-confirm callback): re-fetch profile or clear user.
  *
  * Why fetch /api/profile and not use the auth.User object directly?
  *   - auth.User has email + id, but not timezone etc.
@@ -104,7 +104,7 @@ export default function AuthProvider({
       }
     })()
 
-    // ── 2. Listen for auth state changes (magic link callback, sign-out) ─────
+    // ── 2. Listen for auth state changes (OAuth/email-confirm callback, sign-out) ─
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {

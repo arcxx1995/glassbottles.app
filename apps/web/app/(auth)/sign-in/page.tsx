@@ -168,7 +168,7 @@ function SignInForm() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-coral text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
+              className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <span

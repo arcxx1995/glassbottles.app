@@ -1,43 +1,131 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { GoogleButton } from '@/components/auth/GoogleButton'
+import {
+  OrDivider,
+  FieldError,
+  FormError,
+  isValidEmail,
+  isValidPassword,
+  mapAuthError,
+  PASSWORD_MIN,
+} from '@/components/auth/authShared'
 
-type Status = 'idle' | 'loading' | 'sent' | 'error'
+const RESEND_COOLDOWN = 60 // seconds — mirrors server-side throttle
 
 export default function SignUpPage() {
   const supabase = createClient()
+  const router = useRouter()
+
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<Status>('idle')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [password, setPassword] = useState('')
+  const [touched, setTouched] = useState(false)
+
+  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+
+  // Resend throttle
+  const [cooldown, setCooldown] = useState(0)
+  const [resendNote, setResendNote] = useState<string | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const emailOk = isValidEmail(email)
+  const passwordOk = isValidPassword(password)
+  const canSubmit = emailOk && passwordOk && !loading && !googleLoading
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  function startCooldown() {
+    setCooldown(RESEND_COOLDOWN)
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current)
+          return 0
+        }
+        return c - 1
+      })
+    }, 1000)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setStatus('loading')
-    setErrorMsg(null)
+    setTouched(true)
+    if (!emailOk || !passwordOk) return
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    setLoading(true)
+    setFormError(null)
+
+    const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (error) {
-      setErrorMsg(error.message)
-      setStatus('error')
-    } else {
-      setStatus('sent')
+      setFormError(mapAuthError(error, 'sign-up'))
+      setLoading(false)
+      return
     }
+
+    // Silent-duplicate trap: with email confirmation on, signing up for an
+    // already-registered email returns 200 with no error but a null session
+    // and an empty identities array. Treat as "already registered".
+    if (data.session === null && data.user?.identities?.length === 0) {
+      setFormError('An account with this email already exists. Sign in instead.')
+      setLoading(false)
+      router.push('/sign-in')
+      return
+    }
+
+    setLoading(false)
+    setSent(true)
+    startCooldown()
+  }
+
+  async function handleGoogle() {
+    setGoogleLoading(true)
+    setFormError(null)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${location.origin}/auth/callback` },
+    })
+    if (error) {
+      setFormError(mapAuthError(error, 'sign-up'))
+      setGoogleLoading(false)
+    }
+    // On success the browser redirects to Google — keep the loading state.
+  }
+
+  async function handleResend() {
+    if (cooldown > 0) return
+    setResendNote(null)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) {
+      setResendNote(
+        error.code === 'over_email_send_rate_limit'
+          ? 'Please wait a moment before requesting another email.'
+          : 'Could not resend right now. Try again shortly.',
+      )
+      startCooldown()
+      return
+    }
+    setResendNote('Sent! Check your inbox again.')
+    startCooldown()
   }
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen px-6">
       <div className="w-full max-w-sm flex flex-col gap-8">
-
         {/* Hero */}
         <motion.div
           className="text-center"
@@ -45,88 +133,112 @@ export default function SignUpPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <span
-            className="text-5xl block mb-4 select-none"
-            role="img"
-            aria-label="glass bottle"
-          >
+          <span className="text-5xl block mb-4 select-none" role="img" aria-label="glass bottle">
             🫙
           </span>
-          <h1 className="font-display text-3xl text-sand mb-2">
-            Join glassbottles
-          </h1>
+          <h1 className="font-display text-3xl text-sand mb-2">Join glassbottles</h1>
           <p className="font-ui text-sm text-sand/45 max-w-[240px] mx-auto leading-relaxed">
             Every day, one bottle. One stranger. One honest message.
           </p>
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {status === 'sent' ? (
+          {sent ? (
             <motion.div
               key="sent"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-ocean-mid rounded-3xl border border-white/5 p-7 text-center"
+              className="bg-ocean-mid rounded-3xl border border-white/5 p-7 flex flex-col items-center gap-4 text-center"
             >
-              <p className="font-display text-xl text-sand mb-2">
-                You&apos;re almost in 🌊
-              </p>
-              <p className="font-ui text-sm text-sand/45">
-                Check{' '}
-                <span className="text-sand/75">{email}</span>
-                {' '}for your magic link.
-              </p>
+              <div className="w-14 h-14 rounded-full bg-seafoam/10 flex items-center justify-center">
+                <Mail size={26} className="text-seafoam" strokeWidth={1.5} />
+              </div>
+              <div>
+                <p className="font-display text-xl text-sand mb-1">Check your inbox</p>
+                <p className="font-ui text-sm text-sand/45">
+                  We sent a confirmation link to{' '}
+                  <span className="text-sand/75">{email}</span>. Click it to finish setting up
+                  your account.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void handleResend()}
+                disabled={cooldown > 0}
+                className="font-ui text-sm text-seafoam hover:underline disabled:text-sand/25 disabled:no-underline"
+              >
+                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
+              </button>
+              {resendNote && <p className="font-ui text-xs text-sand/45">{resendNote}</p>}
             </motion.div>
           ) : (
-            <motion.form
+            <motion.div
               key="form"
-              onSubmit={handleSubmit}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
               className="flex flex-col gap-4"
             >
-              <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  autoComplete="email"
-                  className="w-full bg-transparent px-5 py-4 font-ui text-sand
-                             placeholder:text-sand/25 outline-none text-base"
-                />
-              </div>
-
-              {status === 'error' && errorMsg && (
-                <p className="font-ui text-sm text-coral px-1">{errorMsg}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={status === 'loading' || !email}
-                className="flex items-center justify-center gap-2 py-4 rounded-2xl
-                           bg-coral text-ocean-deep font-ui font-semibold text-base
-                           tracking-wide transition-all duration-150
-                           active:scale-[0.97] hover:brightness-110
-                           disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {status === 'loading' ? (
-                  <span
-                    className="w-5 h-5 border-2 border-ocean-deep/25 border-t-ocean-deep
-                               rounded-full animate-spin"
-                    aria-label="Creating account…"
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+                <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                    aria-label="Email"
+                    className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
                   />
-                ) : (
-                  <>
-                    Get started
-                    <ArrowRight size={18} strokeWidth={2} />
-                  </>
+                </div>
+                {touched && !emailOk && <FieldError>Enter a valid email address.</FieldError>}
+
+                <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    autoComplete="new-password"
+                    aria-label="Password"
+                    className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
+                  />
+                </div>
+                {touched && !passwordOk && (
+                  <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
                 )}
-              </button>
-            </motion.form>
+
+                <FormError>{formError}</FormError>
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {loading ? (
+                    <span
+                      className="w-5 h-5 border-2 border-ocean-deep/25 border-t-ocean-deep rounded-full animate-spin"
+                      aria-label="Creating account…"
+                    />
+                  ) : (
+                    <>
+                      Create account
+                      <ArrowRight size={18} strokeWidth={2} />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <OrDivider />
+
+              <GoogleButton
+                onClick={() => void handleGoogle()}
+                loading={googleLoading}
+                disabled={loading}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
 

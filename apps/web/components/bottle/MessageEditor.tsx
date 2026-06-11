@@ -97,7 +97,7 @@ export default function MessageEditor({
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="w-full py-4 rounded-2xl bg-coral text-ocean-deep font-ui font-semibold
+          className="w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
                      text-base tracking-wide transition-all duration-150
                      active:scale-[0.97] hover:brightness-110"
         >

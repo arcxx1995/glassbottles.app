@@ -6,14 +6,25 @@ import { cookies } from 'next/headers'
 /**
  * GET /auth/callback
  *
- * Supabase magic-link and OAuth flows land here via the `emailRedirectTo` /
- * `redirectTo` option.  Supabase appends either:
- *   - ?code=<pkce_code>   (PKCE — default for email OTP / magic link)
- *   - #access_token=...   (implicit — legacy, not used here)
+ * Single PKCE code-exchange landing point for both supported auth methods:
+ *   - Google OAuth        (signInWithOAuth → provider redirect → ?code=...)
+ *   - Email confirmation  (signUp / email-confirm link → ?code=...)
+ *   - Password recovery   (resetPasswordForEmail → ?code=... → /home then
+ *                          client routes to the update-password screen)
  *
- * We exchange the code for a session and redirect to /home (or /sign-in on
- * failure).  Cookies are written by the SSR client exactly as the middleware
- * expects them.
+ * In every case Supabase appends `?code=<pkce_code>` and we exchange it for a
+ * session here. The exchange itself is provider-agnostic — the same
+ * `exchangeCodeForSession` call resolves OAuth, email-confirm, and recovery
+ * codes. (Implicit `#access_token=...` hash flow is not used by this app.)
+ *
+ * We redirect to /home on success (or `?next=` when same-origin), and to
+ * /sign-in with a canonical `?error=` code on failure. Cookies are written by
+ * the SSR client exactly as the middleware expects them.
+ *
+ * Canonical error codes emitted (frontend must match copy to these):
+ *   - ?error=missing_code  → no `code` query param present
+ *   - ?error=auth_failed   → exchangeCodeForSession returned an error
+ *                            (expired/used code, provider mismatch, etc.)
  *
  * Security:
  *   - `next` param is validated against same-origin to prevent open-redirect.

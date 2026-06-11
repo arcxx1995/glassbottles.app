@@ -298,9 +298,9 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         </p>
         <Link
           href="/sign-up"
-          className="px-10 py-4 rounded-2xl bg-coral text-ocean-deep font-ui font-semibold text-base
+          className="px-10 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base
                      tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seafoam
                      focus-visible:ring-offset-2 focus-visible:ring-offset-ocean-deep"
         >
           Create an account
@@ -404,10 +404,10 @@ export default function LandingPage() {
         >
           <Link
             href="/sign-up"
-            className="inline-block px-10 py-4 rounded-2xl bg-coral text-ocean-deep font-ui
+            className="inline-block px-10 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui
                        font-semibold text-base tracking-wide transition-all duration-150
                        active:scale-[0.97] hover:brightness-110 focus-visible:outline-none
-                       focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2
+                       focus-visible:ring-2 focus-visible:ring-seafoam focus-visible:ring-offset-2
                        focus-visible:ring-offset-ocean-deep"
           >
             Start throwing

@@ -20,7 +20,7 @@ import MessageEditor from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
-import PierScene from '@/components/bottle/PierScene'
+import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -80,7 +80,7 @@ export default function HomePage() {
     }
   }
 
-  // Fired when the bottle finishes dropping off the pier into the sea.
+  // Fired when the bottle finishes dropping off its tether into the sea.
   function handleDropComplete() {
     dispatch(setThrowAnimating(false))
     // Don't transition into the sea if the send failed — stay on idle so the
@@ -129,17 +129,6 @@ export default function HomePage() {
       {/* Stage */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 flex-1">
 
-        {/* Pier persists across idle → throwing so it doesn't remount mid-drop;
-            phase switches to 'dropping' on throw. Sits below the foreground. */}
-        {!isInitializing && sendStatus !== 'thrown' && (
-          <div className="absolute inset-0 z-0">
-            <PierScene
-              phase={sendStatus === 'throwing' ? 'dropping' : 'idle'}
-              onDropComplete={handleDropComplete}
-            />
-          </div>
-        )}
-
         {/* Status loading — prevents "Your bottle awaits" flash */}
         {isInitializing && (
           <motion.div
@@ -155,41 +144,55 @@ export default function HomePage() {
         {!isInitializing && (
           <AnimatePresence mode="wait">
 
-            {/* ── IDLE — pier + bottle (left), compose dialog (right) ─────
-                The pier itself is rendered persistently above; this layer is the
-                heading, the message editor on the right, and the counter. ── */}
-            {sendStatus === 'idle' && (
+            {/* ── IDLE — centered compose box with the bottle tied beneath it,
+                bobbing on the sea. Stays mounted through 'throwing' so the drop
+                animation plays in place (no remount mid-throw). ── */}
+            {(sendStatus === 'idle' || sendStatus === 'throwing') && (
               <motion.div
                 key="idle"
-                className="relative z-10 w-full flex-1 min-h-[460px]"
+                className="relative z-10 w-full flex-1 flex flex-col items-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, ease: 'easeInOut' }}
               >
-                {/* Heading */}
-                <div className="text-center">
-                  <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                  <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
-                    Write something for a stranger. They won&apos;t know it&apos;s you.
-                  </p>
-                  {sendError && (
-                    <p
-                      className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
-                      role="alert"
-                    >
-                      Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                {/* Heading + compose box — share one centered axis so the text
+                    above is perfectly aligned with the box. Fades on throw. */}
+                <motion.div
+                  className="w-full flex flex-col items-center"
+                  animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                  {/* Heading */}
+                  <div className="text-center">
+                    <p className="font-display text-xl text-sand">Your bottle awaits</p>
+                    <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
+                      Write something for a stranger. They won&apos;t know it&apos;s you.
                     </p>
-                  )}
-                </div>
+                    {sendError && (
+                      <p
+                        className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                        role="alert"
+                      >
+                        Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                      </p>
+                    )}
+                  </div>
 
-                {/* Compose dialog — right side */}
-                <div className="absolute top-[84px] right-0 w-[82%] max-w-[300px]">
-                  <MessageEditor onReady={handleThrow} />
-                </div>
+                  {/* Compose box — perfectly centered */}
+                  <div className="w-[86%] max-w-[320px] mt-6">
+                    <MessageEditor onReady={handleThrow} />
+                  </div>
+                </motion.div>
+
+                {/* Bottle tied beneath the compose box, wobbling on the water */}
+                <TetheredBottle
+                  dropping={sendStatus === 'throwing'}
+                  onDropComplete={handleDropComplete}
+                />
 
                 {/* Ambient counter — bottom */}
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
+                <div className="mt-auto pt-6">
                   <OceanCounter />
                 </div>
               </motion.div>

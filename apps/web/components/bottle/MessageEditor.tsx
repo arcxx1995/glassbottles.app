@@ -43,7 +43,7 @@ export default function MessageEditor({
       transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       {/* Editor surface */}
-      <div className="relative rounded-2xl bg-glass border border-white/10 p-4 focus-within:border-seafoam/30 transition-colors duration-200">
+      <div className="relative rounded-2xl bg-glass border border-white/10 p-4 focus-within:border-white/20 transition-colors duration-200">
         <textarea
           ref={textareaRef}
           value={message}
@@ -55,12 +55,12 @@ export default function MessageEditor({
           placeholder="Write something for a stranger to find…"
           rows={6}
           className="w-full bg-transparent font-display text-sand text-lg leading-relaxed
-                     placeholder:text-sand/25 resize-none outline-none min-h-[144px]"
+                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none min-h-[144px]"
           aria-label="Message to place in your bottle"
         />
 
         {/* Decorative wax seal corner */}
-        <div className="absolute top-3 right-4 opacity-20 select-none pointer-events-none">
+        <div className="absolute top-3 right-4 opacity-40 select-none pointer-events-none">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M7 1L13 7L7 13L1 7L7 1Z"

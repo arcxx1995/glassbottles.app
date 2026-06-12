@@ -109,7 +109,7 @@ export default function HomePage() {
       )}
 
       {/* Header */}
-      <div className="relative z-10 w-full max-w-md flex items-center justify-between mb-10">
+      <div className="relative z-10 w-full flex items-center justify-between mb-10">
         <h1 className="font-display text-2xl text-sand tracking-tight">
           glassbottles
         </h1>
@@ -179,17 +179,25 @@ export default function HomePage() {
                     )}
                   </div>
 
-                  {/* Compose box — perfectly centered */}
-                  <div className="w-[86%] max-w-[320px] mt-6">
-                    <MessageEditor onReady={handleThrow} />
-                  </div>
                 </motion.div>
 
-                {/* Bottle tied beneath the compose box, wobbling on the water */}
-                <TetheredBottle
-                  dropping={sendStatus === 'throwing'}
-                  onDropComplete={handleDropComplete}
-                />
+                {/* Compose box (wider) + the bottle tied to its diamond hook,
+                    dangling offset-right below. `relative` so the tether anchors
+                    onto the diamond regardless of box width. The box fades on
+                    throw; the tether stays to play its snap + drop. */}
+                <div className="relative w-[94%] max-w-[420px] mt-6">
+                  <motion.div
+                    animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  >
+                    <MessageEditor onReady={handleThrow} />
+                  </motion.div>
+
+                  <TetheredBottle
+                    dropping={sendStatus === 'throwing'}
+                    onDropComplete={handleDropComplete}
+                  />
+                </div>
 
                 {/* Ambient counter — bottom */}
                 <div className="mt-auto pt-6">

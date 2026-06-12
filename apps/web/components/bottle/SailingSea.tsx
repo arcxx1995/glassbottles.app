@@ -130,68 +130,112 @@ function Ship({
   dir: 1 | -1
   reduced: boolean
 }) {
-  // Travel fully across the stage and a bit beyond on both sides.
-  const from = dir === 1 ? '-20%' : '120%'
-  const to = dir === 1 ? '120%' : '-20%'
+  // Travel across the viewport, just off both edges (vw, not element %). Small
+  // margins keep the off-screen gap short so coverage stays dense. Loop jumps
+  // far edge → start edge (both off-screen): a ship sails away, then re-enters
+  // from the opposite side.
+  const from = dir === 1 ? '-8vw' : '108vw'
+  const to = dir === 1 ? '108vw' : '-8vw'
 
   return (
     <motion.div
       className="absolute pointer-events-none"
       style={{ top: `${topPct}%`, left: 0, opacity }}
       initial={{ x: from }}
-      animate={reduced ? { x: '50%' } : { x: [from, to] }}
+      animate={reduced ? { x: '50vw' } : { x: [from, to] }}
       transition={{ duration: dur, repeat: Infinity, ease: 'linear', delay }}
     >
+      {/* Lift so the hull waterline (y59/72 in the viewBox ≈ 82%) rests on
+          `topPct` — i.e. topPct marks the horizon, not the ship's top. */}
+      <div style={{ transform: 'translateY(-82%)' }}>
       <motion.div
-        animate={reduced ? undefined : { y: [0, -3, 0], rotate: [-1.5, 1.5, -1.5] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={reduced ? undefined : { y: [0, -2.5, 0], rotate: [-1.8, 1.8, -1.8] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         style={{ transform: `scaleX(${dir})` }}
       >
         <svg
-          width={64 * scale}
-          height={52 * scale}
-          viewBox="0 0 64 52"
+          width={100 * scale}
+          height={72 * scale}
+          viewBox="0 0 100 72"
           fill="none"
-          style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.45))' }}
         >
-          {/* sails */}
-          <path d="M32 6 L32 34 L14 34 Q22 18 32 6 Z" fill="#1C4A63" />
-          <path d="M34 12 L34 34 L50 34 Q44 22 34 12 Z" fill="#16384C" />
-          {/* mast */}
-          <rect x="31" y="4" width="1.6" height="32" fill="#0E2433" />
-          {/* hull */}
-          <path d="M10 36 L54 36 L48 46 Q32 50 16 46 Z" fill="#0B1E2D" />
-          <path d="M10 36 L54 36 L52 39 L12 39 Z" fill="#1C4A63" fillOpacity="0.5" />
+          {/* bowsprit + rigging spar */}
+          <path d="M14 44 L2 33" stroke="#0E2433" strokeWidth="1.4" strokeLinecap="round" />
+          {/* masts */}
+          <rect x="31.2" y="9" width="1.6" height="38" fill="#0E2433" />
+          <rect x="51" y="5" width="1.8" height="44" fill="#0E2433" />
+          <rect x="69.2" y="14" width="1.5" height="33" fill="#0E2433" />
+          {/* square sails — billowed, lighter than hull */}
+          <g fill="#21516B">
+            <path d="M22 26 Q32 30 42 26 L42 40 Q32 43 22 40 Z" />
+            <path d="M24 12 Q32 15 40 12 L40 24 Q32 27 24 24 Z" />
+            <path d="M40 24 Q52 29 64 24 L64 40 Q52 44 40 40 Z" />
+            <path d="M42 8 Q52 11 62 8 L62 22 Q52 25 42 22 Z" />
+            <path d="M62 28 Q70 31 78 28 L78 40 Q70 42 62 40 Z" />
+            <path d="M63 16 Q70 18 77 16 L77 26 Q70 28 63 26 Z" />
+          </g>
+          {/* wind-lit sail edge */}
+          <g fill="#3A7591" fillOpacity="0.45">
+            <path d="M40 12 Q42 13 42 14 L42 24 Q40 23 40 24 Z" />
+            <path d="M62 8 Q64 9 64 10 L64 22 Q62 21 62 22 Z" />
+          </g>
+          {/* pennants */}
+          <path d="M52.8 5 L63 7 L52.8 9 Z" fill="#2E6B85" />
+          {/* stern castle (raised aft deck) */}
+          <path d="M74 46 L88 43 L88 33 L80 33 Q75 39 74 46 Z" fill="#0A1B28" />
+          {/* hull — old wooden crescent, bow + stern rise */}
+          <path
+            d="M10 43 C 9 51, 20 59, 50 59 C 80 59, 91 51, 90 43 C 85 48, 70 51, 50 51 C 30 51, 16 48, 10 43 Z"
+            fill="#0B1E2D"
+          />
+          {/* hull gunwale highlight */}
+          <path d="M12 44 Q50 50 88 44 L86 46 Q50 51 14 46 Z" fill="#21516B" fillOpacity="0.5" />
         </svg>
       </motion.div>
+      </div>
     </motion.div>
   )
 }
 
-// ─── Lightning ───────────────────────────────────────────────────────────────
-// Full-scene flash + a jagged bolt near the horizon, fired at randomized
-// intervals. Disabled under prefers-reduced-motion.
+// ─── Storm clouds ──────────────────────────────────────────────────────────────
+// A slow-drifting cloud bank across the top of the sky. At randomized intervals
+// one cluster throbs with an internal flash — a flicker of light buried inside
+// the clouds (no sharp bolt). A soft scene flash washes the sea below.
+// Disabled under prefers-reduced-motion.
 
-function Lightning() {
+// Soft cloud blobs, positioned (%) across the 200%-wide drifting bank.
+const CLOUD_BLOBS = [
+  { left: 6, top: 14, w: 220, h: 90, o: 0.85 },
+  { left: 15, top: 6, w: 300, h: 120, o: 0.95 },
+  { left: 30, top: 18, w: 180, h: 76, o: 0.7 },
+  { left: 40, top: 9, w: 260, h: 104, o: 0.9 },
+  { left: 56, top: 16, w: 200, h: 84, o: 0.8 },
+  { left: 66, top: 7, w: 300, h: 118, o: 0.92 },
+  { left: 82, top: 15, w: 220, h: 90, o: 0.82 },
+] as const
+
+function StormClouds({ reduced }: { reduced: boolean }) {
   const flash = useAnimationControls()
-  const bolt = useAnimationControls()
-  const [boltX, setBoltX] = useState(30)
+  const [origin, setOrigin] = useState({ x: 50, y: 11 })
 
   useEffect(() => {
+    if (reduced) return
     let active = true
     async function loop() {
       while (active) {
-        const wait = 6000 + Math.random() * 9000
+        const wait = 5000 + Math.random() * 8000
         await new Promise((r) => setTimeout(r, wait))
         if (!active) break
-        setBoltX(15 + Math.random() * 60)
-        bolt.start({
-          opacity: [0, 0.9, 0.2, 0.7, 0],
-          transition: { duration: 0.7, times: [0, 0.08, 0.22, 0.4, 1] },
-        })
+        setOrigin({ x: 18 + Math.random() * 64, y: 7 + Math.random() * 10 })
+        // Throbbing flicker buried in the cloud — multi-stage rise/fall.
         await flash.start({
-          opacity: [0, 0.5, 0.08, 0.32, 0],
-          transition: { duration: 0.9, times: [0, 0.08, 0.25, 0.42, 1] },
+          opacity: [0, 0.7, 0.22, 0.9, 0.12, 0.5, 0],
+          transition: {
+            duration: 1.6,
+            times: [0, 0.06, 0.14, 0.24, 0.36, 0.52, 1],
+            ease: 'easeOut',
+          },
         })
       }
     }
@@ -199,36 +243,47 @@ function Lightning() {
     return () => {
       active = false
     }
-  }, [flash, bolt])
+  }, [flash, reduced])
 
   return (
     <>
-      {/* Scene flash */}
+      {/* Drifting cloud bank (200% wide → loops by translating -50%) */}
+      <motion.div
+        className="absolute left-0 top-0 pointer-events-none"
+        style={{ width: '200%', height: '34%' }}
+        animate={reduced ? undefined : { x: ['0%', '-50%'] }}
+        transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
+      >
+        {CLOUD_BLOBS.map((c, i) => (
+          <div
+            key={i}
+            className="absolute"
+            style={{
+              left: `${c.left}%`,
+              top: `${c.top}%`,
+              width: c.w,
+              height: c.h,
+              opacity: c.o,
+              transform: 'translateX(-50%)',
+              background:
+                'radial-gradient(50% 50% at 50% 50%, rgba(20,40,58,0.95) 0%, rgba(13,30,46,0.6) 45%, rgba(10,22,40,0) 72%)',
+              filter: 'blur(10px)',
+            }}
+          />
+        ))}
+      </motion.div>
+
+      {/* Internal cloud flash — lights up the bank from within, then a soft
+          wash spills down over the sea. */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            'radial-gradient(120% 80% at 50% 0%, rgba(174,224,255,0.55) 0%, rgba(78,205,196,0.12) 35%, transparent 70%)',
+          background: `radial-gradient(42% 30% at ${origin.x}% ${origin.y}%, rgba(206,236,255,0.9) 0%, rgba(120,200,210,0.28) 38%, rgba(78,205,196,0.05) 60%, transparent 75%)`,
           mixBlendMode: 'screen',
         }}
         initial={{ opacity: 0 }}
         animate={flash}
       />
-      {/* Bolt */}
-      <motion.div
-        className="absolute pointer-events-none"
-        style={{ top: '8%', left: `${boltX}%`, width: 60, height: 150 }}
-        initial={{ opacity: 0 }}
-        animate={bolt}
-      >
-        <svg viewBox="0 0 60 150" fill="none" style={{ width: '100%', height: '100%' }}>
-          <path
-            d="M34 0 L18 64 L32 64 L14 150 L46 56 L30 56 L42 0 Z"
-            fill="#DCF4FF"
-            style={{ filter: 'drop-shadow(0 0 8px rgba(174,224,255,0.9))' }}
-          />
-        </svg>
-      </motion.div>
     </>
   )
 }
@@ -395,18 +450,24 @@ export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }
         }}
       />
 
-      {/* Distant ships (behind the front waves) */}
-      <Ship topPct={33} scale={0.7} opacity={0.45} dur={70} delay={0} dir={1} reduced={reduced} />
-      <Ship topPct={37} scale={1} opacity={0.6} dur={95} delay={12} dir={-1} reduced={reduced} />
-      <Ship topPct={35} scale={0.55} opacity={0.35} dur={120} delay={40} dir={1} reduced={reduced} />
+      {/* Up to 3 ships on the horizon (~38.5%, where the sky meets the sea).
+          topPct marks the waterline; the hull base rests on it. Each crosses
+          the whole viewport on X very slowly, sails off one edge and re-enters
+          from the opposite side. Mix of left→right and right→left. */}
+      {/* Same period (260s, slow) with phases evenly spaced by dur/3 so the
+          short off-screen gaps never align — at least one ship is always on the
+          sea. */}
+      <Ship topPct={45.5} scale={0.62} opacity={0.6} dur={260} delay={0} dir={1} reduced={reduced} />
+      <Ship topPct={45.5} scale={0.72} opacity={0.68} dur={260} delay={87} dir={-1} reduced={reduced} />
+      <Ship topPct={45.5} scale={0.82} opacity={0.75} dur={260} delay={173} dir={1} reduced={reduced} />
 
       {/* Turbulent sea bands */}
       {WAVE_BANDS.map((band, i) => (
         <WaveBand key={i} band={band} reduced={reduced} />
       ))}
 
-      {/* Lightning over the scene */}
-      {!reduced && <Lightning />}
+      {/* Storm clouds throbbing with flash over the scene */}
+      <StormClouds reduced={reduced} />
 
       {/* Floating bottles dipped in the water */}
       <AnimatePresence>

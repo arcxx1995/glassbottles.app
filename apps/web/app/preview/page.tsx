@@ -30,6 +30,7 @@ import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import SailingSea, { type SailingBottleItem } from '@/components/bottle/SailingSea'
 import PierScene from '@/components/bottle/PierScene'
+import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 const ReceivedBottle = dynamic(
   () => import('@/components/bottle/ReceivedBottle'),
@@ -119,21 +120,18 @@ function IdlePanel() {
       {/* Continuous sea behind the pier */}
       <SailingSea bottles={[]} />
 
-      {/* Pier with the resting bottle */}
-      <div className="fixed inset-0 z-[1]">
-        <PierScene phase="idle" />
-      </div>
-
-      {/* Foreground: heading + compose dialog on the right */}
-      <div className="relative z-10 w-full min-h-[460px]">
+      {/* Foreground: heading + wider compose box with the bottle tethered
+          beneath it by the nail + rope — mirrors the real /home idle screen. */}
+      <div className="relative z-10 w-full min-h-[520px] flex flex-col items-center">
         <div className="text-center">
           <p className="font-display text-xl text-sand">Your bottle awaits</p>
           <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
             Write something for a stranger. They won&apos;t know it&apos;s you.
           </p>
         </div>
-        <div className="absolute top-[84px] right-0 w-[82%] max-w-[300px]">
+        <div className="relative w-[94%] max-w-[420px] mt-6">
           <MessageEditor onReady={() => undefined} />
+          <TetheredBottle dropping={false} />
         </div>
       </div>
     </Provider>

@@ -114,7 +114,7 @@ export default function HomePage() {
   const isInitializing = !!user?.id && isStatusLoading && !todayStatus
 
   return (
-    <div className="flex flex-col items-center min-h-screen pt-14 px-5">
+    <div className="relative flex flex-col items-center min-h-screen pt-14 px-5">
       {/* Full-viewport sea background, present across the whole throw flow so the
           idle pier, the drop, and the sailing sea share one continuous ocean.
           Floating bottles only appear once sailing (idle/throwing pass []).

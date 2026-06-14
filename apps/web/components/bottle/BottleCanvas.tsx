@@ -6,11 +6,16 @@ import { selectSendStatus } from '@/store/bottleSlice'
 
 interface BottleCanvasProps {
   className?: string
+  // Bottle width in px (height keeps the 2:3 aspect). Defaults to the original
+  // 160×240; the landing hero passes a smaller size.
+  size?: number
 }
 
-export default function BottleCanvas({ className }: BottleCanvasProps) {
+export default function BottleCanvas({ className, size = 160 }: BottleCanvasProps) {
   const sendStatus = useAppSelector(selectSendStatus)
   const isComposing = sendStatus === 'composing'
+  const width = `${size}px`
+  const height = `${size * 1.5}px`
 
   return (
     <motion.div
@@ -19,7 +24,7 @@ export default function BottleCanvas({ className }: BottleCanvasProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -16, scale: 0.88 }}
       transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
-      style={{ width: '160px', height: '240px', position: 'relative' }}
+      style={{ width, height, position: 'relative' }}
       aria-label="Your glass bottle"
     >
       {/* Continuous bob wrapper — separate from enter/exit */}
@@ -34,13 +39,13 @@ export default function BottleCanvas({ className }: BottleCanvasProps) {
           ease: 'easeInOut',
           times: [0, 0.5, 1],
         }}
-        style={{ width: '160px', height: '240px' }}
+        style={{ width, height }}
       >
         <svg
           viewBox="0 0 160 240"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ width: '160px', height: '240px' }}
+          style={{ width, height }}
         >
           {/* Cork */}
           <rect x="54" y="8" width="52" height="24" rx="8" fill="#C4A882" />

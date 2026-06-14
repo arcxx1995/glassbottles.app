@@ -192,16 +192,15 @@ function ThrowingPanel() {
     <Provider store={store}>
       <SailingSea bottles={bottles} />
 
-      {/* Throwable bottle pinned to the screen top-right; vanishes on throw. */}
-      {showCompose && (
-        <TetheredBottle
-          key={cycle}
-          dropping={phase === 'dropping'}
-          onDropComplete={handleComplete}
-        />
-      )}
-
       <div className="relative z-10 w-full min-h-[520px] flex flex-col items-center">
+        {/* Throwable bottle pinned to the screen top-right; vanishes on throw. */}
+        {showCompose && (
+          <TetheredBottle
+            key={cycle}
+            dropping={phase === 'dropping'}
+            onDropComplete={handleComplete}
+          />
+        )}
         <AnimatePresence>
           {showCompose && (
             <motion.div
@@ -425,12 +424,10 @@ export default function PreviewPage() {
           </span>
         </div>
 
-        {/* Tab strip */}
-        <div
-          className="sticky top-0 z-20 w-full bg-ocean-deep/90 backdrop-blur-md
-                     border-b border-white/5 overflow-x-auto"
-        >
-          <div className="flex items-center gap-1 px-4 py-3 min-w-max mx-auto">
+        {/* Tab strip — transparent (no opaque band) so it never covers the
+            screen-top-right bottle. Chips keep their own pill background. */}
+        <div className="sticky top-0 z-20 w-full overflow-x-auto pointer-events-none">
+          <div className="flex items-center gap-1 px-4 py-3 min-w-max mr-auto pointer-events-auto">
             {PANEL_IDS.map((id) => (
               <button
                 key={id}

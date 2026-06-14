@@ -299,14 +299,25 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
   const layout = useMemo(() => {
     const seed = hashId(item.day_key)
     const depth = rand(seed + 1) // 0 = far/back, 1 = near/front
+    const top = 50 + depth * 36 // % of viewport — back bottles higher (near horizon)
+
+    // Which wave band the bottle floats on (by vertical position). Its bob is
+    // matched to that band's vertical wave frequency (and phase) so the bottle
+    // rides the wave instead of bobbing on its own clock.
+    let bandIndex = 0
+    for (let i = 0; i < WAVE_BANDS.length; i++) {
+      if (top >= parseFloat(WAVE_BANDS[i].top)) bandIndex = i
+    }
+    const band = WAVE_BANDS[bandIndex]
+
     return {
       left: 7 + rand(seed) * 84, // %
-      top: 50 + depth * 36, // % of viewport — back bottles higher (near horizon)
+      top,
       scale: 0.6 + depth * 0.5,
       opacity: 0.62 + depth * 0.38,
       z: Math.round(depth * 100),
-      bobDelay: rand(seed + 2) * 4,
-      bobDur: 3 + rand(seed + 3) * 2.4,
+      bobDelay: 0, // in phase with the band
+      bobDur: band.dur / 3, // same frequency as the band's vertical wave
       drift: rand(seed + 4) > 0.5 ? 1 : -1,
     }
   }, [item.day_key])
@@ -342,12 +353,14 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
         {formatDay(item.day_key)}
       </span>
 
-      {/* Bottle + waterline, bobbing as one unit */}
+      {/* Bottle + waterline, bobbing as one unit — amplitude bumped so the
+          band-matched frequency reads clearly (a bottle on a fast front band
+          visibly wiggles faster than one on a slow back band). */}
       <motion.div
         style={{ position: 'relative', width: W, height: H }}
         animate={{
-          y: [0, -6, 0],
-          rotate: [-2.5 * layout.drift, 2.5 * layout.drift, -2.5 * layout.drift],
+          y: [0, -12, 0],
+          rotate: [-7 * layout.drift, 7 * layout.drift, -7 * layout.drift],
         }}
         transition={{
           duration: layout.bobDur,
@@ -418,7 +431,19 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
 // with the user's undelivered bottles dipped and scattered across the water.
 // When a bottle is matched it drops out of `bottles` and floats away.
 
-export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }) {
+export default function SailingSea({
+  bottles,
+  backdropOnly = false,
+  thunder = false,
+}: {
+  bottles: SailingBottleItem[]
+  // Renders only the sky + sea waves (no ships, storm clouds, or bottles).
+  backdropOnly?: boolean
+  // Freezes a single lightning flash washing the sea (the "thunder instant"):
+  // a static peak of the StormClouds internal flash, no cloud blobs/ships/bottles.
+  // Intended for still captures.
+  thunder?: boolean
+}) {
   const reduced = useReducedMotion() ?? false
 
   return (
@@ -460,9 +485,13 @@ export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }
       {/* Same period (260s, slow) with phases evenly spaced by dur/3 so the
           short off-screen gaps never align — at least one ship is always on the
           sea. */}
-      <Ship topPct={45.5} scale={0.62} opacity={0.6} dur={260} delay={0} dir={1} reduced={reduced} />
-      <Ship topPct={45.5} scale={0.72} opacity={0.68} dur={260} delay={87} dir={-1} reduced={reduced} />
-      <Ship topPct={45.5} scale={0.82} opacity={0.75} dur={260} delay={173} dir={1} reduced={reduced} />
+      {!backdropOnly && (
+        <>
+          <Ship topPct={45.5} scale={0.62} opacity={0.6} dur={260} delay={0} dir={1} reduced={reduced} />
+          <Ship topPct={45.5} scale={0.72} opacity={0.68} dur={260} delay={87} dir={-1} reduced={reduced} />
+          <Ship topPct={45.5} scale={0.82} opacity={0.75} dur={260} delay={173} dir={1} reduced={reduced} />
+        </>
+      )}
 
       {/* Turbulent sea bands */}
       {WAVE_BANDS.map((band, i) => (
@@ -470,11 +499,12 @@ export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }
       ))}
 
       {/* Storm clouds throbbing with flash over the scene */}
-      <StormClouds reduced={reduced} />
+      {!backdropOnly && <StormClouds reduced={reduced} />}
 
       {/* Floating bottles dipped in the water */}
       <AnimatePresence>
-        {bottles.map((b) => (
+        {!backdropOnly &&
+          bottles.map((b) => (
           // Key by day_key (one bottle per day) so an optimistic placeholder and
           // the real refetched bottle — same day_key — reconcile in place. When a
           // bottle is matched it leaves the list → the exit (fly-up) plays as the
@@ -482,6 +512,19 @@ export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }
           <FloatingBottle key={b.day_key} item={b} />
         ))}
       </AnimatePresence>
+
+      {/* Frozen thunder instant — a static peak of the cloud flash washing the
+          sea from above. No cloud blobs, ships, or bottles. */}
+      {thunder && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(48% 36% at 50% 8%, rgba(206,236,255,0.95) 0%, rgba(120,200,210,0.34) 38%, rgba(78,205,196,0.08) 60%, transparent 78%)',
+            mixBlendMode: 'screen',
+          }}
+        />
+      )}
 
       {/* Vignette for depth */}
       <div

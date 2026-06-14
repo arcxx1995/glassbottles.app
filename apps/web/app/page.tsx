@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useAppSelector } from '@/store'
 import { selectUser, selectIsLoading } from '@/store/authSlice'
 import WaveBackground from '@/components/shared/WaveBackground'
+import NightSky from '@/components/shared/NightSky'
 
 const BottleCanvas = dynamic(
   () => import('@/components/bottle/BottleCanvas'),
@@ -341,6 +342,10 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-ocean-deep text-sand overflow-x-hidden">
       <WaveBackground />
+      {/* Night sky over the hero — galaxy, crescent moon, twinkling stars,
+          occasional shooting stars. Sits above the ocean gradient, behind
+          all content. */}
+      <NightSky />
 
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <header className="relative z-10 flex items-center justify-between px-6 pt-7 pb-4 max-w-5xl mx-auto">
@@ -365,7 +370,7 @@ export default function LandingPage() {
       >
         {/* Bottle — enters with its own built-in animation */}
         <div className="mb-10" aria-hidden="true">
-          <BottleCanvas />
+          <BottleCanvas size={108} />
         </div>
 
         <motion.h1

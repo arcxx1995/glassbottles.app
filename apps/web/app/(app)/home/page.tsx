@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -20,7 +20,6 @@ import MessageEditor from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
-import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -38,9 +37,25 @@ export default function HomePage() {
 
   // All of the user's undelivered bottles, floating together in the sea.
   const sailingBottles = todayStatus?.sailingBottles ?? []
+  const todayKey = todayStatus?.quota.date
   const hasSent = todayStatus?.quota.has_sent ?? false
   // status route fetches at most 21 — length 21 means "at or above the ceiling".
   const atCeiling = sailingBottles.length >= 21
+
+  // While the throw settles, the real "today" bottle may not be in sailingBottles
+  // yet (the refetch lags the drop animation). Render an optimistic placeholder at
+  // the measured landing spot so the hand-off never blinks; the real bottle takes
+  // its place (same spot, same look) once the refetch lands.
+  const seaBottles = useMemo(() => {
+    if (
+      sendStatus === 'thrown' &&
+      todayKey &&
+      !sailingBottles.some((b) => b.day_key === todayKey)
+    ) {
+      return [...sailingBottles, { id: '__pending_today__', day_key: todayKey }]
+    }
+    return sailingBottles
+  }, [sailingBottles, sendStatus, todayKey])
 
   // Idle (throw entry) shows only when the user hasn't sent today AND the sea
   // isn't full. Otherwise → sailing. When a bottle is delivered, the realtime
@@ -105,7 +120,7 @@ export default function HomePage() {
           Mounted here (not inside the animated stage) so its `fixed` positioning
           stays relative to the viewport rather than a transformed ancestor. */}
       {!isInitializing && (
-        <SailingSea bottles={sendStatus === 'thrown' ? sailingBottles : []} />
+        <SailingSea bottles={seaBottles} />
       )}
 
       {/* Header */}
@@ -127,7 +142,7 @@ export default function HomePage() {
       </div>
 
       {/* Stage */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 flex-1">
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center flex-1">
 
         {/* Status loading — prevents "Your bottle awaits" flash */}
         {isInitializing && (
@@ -142,119 +157,107 @@ export default function HomePage() {
         )}
 
         {!isInitializing && (
-          <AnimatePresence mode="wait">
-
-            {/* ── IDLE — centered compose box with the bottle tied beneath it,
-                bobbing on the sea. Stays mounted through 'throwing' so the drop
-                animation plays in place (no remount mid-throw). ── */}
-            {(sendStatus === 'idle' || sendStatus === 'throwing') && (
-              <motion.div
-                key="idle"
-                className="relative z-10 w-full flex-1 flex flex-col items-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.45, ease: 'easeInOut' }}
-              >
-                {/* Heading + compose box — share one centered axis so the text
-                    above is perfectly aligned with the box. Fades on throw. */}
+          <>
+            {/* ── COMPOSE LAYER — the bottle tied beneath the compose box,
+                bobbing on the sea. Mounts only when a throw is available
+                (quota unused, sea below the ceiling). Stays mounted through
+                'throwing' so the tether-release drop plays in place, then
+                unmounts as the scene settles into sailing. ── */}
+            <AnimatePresence mode="wait">
+              {(sendStatus === 'idle' || sendStatus === 'throwing') && (
                 <motion.div
-                  className="w-full flex flex-col items-center"
-                  animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  key="compose"
+                  className="relative z-10 w-full flex-1 flex flex-col items-center justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  // No exit fade: the landed throw bottle must NOT fade out. The
+                  // compose layer unmounts INSTANTLY, revealing the identical
+                  // drift bottle sitting on the exact same pixel beneath it.
+                  exit={{ opacity: 1, transition: { duration: 0 } }}
+                  transition={{ duration: 0.45, ease: 'easeInOut' }}
                 >
-                  {/* Heading */}
-                  <div className="text-center">
-                    <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                    <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
-                      Write something for a stranger. They won&apos;t know it&apos;s you.
-                    </p>
-                    {sendError && (
-                      <p
-                        className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
-                        role="alert"
-                      >
-                        Your bottle couldn&apos;t be thrown. Check your connection and try again.
-                      </p>
-                    )}
-                  </div>
-
-                </motion.div>
-
-                {/* Compose box (wider) + the bottle tied to its diamond hook,
-                    dangling offset-right below. `relative` so the tether anchors
-                    onto the diamond regardless of box width. The box fades on
-                    throw; the tether stays to play its snap + drop. */}
-                <div className="relative w-[94%] max-w-[420px] mt-6">
+                  {/* Heading — fades out the instant the throw begins. */}
                   <motion.div
+                    className="w-full flex flex-col items-center"
                     animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                   >
-                    <MessageEditor onReady={handleThrow} />
+                    <div className="text-center">
+                      <p className="font-display text-xl text-sand">Your bottle awaits</p>
+                      <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
+                        Write something for a stranger. They won&apos;t know it&apos;s you.
+                      </p>
+                      {sendError && (
+                        <p
+                          className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                          role="alert"
+                        >
+                          Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                        </p>
+                      )}
+                    </div>
                   </motion.div>
 
-                  <TetheredBottle
-                    dropping={sendStatus === 'throwing'}
-                    onDropComplete={handleDropComplete}
-                  />
-                </div>
+                  {/* Compose box with the bottle inside its top-right corner.
+                      On throw the box fades out and the bottle vanishes; the
+                      thrown bottle re-appears at a random spot on the sea. */}
+                  <div className="relative w-[94%] max-w-[420px] mt-6">
+                    <motion.div
+                      animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                      <MessageEditor
+                        onReady={handleThrow}
+                        dropping={sendStatus === 'throwing'}
+                        onDropComplete={handleDropComplete}
+                      />
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                {/* Ambient counter — bottom */}
-                <div className="mt-auto pt-6">
-                  <OceanCounter />
-                </div>
-              </motion.div>
-            )}
-
-            {/* ── SAILING — already threw today. Bottles float in the fixed
-                sea background; this layer is just the foreground copy. ── */}
-            {sendStatus === 'thrown' && (
-              <motion.div
-                key="sailing"
-                className="flex flex-col items-center gap-8 text-center w-full flex-1 pt-2"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              >
-                {/* Heading over the horizon */}
-                <div className="flex flex-col gap-2">
-                  {sailingBottles.length === 0 ? (
+            {/* ── STATUS + FOOTER — always present, sitting low over the deep
+                water. The sailing copy shows alongside the compose box (the
+                user's older bottles are always drifting in the sea behind it),
+                and remains once the sea is the only thing on screen. ── */}
+            <div className="relative z-10 mt-auto flex flex-col items-center gap-6 pb-2 text-center w-full pt-6">
+              {sailingBottles.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {atCeiling && !hasSent ? (
                     <>
-                      <p className="font-display text-2xl text-sand">The sea is calm</p>
-                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
-                        Every bottle you&apos;ve thrown has found a stranger. Come back
-                        tomorrow to send another.
-                      </p>
-                    </>
-                  ) : atCeiling && !hasSent ? (
-                    <>
-                      <p className="font-display text-2xl text-sand">Your sea is full</p>
-                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                      <p className="font-display text-xl text-sand">Your sea is full</p>
+                      <p className="font-ui text-xs text-sand/55 max-w-[260px] mx-auto leading-relaxed">
                         21 bottles still drifting. Throw again once one of them finds a
                         stranger.
                       </p>
                     </>
                   ) : (
-                    <>
-                      <p className="font-display text-2xl text-sand">Still sailing</p>
-                      <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
-                        {sailingBottles.length} bottle
-                        {sailingBottles.length === 1 ? '' : 's'} drifting through the
-                        ocean, waiting to be found.
-                      </p>
-                    </>
+                    <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+                      {sailingBottles.length} bottle
+                      {sailingBottles.length === 1 ? '' : 's'} drifting through the
+                      ocean, waiting to be found.
+                    </p>
                   )}
                 </div>
+              )}
 
-                {/* Timer + counter pinned toward the bottom, over deep water */}
-                <div className="mt-auto flex flex-col items-center gap-8 pb-2">
-                  <DailyTimer />
-                  <OceanCounter />
+              {/* The sea is calm — only once everything has been found AND there's
+                  nothing left to throw today. */}
+              {sailingBottles.length === 0 && hasSent && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="font-display text-xl text-sand">The sea is calm</p>
+                  <p className="font-ui text-xs text-sand/55 max-w-[260px] mx-auto leading-relaxed">
+                    Every bottle you&apos;ve thrown has found a stranger. Come back
+                    tomorrow to send another.
+                  </p>
                 </div>
-              </motion.div>
-            )}
+              )}
 
-          </AnimatePresence>
+              {hasSent && <DailyTimer />}
+              <OceanCounter />
+            </div>
+          </>
         )}
       </div>
 

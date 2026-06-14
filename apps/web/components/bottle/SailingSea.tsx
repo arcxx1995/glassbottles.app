@@ -293,8 +293,11 @@ function StormClouds({ reduced }: { reduced: boolean }) {
 // cap clipping its base, and expanding ripple rings.
 
 function FloatingBottle({ item }: { item: SailingBottleItem }) {
+  // Stable hash-seeded scatter. Seeded by day_key (one bottle per day) so an
+  // optimistic just-thrown placeholder and the real refetched bottle — same
+  // day_key — land on the SAME spot (no jump on swap).
   const layout = useMemo(() => {
-    const seed = hashId(item.id)
+    const seed = hashId(item.day_key)
     const depth = rand(seed + 1) // 0 = far/back, 1 = near/front
     return {
       left: 7 + rand(seed) * 84, // %
@@ -306,7 +309,7 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
       bobDur: 3 + rand(seed + 3) * 2.4,
       drift: rand(seed + 4) > 0.5 ? 1 : -1,
     }
-  }, [item.id])
+  }, [item.day_key])
 
   const W = 52
   const H = 78
@@ -472,7 +475,11 @@ export default function SailingSea({ bottles }: { bottles: SailingBottleItem[] }
       {/* Floating bottles dipped in the water */}
       <AnimatePresence>
         {bottles.map((b) => (
-          <FloatingBottle key={b.id} item={b} />
+          // Key by day_key (one bottle per day) so an optimistic placeholder and
+          // the real refetched bottle — same day_key — reconcile in place. When a
+          // bottle is matched it leaves the list → the exit (fly-up) plays as the
+          // "found" vanish.
+          <FloatingBottle key={b.day_key} item={b} />
         ))}
       </AnimatePresence>
 

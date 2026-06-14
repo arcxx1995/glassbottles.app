@@ -29,8 +29,6 @@ import WaveBackground from '@/components/shared/WaveBackground'
 import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import SailingSea, { type SailingBottleItem } from '@/components/bottle/SailingSea'
-import PierScene from '@/components/bottle/PierScene'
-import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 const ReceivedBottle = dynamic(
   () => import('@/components/bottle/ReceivedBottle'),
@@ -104,12 +102,26 @@ const PANEL_IDS = [
 type PanelId = (typeof PANEL_IDS)[number]
 
 const PANEL_LABELS: Record<PanelId, string> = {
-  'idle': 'Idle (Pier)',
+  'idle': 'Idle',
   'throwing': 'Throwing (Drop)',
   'sailing': 'Sailing + Delivery',
   'received': 'Received',
   'received-banner': 'Received Toast',
 }
+
+// ─── Shared mock day keys ────────────────────────────────────────────────────
+
+const dayKeyAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)
+const TODAY_KEY = dayKeyAgo(0)
+
+// A few older bottles still drifting from previous days — always visible on the
+// idle screen, behind the compose box.
+const OLD_SAILING: SailingBottleItem[] = [
+  { id: 'old-1', day_key: dayKeyAgo(2) },
+  { id: 'old-2', day_key: dayKeyAgo(4) },
+  { id: 'old-3', day_key: dayKeyAgo(6) },
+]
 
 // ─── Individual state panels ─────────────────────────────────────────────────
 
@@ -117,8 +129,8 @@ function IdlePanel() {
   const store = makeMockStore({ sendStatus: 'idle' })
   return (
     <Provider store={store}>
-      {/* Continuous sea behind the pier */}
-      <SailingSea bottles={[]} />
+      {/* Continuous sea — older bottles drift behind the compose box. */}
+      <SailingSea bottles={OLD_SAILING} />
 
       {/* Foreground: heading + wider compose box with the bottle tethered
           beneath it by the nail + rope — mirrors the real /home idle screen. */}
@@ -131,20 +143,28 @@ function IdlePanel() {
         </div>
         <div className="relative w-[94%] max-w-[420px] mt-6">
           <MessageEditor onReady={() => undefined} />
-          <TetheredBottle dropping={false} />
+        </div>
+
+        {/* Always-on sailing copy, coexisting with the compose box. */}
+        <div className="mt-10 text-center">
+          <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
+            {OLD_SAILING.length} bottles drifting through the ocean, waiting to be
+            found.
+          </p>
         </div>
       </div>
     </Provider>
   )
 }
 
-// Loops idle → drop so the wiggle, slide-out and splash can be inspected.
-// Each cycle remounts the pier in `idle` (initial={false} → present, no slide-in)
-// then flips to `dropping` after a beat.
+// Loops idle → drop → sailing so the rope-fall, bottle drop, and the seamless
+// hand-off into the fixed-spot sailing bottle can be inspected. Each cycle
+// remounts the tether in `idle`, flips to `dropping` after a beat, then on drop
+// completion reveals the "today" bottle resting at the fixed drop location.
 function ThrowingPanel() {
   const [store] = useState(() => makeMockStore({ sendStatus: 'throwing' }))
   const [cycle, setCycle] = useState(0)
-  const [phase, setPhase] = useState<'idle' | 'dropping'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'dropping' | 'sailing'>('idle')
 
   useEffect(() => {
     setPhase('idle')
@@ -153,19 +173,65 @@ function ThrowingPanel() {
   }, [cycle])
 
   const handleComplete = useCallback(() => {
-    setTimeout(() => setCycle((c) => c + 1), 700)
+    setPhase('sailing')
+    setTimeout(() => setCycle((c) => c + 1), 2000)
   }, [])
+
+  const showCompose = phase === 'idle' || phase === 'dropping'
+  // After the box bottle vanishes, the "today" bottle appears at its random spot.
+  const bottles: SailingBottleItem[] =
+    phase === 'sailing'
+      ? [...OLD_SAILING, { id: 'today', day_key: TODAY_KEY }]
+      : OLD_SAILING
 
   return (
     <Provider store={store}>
-      <SailingSea bottles={[]} />
-      <div className="fixed inset-0 z-[1]">
-        <PierScene key={cycle} phase={phase} onDropComplete={handleComplete} />
-      </div>
-      <div className="relative z-10 text-center pt-2">
-        <p className="font-ui text-sm text-sand/60">
-          {phase === 'dropping' ? 'Casting into the ocean…' : 'Bottle waiting…'}
-        </p>
+      <SailingSea bottles={bottles} />
+
+      <div className="relative z-10 w-full min-h-[520px] flex flex-col items-center">
+        <AnimatePresence>
+          {showCompose && (
+            <motion.div
+              key="compose"
+              className="w-full flex flex-col items-center"
+              initial={false}
+              // No exit fade — the landed bottle stays put; the drift bottle
+              // beneath is revealed instantly when this unmounts.
+              exit={{ opacity: 1, transition: { duration: 0 } }}
+            >
+              <motion.div
+                className="text-center"
+                animate={{ opacity: phase === 'dropping' ? 0 : 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <p className="font-display text-xl text-sand">Your bottle awaits</p>
+              </motion.div>
+              <div className="relative w-[94%] max-w-[420px] mt-6">
+                <motion.div
+                  animate={{ opacity: phase === 'dropping' ? 0 : 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <MessageEditor
+                    key={cycle}
+                    onReady={() => undefined}
+                    dropping={phase === 'dropping'}
+                    onDropComplete={handleComplete}
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="mt-10 text-center">
+          <p className="font-ui text-sm text-sand/60">
+            {phase === 'dropping'
+              ? 'Casting into the ocean…'
+              : phase === 'sailing'
+                ? 'Drifting…'
+                : 'Bottle waiting…'}
+          </p>
+        </div>
       </div>
     </Provider>
   )
@@ -223,7 +289,7 @@ function SailingPanel() {
         onPreviewDismiss={() => setShowDelivered(false)}
       />
 
-      {/* Full-viewport sea background */}
+      {/* Full-viewport sea background — all bottles scatter randomly. */}
       <SailingSea bottles={bottles} />
 
       {/* Foreground over the sea */}

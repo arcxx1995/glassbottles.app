@@ -20,6 +20,7 @@ import MessageEditor from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
+import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -123,6 +124,16 @@ export default function HomePage() {
         <SailingSea bottles={seaBottles} />
       )}
 
+      {/* The throwable bottle — pinned to the screen top-right, wiggling with a
+          shimmer. Shown only while a throw is available; on throw it vanishes and
+          re-appears at a random spot on the sea. */}
+      {!isInitializing && (sendStatus === 'idle' || sendStatus === 'throwing') && (
+        <TetheredBottle
+          dropping={sendStatus === 'throwing'}
+          onDropComplete={handleDropComplete}
+        />
+      )}
+
       {/* Header */}
       <div className="relative z-10 w-full flex items-center justify-between mb-10">
         <h1 className="font-display text-2xl text-sand tracking-tight">
@@ -206,11 +217,7 @@ export default function HomePage() {
                       animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
                       transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
-                      <MessageEditor
-                        onReady={handleThrow}
-                        dropping={sendStatus === 'throwing'}
-                        onDropComplete={handleDropComplete}
-                      />
+                      <MessageEditor onReady={handleThrow} />
                     </motion.div>
                   </div>
                 </motion.div>

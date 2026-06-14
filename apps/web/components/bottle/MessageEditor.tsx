@@ -5,23 +5,17 @@ import { motion } from 'framer-motion'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { setMessage, selectMessage } from '@/store/bottleSlice'
 import { cn } from '@/lib/utils'
-import TetheredBottle from './TetheredBottle'
 
 const MAX_CHARS = 1000
 
 interface MessageEditorProps {
   onReady?: () => void
   className?: string
-  // Throw state for the bottle that sits inside the chatbox (top-right).
-  dropping?: boolean
-  onDropComplete?: () => void
 }
 
 export default function MessageEditor({
   onReady,
   className,
-  dropping = false,
-  onDropComplete,
 }: MessageEditorProps) {
   const dispatch = useAppDispatch()
   const message = useAppSelector(selectMessage)
@@ -48,7 +42,7 @@ export default function MessageEditor({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      {/* Editor surface — the chatbox. The bottle sits inside it, top-right. */}
+      {/* Editor surface */}
       <div className="relative rounded-2xl bg-glass border border-white/10 p-4 focus-within:border-white/20 transition-colors duration-200">
         <textarea
           ref={textareaRef}
@@ -61,12 +55,9 @@ export default function MessageEditor({
           placeholder="Write something for a stranger to find…"
           rows={6}
           className="w-full bg-transparent font-display text-sand text-lg leading-relaxed
-                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none min-h-[144px] pr-12"
+                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none min-h-[144px]"
           aria-label="Message to place in your bottle"
         />
-
-        {/* Bottle tucked into the chatbox's top-right corner; vanishes on throw. */}
-        <TetheredBottle dropping={dropping} onDropComplete={onDropComplete} />
       </div>
 
       {/* Footer row */}

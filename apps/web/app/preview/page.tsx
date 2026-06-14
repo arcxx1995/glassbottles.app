@@ -29,6 +29,7 @@ import WaveBackground from '@/components/shared/WaveBackground'
 import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import SailingSea, { type SailingBottleItem } from '@/components/bottle/SailingSea'
+import TetheredBottle from '@/components/bottle/TetheredBottle'
 
 const ReceivedBottle = dynamic(
   () => import('@/components/bottle/ReceivedBottle'),
@@ -145,6 +146,9 @@ function IdlePanel() {
           <MessageEditor onReady={() => undefined} />
         </div>
 
+        {/* Throwable bottle pinned to the screen top-right. */}
+        <TetheredBottle dropping={false} />
+
         {/* Always-on sailing copy, coexisting with the compose box. */}
         <div className="mt-10 text-center">
           <p className="font-ui text-sm text-sand/60 max-w-[260px] mx-auto leading-relaxed">
@@ -188,6 +192,15 @@ function ThrowingPanel() {
     <Provider store={store}>
       <SailingSea bottles={bottles} />
 
+      {/* Throwable bottle pinned to the screen top-right; vanishes on throw. */}
+      {showCompose && (
+        <TetheredBottle
+          key={cycle}
+          dropping={phase === 'dropping'}
+          onDropComplete={handleComplete}
+        />
+      )}
+
       <div className="relative z-10 w-full min-h-[520px] flex flex-col items-center">
         <AnimatePresence>
           {showCompose && (
@@ -211,12 +224,7 @@ function ThrowingPanel() {
                   animate={{ opacity: phase === 'dropping' ? 0 : 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <MessageEditor
-                    key={cycle}
-                    onReady={() => undefined}
-                    dropping={phase === 'dropping'}
-                    onDropComplete={handleComplete}
-                  />
+                  <MessageEditor onReady={() => undefined} />
                 </motion.div>
               </div>
             </motion.div>

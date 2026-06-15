@@ -12,7 +12,13 @@ import {
   isValidPassword,
   mapAuthError,
   PASSWORD_MIN,
+  AUTH_BOX_CLASS,
+  AUTH_INPUT_CLASS,
+  AUTH_PRIMARY_BTN_CLASS,
+  AUTH_CARD_CLASS,
 } from '@/components/auth/authShared'
+import WaveBackground from '@/components/shared/WaveBackground'
+import NightSky from '@/components/shared/NightSky'
 
 type Phase = 'checking' | 'ready' | 'no-session' | 'done'
 
@@ -57,15 +63,18 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-6">
-      <div className="w-full max-w-sm flex flex-col gap-8">
+    <>
+      <WaveBackground />
+      <NightSky />
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <div className={AUTH_BOX_CLASS}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <h1 className="font-display text-3xl text-sand mb-2">Set a new password</h1>
+          <h1 className="font-display text-2xl text-sand mb-2">Set a new password</h1>
           <p className="font-ui text-sm text-sand/45 max-w-[260px] mx-auto leading-relaxed">
             Choose a password with at least {PASSWORD_MIN} characters.
           </p>
@@ -93,7 +102,7 @@ export default function ResetPasswordPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-ocean-mid rounded-3xl border border-white/5 p-7 text-center"
+              className={`${AUTH_CARD_CLASS} text-center`}
             >
               <p className="font-display text-xl text-sand mb-2">Link expired</p>
               <p className="font-ui text-sm text-sand/45 mb-4">
@@ -114,7 +123,7 @@ export default function ResetPasswordPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-ocean-mid rounded-3xl border border-white/5 p-7 flex flex-col items-center gap-4 text-center"
+              className={`${AUTH_CARD_CLASS} flex flex-col items-center gap-4 text-center`}
             >
               <div className="w-14 h-14 rounded-full bg-seafoam/10 flex items-center justify-center">
                 <Check size={26} className="text-seafoam" strokeWidth={2} />
@@ -129,7 +138,7 @@ export default function ResetPasswordPage() {
                   router.refresh()
                   router.push('/home')
                 }}
-                className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110"
+                className={`${AUTH_PRIMARY_BTN_CLASS} w-full`}
               >
                 Go to home
                 <ArrowRight size={18} strokeWidth={2} />
@@ -144,46 +153,38 @@ export default function ResetPasswordPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-3"
               noValidate
             >
-              <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="New password"
-                  autoComplete="new-password"
-                  aria-label="New password"
-                  className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-                />
-              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                autoComplete="new-password"
+                aria-label="New password"
+                className={AUTH_INPUT_CLASS}
+              />
               {touched && !passwordOk && (
                 <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
               )}
 
-              <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-                <input
-                  type="password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Confirm new password"
-                  autoComplete="new-password"
-                  aria-label="Confirm new password"
-                  className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-                />
-              </div>
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                aria-label="Confirm new password"
+                className={AUTH_INPUT_CLASS}
+              />
               {touched && passwordOk && !matches && (
                 <FieldError>Passwords don&apos;t match.</FieldError>
               )}
 
               <FormError>{formError}</FormError>
 
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-              >
+              <button type="submit" disabled={!canSubmit} className={AUTH_PRIMARY_BTN_CLASS}>
                 {loading ? (
                   <span
                     className="w-5 h-5 border-2 border-ocean-deep/25 border-t-ocean-deep rounded-full animate-spin"
@@ -208,6 +209,7 @@ export default function ResetPasswordPage() {
           </p>
         )}
       </div>
-    </main>
+      </main>
+    </>
   )
 }

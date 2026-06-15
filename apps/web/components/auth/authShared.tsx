@@ -54,6 +54,26 @@ export function mapAuthError(
   }
 }
 
+// ─── Shared layout classes ─────────────────────────────────────────────────────
+// One source of truth so every auth screen shares the same box size, input and
+// primary-button proportions.
+
+export const AUTH_BOX_CLASS = 'w-full max-w-[20rem] flex flex-col gap-6'
+
+export const AUTH_INPUT_CLASS =
+  'w-full bg-ocean-mid rounded-2xl border border-white/5 px-4 py-3 font-ui ' +
+  'text-sand placeholder:text-sand/25 outline-none text-sm ' +
+  'focus:border-seafoam/30 transition-colors'
+
+export const AUTH_PRIMARY_BTN_CLASS =
+  'flex items-center justify-center gap-2 py-3 rounded-2xl bg-seafoam ' +
+  'text-ocean-deep font-ui font-semibold text-sm tracking-wide ' +
+  'transition-all duration-150 active:scale-[0.97] hover:brightness-110 ' +
+  'disabled:opacity-50 disabled:pointer-events-none'
+
+export const AUTH_CARD_CLASS =
+  'bg-ocean-mid rounded-3xl border border-white/5 p-6'
+
 // ─── Shared UI bits ────────────────────────────────────────────────────────────
 
 export function OrDivider() {

@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/GoogleButton'
+import WaveBackground from '@/components/shared/WaveBackground'
+import NightSky from '@/components/shared/NightSky'
 import {
   OrDivider,
   FieldError,
@@ -15,6 +17,10 @@ import {
   isValidPassword,
   mapAuthError,
   PASSWORD_MIN,
+  AUTH_BOX_CLASS,
+  AUTH_INPUT_CLASS,
+  AUTH_PRIMARY_BTN_CLASS,
+  AUTH_CARD_CLASS,
 } from '@/components/auth/authShared'
 
 const RESEND_COOLDOWN = 60 // seconds — mirrors server-side throttle
@@ -124,8 +130,11 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-6">
-      <div className="w-full max-w-sm flex flex-col gap-8">
+    <>
+      <WaveBackground />
+      <NightSky />
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <div className={AUTH_BOX_CLASS}>
         {/* Hero */}
         <motion.div
           className="text-center"
@@ -133,13 +142,7 @@ export default function SignUpPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <span className="text-5xl block mb-4 select-none" role="img" aria-label="glass bottle">
-            🫙
-          </span>
-          <h1 className="font-display text-3xl text-sand mb-2">Join glassbottles</h1>
-          <p className="font-ui text-sm text-sand/45 max-w-[240px] mx-auto leading-relaxed">
-            Every day, one bottle. One stranger. One honest message.
-          </p>
+          <h1 className="font-display text-2xl text-sand">glassbottles</h1>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -149,7 +152,7 @@ export default function SignUpPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-ocean-mid rounded-3xl border border-white/5 p-7 flex flex-col items-center gap-4 text-center"
+              className={`${AUTH_CARD_CLASS} flex flex-col items-center gap-4 text-center`}
             >
               <div className="w-14 h-14 rounded-full bg-seafoam/10 flex items-center justify-center">
                 <Mail size={26} className="text-seafoam" strokeWidth={1.5} />
@@ -181,42 +184,34 @@ export default function SignUpPage() {
               transition={{ duration: 0.4 }}
               className="flex flex-col gap-4"
             >
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-                <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    autoComplete="email"
-                    aria-label="Email"
-                    className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  aria-label="Email"
+                  className={AUTH_INPUT_CLASS}
+                />
                 {touched && !emailOk && <FieldError>Enter a valid email address.</FieldError>}
 
-                <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    autoComplete="new-password"
-                    aria-label="Password"
-                    className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-                  />
-                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  autoComplete="new-password"
+                  aria-label="Password"
+                  className={AUTH_INPUT_CLASS}
+                />
                 {touched && !passwordOk && (
                   <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
                 )}
 
                 <FormError>{formError}</FormError>
 
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-                >
+                <button type="submit" disabled={!canSubmit} className={AUTH_PRIMARY_BTN_CLASS}>
                   {loading ? (
                     <span
                       className="w-5 h-5 border-2 border-ocean-deep/25 border-t-ocean-deep rounded-full animate-spin"
@@ -249,6 +244,7 @@ export default function SignUpPage() {
           </Link>
         </p>
       </div>
-    </main>
+      </main>
+    </>
   )
 }

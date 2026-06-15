@@ -368,13 +368,9 @@ export default function LandingPage() {
         style={{ minHeight: 'calc(100svh - 64px)' }}
         aria-labelledby="hero-heading"
       >
-        {/* Bottle — enters with its own built-in animation */}
-        <div className="mb-10" aria-hidden="true">
-          <BottleCanvas size={108} />
-        </div>
-
         <motion.h1
           id="hero-heading"
+          aria-label="One bottle. One stranger. Every day."
           className="font-display text-sand leading-[1.08] tracking-[-0.02em] mb-6"
           style={{
             fontSize: 'clamp(2.25rem, 9vw, 4.5rem)',
@@ -384,7 +380,15 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE_OUT_QUART, delay: reduced ? 0 : 0.2 }}
         >
-          One bottle.
+          {/* The "o" in "bottle" is the wiggling bottle itself. */}
+          One b
+          <span
+            aria-hidden="true"
+            style={{ display: 'inline-block', verticalAlign: '-0.22em', margin: '0 0.02em' }}
+          >
+            <BottleCanvas size="0.62em" />
+          </span>
+          ttle.
           <br />
           One stranger.
           <br />

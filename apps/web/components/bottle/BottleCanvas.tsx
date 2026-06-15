@@ -6,16 +6,18 @@ import { selectSendStatus } from '@/store/bottleSlice'
 
 interface BottleCanvasProps {
   className?: string
-  // Bottle width in px (height keeps the 2:3 aspect). Defaults to the original
-  // 160×240; the landing hero passes a smaller size.
-  size?: number
+  // Bottle width (height keeps the 2:3 aspect). A number is px; a string is used
+  // verbatim as a CSS length (e.g. '0.66em' to size the bottle as a glyph that
+  // scales with the surrounding font). Defaults to the original 160×240.
+  size?: number | string
 }
 
 export default function BottleCanvas({ className, size = 160 }: BottleCanvasProps) {
   const sendStatus = useAppSelector(selectSendStatus)
   const isComposing = sendStatus === 'composing'
-  const width = `${size}px`
-  const height = `${size * 1.5}px`
+  const width = typeof size === 'number' ? `${size}px` : size
+  const height =
+    typeof size === 'number' ? `${size * 1.5}px` : `calc(${size} * 1.5)`
 
   return (
     <motion.div

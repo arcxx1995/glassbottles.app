@@ -7,6 +7,8 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/GoogleButton'
+import WaveBackground from '@/components/shared/WaveBackground'
+import NightSky from '@/components/shared/NightSky'
 import {
   OrDivider,
   FieldError,
@@ -15,6 +17,9 @@ import {
   isValidPassword,
   mapAuthError,
   PASSWORD_MIN,
+  AUTH_BOX_CLASS,
+  AUTH_INPUT_CLASS,
+  AUTH_PRIMARY_BTN_CLASS,
 } from '@/components/auth/authShared'
 
 // Friendly copy for the canonical ?error= codes emitted by /auth/callback.
@@ -95,8 +100,11 @@ function SignInForm() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-6">
-      <div className="w-full max-w-sm flex flex-col gap-8">
+    <>
+      <WaveBackground />
+      <NightSky />
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <div className={AUTH_BOX_CLASS}>
         {/* Logo */}
         <motion.div
           className="text-center"
@@ -104,7 +112,7 @@ function SignInForm() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <h1 className="font-display text-4xl text-sand mb-2">glassbottles</h1>
+          <h1 className="font-display text-2xl text-sand mb-2">glassbottles</h1>
           <p className="font-ui text-sm text-sand/45">One bottle. One stranger. Every day.</p>
         </motion.div>
 
@@ -112,33 +120,29 @@ function SignInForm() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-3"
         >
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-            <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                autoComplete="email"
-                aria-label="Email"
-                className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              autoComplete="email"
+              aria-label="Email"
+              className={AUTH_INPUT_CLASS}
+            />
             {touched && !emailOk && <FieldError>Enter a valid email address.</FieldError>}
 
-            <div className="bg-ocean-mid rounded-3xl border border-white/5 p-1 focus-within:border-seafoam/30 transition-colors">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                autoComplete="current-password"
-                aria-label="Password"
-                className="w-full bg-transparent px-5 py-4 font-ui text-sand placeholder:text-sand/25 outline-none text-base"
-              />
-            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete="current-password"
+              aria-label="Password"
+              className={AUTH_INPUT_CLASS}
+            />
             {touched && !passwordOk && (
               <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
             )}
@@ -165,11 +169,7 @@ function SignInForm() {
             )}
             {resendNote && <p className="font-ui text-xs text-sand/45 px-1 -mt-2">{resendNote}</p>}
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-            >
+            <button type="submit" disabled={!canSubmit} className={AUTH_PRIMARY_BTN_CLASS}>
               {loading ? (
                 <span
                   className="w-5 h-5 border-2 border-ocean-deep/25 border-t-ocean-deep rounded-full animate-spin"
@@ -200,7 +200,8 @@ function SignInForm() {
           </Link>
         </p>
       </div>
-    </main>
+      </main>
+    </>
   )
 }
 

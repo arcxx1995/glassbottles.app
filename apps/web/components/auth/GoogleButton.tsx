@@ -46,8 +46,8 @@ export function GoogleButton({
       onClick={onClick}
       disabled={disabled || loading}
       whileTap={{ scale: 0.97 }}
-      className="flex items-center justify-center gap-3 py-4 rounded-2xl
-                 bg-white text-[#1f1f1f] font-ui font-semibold text-base
+      className="flex items-center justify-center gap-3 py-3 rounded-2xl
+                 bg-white text-[#1f1f1f] font-ui font-semibold text-sm
                  transition-all duration-150 hover:brightness-95
                  disabled:opacity-50 disabled:pointer-events-none"
     >

@@ -57,15 +57,21 @@ HTML has no include mechanism; duplication is correct here).
   blocks (Gmail strips/limits them). A `<style>` block may carry only
   progressive-enhancement hints (e.g. media query for mobile padding); the email
   must be fully legible without it.
-- **Web-safe font stack:** `-apple-system, BlinkMacSystemFont, "Segoe UI",
-  Roboto, Helvetica, Arial, sans-serif`. The app's custom display/UI fonts
-  cannot load reliably in mail clients; do not attempt webfont loading.
+- **Fonts:** body/UI copy uses a web-safe sans stack (`-apple-system,
+  BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`). The
+  serif **headings** declare `'Playfair Display', Georgia, 'Times New Roman',
+  serif` — Playfair only renders in clients that allow webfonts (Apple/iOS
+  Mail); Gmail/Outlook strip the `<link>` and fall back to Georgia. Headings are
+  `font-weight:400` (Georgia's 700 read too heavy).
 - **Explicit hex backgrounds on every cell.** Dark-theme mail clients mangle
   transparent/implicit backgrounds. Set colors on each table cell.
-- **Bottle mark:** hosted PNG served from the app's public origin
-  (`https://glassbottles.app/...`). No inline SVG (Gmail drops it). If no hosted
-  asset exists yet, fall back to the text wordmark "glassbottles" only — do not
-  block on producing an image.
+- **Wordmark = hosted PNG.** The "glassbottles" wordmark is a pre-rendered
+  Playfair-SemiBold PNG (sand `#F7E7CE` text on baked-in ocean-deep `#0A1628`,
+  3x retina) at `apps/web/public/email/glassbottles-wordmark.png`, referenced as
+  `https://glassbottles.app/email/glassbottles-wordmark.png`. This forces the
+  brand font everywhere (Gmail included) since images aren't subject to webfont
+  restrictions. Displayed at 116×26. `alt="glassbottles"` covers image-blocking
+  clients. No inline SVG (Gmail drops it).
 
 ## Visual system (brand tokens)
 
@@ -82,13 +88,15 @@ HTML has no include mechanism; duplication is correct here).
 is NOT used in these emails. All action buttons use seafoam.
 
 Layout per email, top to bottom:
-1. Brand mark (PNG or wordmark), centered.
-2. Heading (sea-flavored sentence).
+1. Wordmark PNG, centered.
+2. Heading (sea-flavored sentence, Playfair/Georgia, weight 400).
 3. Plain-transactional action line.
 4. Seafoam CTA button.
-5. Raw fallback URL (full link as text, for clients that strip buttons).
-6. "This link expires in 1 hour." (matches `otp_expiry = 3600`).
-7. Quiet footer: "If you didn't request this, you can ignore this email."
+5. "This link expires in 1 hour." (matches `otp_expiry = 3600`).
+6. Quiet footer: "If you didn't request this, you can safely ignore this email."
+
+Note: the raw-fallback-URL line was dropped — the CTA button plus expiry line
+are enough, and a bare URL cluttered the layout.
 
 ## Copy & template variables
 
@@ -139,11 +147,21 @@ Local `supabase start` is unavailable (no Docker). Verification path:
    `{{ .NewEmail }}` → `new@example.com`). Open in a browser to check layout,
    colors, dark rendering, and button/link presence. These preview files are
    scratch artifacts — gitignore or delete before commit.
-2. **Real end-to-end:** push templates to the hosted Supabase project (Dashboard
+2. **Real-client render (no Supabase):** send a rendered template to a personal
+   inbox via the Resend API with the wordmark **inlined as a `cid:` attachment**
+   (bypasses the not-yet-deployed PNG URL). Confirms Gmail/Apple rendering,
+   Georgia-vs-Playfair fallback, and image display.
+3. **Real end-to-end:** push templates to the hosted Supabase project (Dashboard
    → Authentication → Email Templates, or `supabase config push` if the project
    is linked). Trigger a real signup and a real password reset to a personal
    inbox; confirm Resend delivers the branded mail and the links work through
    `/auth/callback`.
+
+**Hard dependency:** the wordmark PNG URL
+(`https://glassbottles.app/email/glassbottles-wordmark.png`) only resolves once
+`apps/web/public/email/` is deployed. Until then, real inbox sends (path 3) show
+the `alt` text instead of the wordmark. Deploy the web app before the production
+template push, or the first branded emails ship with a broken image.
 
 ## Risks / edge cases
 
@@ -151,7 +169,10 @@ Local `supabase start` is unavailable (no Docker). Verification path:
   explicit per-cell hex backgrounds; accept minor client-specific variance.
 - **Outlook (Word engine):** no rounded corners / box-shadow. Button degrades to
   a flat seafoam rectangle — acceptable.
-- **Missing hosted bottle PNG:** fall back to text wordmark; do not block.
+- **Wordmark PNG 404 until deploy:** the public asset must ship before the
+  production template push (see Testing). `alt="glassbottles"` is the fallback.
+- **Image-blocking clients** (some Outlook/corporate): wordmark hidden → `alt`
+  text shows. Acceptable; heading + button carry the message.
 - **Template var typos** silently render blank. Double-check var names against
   Supabase's documented set (`ConfirmationURL`, `NewEmail`, `Email`, `SiteURL`,
   `Token`, `TokenHash`).

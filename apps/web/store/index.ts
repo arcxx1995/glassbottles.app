@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { setupListeners } from '@reduxjs/toolkit/query'
 import { useDispatch, useSelector } from 'react-redux'
 import type { TypedUseSelectorHook } from 'react-redux'
 import authReducer from './authSlice'
@@ -20,6 +21,11 @@ export const store = configureStore({
       .concat(bottleApi.middleware)
       .concat(authApi.middleware),
 })
+
+// Wires window focus/online state into RTK Query so `skipPollingIfUnfocused`
+// actually skips on hidden tabs (without this it has no focus signal and polls
+// regardless — wasting the throttle the no-Vercel-polling rule depends on).
+setupListeners(store.dispatch)
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

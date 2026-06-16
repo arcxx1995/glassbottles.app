@@ -34,8 +34,19 @@ export default function HomePage() {
 
   // Restore send state after page refresh — a user who already sent today
   // should land on the sailing sea, not the "Your bottle awaits" idle screen.
+  //
+  // Realtime (bottle_delivered → invalidate BottleStatus) is the primary signal
+  // that drops a matched bottle out of the sea. The poll is a slow fallback so
+  // the sea still reconciles for every user when the socket misses the event
+  // (backgrounded tab, dropped connection, prod auth hiccup) — without it a
+  // found bottle lingered until a manual reload.
   const { data: todayStatus, isLoading: isStatusLoading } =
-    useGetTodayBottleStatusQuery(undefined, { skip: !user?.id })
+    useGetTodayBottleStatusQuery(undefined, {
+      skip: !user?.id,
+      // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
+      pollingInterval: 60_000,
+      skipPollingIfUnfocused: true,
+    })
 
   // All of the user's undelivered bottles, floating together in the sea.
   const sailingBottles = useMemo(

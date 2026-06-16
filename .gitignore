@@ -46,3 +46,6 @@ data/state_store.db/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Scratch copies of auth email templates for dashboard paste (source: supabase/templates/)
+email-paste/

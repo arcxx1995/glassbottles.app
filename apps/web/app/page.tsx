@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useAppSelector } from '@/store'
 import { selectUser, selectIsLoading } from '@/store/authSlice'
+import { useGetPublicStatsQuery } from '@/store/api/bottleApi'
 import WaveBackground from '@/components/shared/WaveBackground'
 import NightSky from '@/components/shared/NightSky'
 
@@ -17,7 +18,6 @@ const BottleCanvas = dynamic(
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const EASE_OUT_QUART = [0.25, 1, 0.5, 1] as const
-const OCEAN_COUNT = 4821
 
 // ── Count-up on inView ────────────────────────────────────────────────────
 function useCountUp(target: number, active: boolean, reduced: boolean, duration = 2000) {
@@ -334,10 +334,14 @@ export default function LandingPage() {
     }
   }, [user, isLoading, router])
 
-  // Ocean counter
+  // Ocean counter — true counts from the precomputed public_stats row
+  // (migration 021): adrift = undelivered bottles at sea (hourly), total = all
+  // bottles ever thrown (daily). Granted to anon, so it loads unauthenticated.
+  const { data: stats } = useGetPublicStatsQuery()
   const counterRef = useRef<HTMLDivElement>(null)
   const counterInView = useInView(counterRef, { once: true })
-  const count = useCountUp(OCEAN_COUNT, counterInView, reduced)
+  const count = useCountUp(stats?.adriftCount ?? 0, counterInView, reduced)
+  const totalCount = useCountUp(stats?.totalCount ?? 0, counterInView, reduced)
 
   return (
     <div className="relative min-h-screen bg-ocean-deep text-sand overflow-x-hidden">
@@ -465,10 +469,18 @@ export default function LandingPage() {
           aria-live="polite"
           aria-atomic="true"
         >
-          {counterInView ? count.toLocaleString() : '—'}
+          {stats && counterInView ? count.toLocaleString() : '—'}
         </p>
         <p className="font-ui text-sm text-sand/45 tracking-wide">
           bottles adrift right now
+        </p>
+
+        {/* Secondary metric — cumulative total, refreshed daily. */}
+        <p className="font-ui text-xs text-sand/30 tracking-wide mt-5">
+          <span className="text-sand/50 tabular-nums font-medium">
+            {stats && counterInView ? totalCount.toLocaleString() : '—'}
+          </span>{' '}
+          bottles in the sea till now
         </p>
       </div>
 

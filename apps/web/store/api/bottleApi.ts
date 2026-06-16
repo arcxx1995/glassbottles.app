@@ -38,6 +38,12 @@ export interface BottleCountResponse {
   date: string
 }
 
+/** Precomputed public landing stats (migration 021). */
+export interface PublicStats {
+  adriftCount: number
+  totalCount: number
+}
+
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
@@ -123,6 +129,28 @@ export const bottleApi = createApi({
       },
       providesTags: ['BottleCount'],
     }),
+
+    // Public landing-page stats — reads ONE precomputed row (migration 021),
+    // never a live COUNT. Granted to anon, so it works unauthenticated.
+    //   adrift_count = undelivered bottles at sea now (refreshed hourly)
+    //   total_count  = all bottles ever thrown (refreshed daily)
+    getPublicStats: builder.query<PublicStats, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_public_stats')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        // RPC returns a single-row set.
+        const row = Array.isArray(data) ? data[0] : data
+        return {
+          data: {
+            adriftCount: row?.adrift_count ?? 0,
+            totalCount: row?.total_count ?? 0,
+          },
+        }
+      },
+    }),
   }),
 })
 
@@ -133,5 +161,6 @@ export const {
   useMarkBottleReadMutation,
   useReportBottleMutation,
   useGetBottleCountQuery,
+  useGetPublicStatsQuery,
   useAckDeliveredBottlesMutation,
 } = bottleApi

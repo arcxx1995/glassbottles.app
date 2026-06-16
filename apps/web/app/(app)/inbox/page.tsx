@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useAppSelector } from '@/store'
@@ -10,9 +11,25 @@ import ReceivedBottle from '@/components/bottle/ReceivedBottle'
 export default function InboxPage() {
   const user = useAppSelector(selectUser)
 
-  const { data: bottles, isLoading } = useGetReceivedBottlesQuery(undefined, {
+  const { data, isLoading } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id,
   })
+
+  // Most recently received on top. Sort client-side so the order is correct
+  // regardless of the RPC's ORDER BY (defends against a stale deployed fn).
+  const bottles = useMemo(
+    () =>
+      data
+        ? [...data].sort(
+            (a, b) =>
+              // received_at is non-null for received bottles, but the type
+              // allows null — coalesce to epoch 0 to satisfy the date math.
+              new Date(b.received_at ?? 0).getTime() -
+              new Date(a.received_at ?? 0).getTime(),
+          )
+        : data,
+    [data],
+  )
 
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 

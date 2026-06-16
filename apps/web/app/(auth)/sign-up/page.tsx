@@ -75,7 +75,16 @@ export default function SignUpPage() {
     setLoading(true)
     setFormError(null)
 
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    // emailRedirectTo routes the confirmation link's {{ .ConfirmationURL }}
+    // through /auth/callback (where the PKCE code is exchanged for a session)
+    // and on to /home — the idle "Your bottle awaits" screen. Without it the
+    // link fell back to the project Site URL (root), so confirming dropped the
+    // user on the landing page with no session, never on the app.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/home` },
+    })
 
     if (error) {
       setFormError(mapAuthError(error, 'sign-up'))

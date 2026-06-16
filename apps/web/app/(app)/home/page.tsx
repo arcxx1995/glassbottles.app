@@ -44,7 +44,7 @@ export default function HomePage() {
     useGetTodayBottleStatusQuery(undefined, {
       skip: !user?.id,
       // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
-      pollingInterval: 60_000,
+      pollingInterval: 30_000,
       skipPollingIfUnfocused: true,
     })
 

@@ -17,8 +17,8 @@ export default function InboxPage() {
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 
   return (
-    <div className="flex flex-col min-h-screen pt-14">
-      {/* Header */}
+    <div className="flex h-full flex-col overflow-hidden pt-14">
+      {/* Header — fixed; only the list region below scrolls */}
       <div className="px-5 mb-6">
         <div className="flex items-center gap-2">
           <h1 className="font-display text-2xl text-sand">Inbox</h1>
@@ -36,6 +36,8 @@ export default function InboxPage() {
         <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
       </div>
 
+      {/* Scroll region — page frame + nav stay put, content scrolls inside */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-4">
       {/* Loading skeletons */}
       {isLoading && (
         <div className="flex flex-col gap-4 px-0">
@@ -88,6 +90,7 @@ export default function InboxPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -194,7 +194,7 @@ export default function HomePage() {
               {(sendStatus === 'idle' || sendStatus === 'throwing') && (
                 <motion.div
                   key="compose"
-                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center"
+                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center -translate-y-8 sm:-translate-y-10"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   // No exit fade: the landed throw bottle must NOT fade out. The
@@ -249,7 +249,7 @@ export default function HomePage() {
                 'z-10 flex w-full flex-col items-center text-center',
                 isThrown
                   ? 'absolute left-1/2 top-[10%] -translate-x-1/2 gap-3 px-4'
-                  : 'relative mt-auto gap-4 pb-1 pt-4 sm:gap-6 sm:pt-6'
+                  : 'relative mt-auto gap-4 pb-8 pt-4 sm:gap-6 sm:pt-6 sm:pb-10'
               )}
             >
               {sailingBottles.length > 0 && (

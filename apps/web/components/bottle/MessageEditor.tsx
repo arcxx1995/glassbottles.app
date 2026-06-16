@@ -7,6 +7,7 @@ import { setMessage, selectMessage } from '@/store/bottleSlice'
 import { cn } from '@/lib/utils'
 
 const MAX_CHARS = 1000
+const MAX_TEXTAREA_HEIGHT = 168
 
 interface MessageEditorProps {
   onReady?: () => void
@@ -32,7 +33,9 @@ export default function MessageEditor({
 
   function autoResize(el: HTMLTextAreaElement) {
     el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
+    const nextHeight = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)
+    el.style.height = `${nextHeight}px`
+    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? 'auto' : 'hidden'
   }
 
   return (
@@ -55,7 +58,8 @@ export default function MessageEditor({
           placeholder="Write something for a stranger to find…"
           rows={6}
           className="w-full bg-transparent font-display text-sand text-lg leading-relaxed
-                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none min-h-[144px]"
+                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none
+                     min-h-[132px] max-h-[168px] overflow-y-hidden"
           aria-label="Message to place in your bottle"
         />
       </div>

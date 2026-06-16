@@ -21,6 +21,7 @@ import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
+import { cn } from '@/lib/utils'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -37,7 +38,10 @@ export default function HomePage() {
     useGetTodayBottleStatusQuery(undefined, { skip: !user?.id })
 
   // All of the user's undelivered bottles, floating together in the sea.
-  const sailingBottles = todayStatus?.sailingBottles ?? []
+  const sailingBottles = useMemo(
+    () => todayStatus?.sailingBottles ?? [],
+    [todayStatus?.sailingBottles]
+  )
   const todayKey = todayStatus?.quota.date
   const hasSent = todayStatus?.quota.has_sent ?? false
   // status route fetches at most 21 — length 21 means "at or above the ceiling".
@@ -112,9 +116,10 @@ export default function HomePage() {
   // Show skeleton while we wait for server state so we don't flash
   // "Your bottle awaits" to a user who already sent today
   const isInitializing = !!user?.id && isStatusLoading && !todayStatus
+  const isThrown = sendStatus === 'thrown'
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen pt-14 px-5">
+    <div className="relative flex h-full flex-col items-center overflow-hidden px-5 pt-10 sm:pt-14">
       {/* Full-viewport sea background, present across the whole throw flow so the
           idle pier, the drop, and the sailing sea share one continuous ocean.
           Floating bottles only appear once sailing (idle/throwing pass []).
@@ -135,7 +140,7 @@ export default function HomePage() {
       )}
 
       {/* Header */}
-      <div className="relative z-10 w-full flex items-center justify-between mb-10">
+      <div className="relative z-10 mb-4 flex w-full items-center justify-between sm:mb-8">
         <h1 className="font-display text-2xl text-sand tracking-tight">
           glassbottles
         </h1>
@@ -153,7 +158,7 @@ export default function HomePage() {
       </div>
 
       {/* Stage */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center flex-1">
+      <div className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center">
 
         {/* Status loading — prevents "Your bottle awaits" flash */}
         {isInitializing && (
@@ -178,7 +183,7 @@ export default function HomePage() {
               {(sendStatus === 'idle' || sendStatus === 'throwing') && (
                 <motion.div
                   key="compose"
-                  className="relative z-10 w-full flex-1 flex flex-col items-center justify-center"
+                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   // No exit fade: the landed throw bottle must NOT fade out. The
@@ -212,7 +217,7 @@ export default function HomePage() {
                   {/* Compose box with the bottle inside its top-right corner.
                       On throw the box fades out and the bottle vanishes; the
                       thrown bottle re-appears at a random spot on the sea. */}
-                  <div className="relative w-[94%] max-w-[420px] mt-6">
+                  <div className="relative mt-5 w-[94%] max-w-[420px] sm:mt-6">
                     <motion.div
                       animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
                       transition={{ duration: 0.3, ease: 'easeInOut' }}
@@ -228,7 +233,14 @@ export default function HomePage() {
                 water. The sailing copy shows alongside the compose box (the
                 user's older bottles are always drifting in the sea behind it),
                 and remains once the sea is the only thing on screen. ── */}
-            <div className="relative z-10 mt-auto flex flex-col items-center gap-6 pb-2 text-center w-full pt-6">
+            <div
+              className={cn(
+                'z-10 flex w-full flex-col items-center text-center',
+                isThrown
+                  ? 'absolute left-1/2 top-[10%] -translate-x-1/2 gap-3 px-4'
+                  : 'relative mt-auto gap-4 pb-1 pt-4 sm:gap-6 sm:pt-6'
+              )}
+            >
               {sailingBottles.length > 0 && (
                 <div className="flex flex-col gap-1.5">
                   {atCeiling && !hasSent ? (

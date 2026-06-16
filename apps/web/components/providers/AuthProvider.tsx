@@ -77,6 +77,20 @@ export default function AuthProvider({
     // request, so skipping the client-side network validation here is safe.
     dispatch(setLoading(true))
 
+    // Minimal Profile derived synchronously from the session user. Seeding this
+    // FIRST puts user.id in Redux immediately so the home status RPC
+    // (skip: !user?.id) fires in parallel with /api/profile instead of serially
+    // after that Vercel round-trip — the post-login lag. fetchProfile() then
+    // enriches it (timezone etc.). The status RPC reads auth.uid() server-side,
+    // so it never needed the full profile to run.
+    const seedUser = (u: { id: string; created_at?: string }) => ({
+      id: u.id,
+      timezone: 'UTC',
+      email_notifications: true,
+      created_at: u.created_at ?? new Date().toISOString(),
+      last_active: null,
+    })
+
     void (async () => {
       const {
         data: { session },
@@ -87,20 +101,12 @@ export default function AuthProvider({
         return
       }
 
+      dispatch(setUser(seedUser(session.user)))
+
       const profile = await fetchProfile()
       if (profile) {
         dispatch(setUser(profile))
         syncTimezone(profile)
-      } else {
-        dispatch(
-          setUser({
-            id: session.user.id,
-            timezone: 'UTC',
-            email_notifications: true,
-            created_at: session.user.created_at ?? new Date().toISOString(),
-            last_active: null,
-          })
-        )
       }
     })()
 
@@ -114,6 +120,13 @@ export default function AuthProvider({
       }
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Fresh sign-in: seed user.id instantly so /home unblocks its status
+        // query and shows the skeleton (not a flash of the idle screen) while
+        // the profile loads. Skip on TOKEN_REFRESHED — the full profile is
+        // already in Redux and re-seeding would briefly reset its timezone.
+        if (event === 'SIGNED_IN' && session?.user) {
+          dispatch(setUser(seedUser(session.user)))
+        }
         const profile = await fetchProfile()
         if (profile) {
           dispatch(setUser(profile))

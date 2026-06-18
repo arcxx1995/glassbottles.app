@@ -10,7 +10,7 @@ import { selectUser, selectIsLoading } from '@/store/authSlice'
 import { useGetPublicStatsQuery } from '@/store/api/bottleApi'
 import WaveBackground from '@/components/shared/WaveBackground'
 import NightSky from '@/components/shared/NightSky'
-import { Github } from 'lucide-react'
+import { Github, Star } from 'lucide-react'
 
 const BottleCanvas = dynamic(
   () => import('@/components/bottle/BottleCanvas'),
@@ -310,13 +310,26 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         </Link>
       </motion.div>
 
-      <nav aria-label="Footer" className="flex items-center justify-center gap-5">
+      <nav aria-label="Footer" className="flex items-center justify-center gap-6 flex-wrap">
         <Link
           href="/sign-in"
           className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
         >
           Sign in
         </Link>
+        <a
+          href="https://github.com/arcxx1995/glassbottles.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Star glassbottles on GitHub"
+          className="inline-flex items-center gap-1.5 rounded-full border border-sand/15
+                     bg-sand/[0.04] px-3 py-1.5 font-ui text-xs text-sand/45
+                     hover:border-seafoam/35 hover:text-seafoam transition-all duration-200"
+        >
+          <Github size={13} strokeWidth={1.6} aria-hidden="true" />
+          <Star size={11} strokeWidth={1.8} aria-hidden="true" className="fill-current opacity-80" />
+          <span>Star on GitHub</span>
+        </a>
       </nav>
     </footer>
   )
@@ -497,20 +510,6 @@ export default function LandingPage() {
       {/* ── Footer CTA ───────────────────────────────────────────────── */}
       <FooterCTA reduced={reduced} />
 
-      {/* GitHub repo — fixed bottom-right, floating just above the sea. */}
-      <a
-        href="https://github.com/arcxx1995/glassbottles.app"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="View glassbottles source on GitHub"
-        className="fixed bottom-6 right-6 z-20 inline-flex items-center gap-2 rounded-full
-                   border border-sand/15 bg-ocean-mid/70 px-4 py-2 backdrop-blur-md
-                   font-ui text-xs text-sand/60 transition-colors duration-200
-                   hover:border-seafoam/30 hover:text-seafoam"
-      >
-        <Github size={15} strokeWidth={1.6} aria-hidden="true" />
-        <span>GitHub</span>
-      </a>
     </div>
   )
 }

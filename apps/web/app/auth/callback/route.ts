@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 /**
@@ -33,7 +34,15 @@ import { cookies } from 'next/headers'
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
+  // OAuth (Google) arrives with ?code= (PKCE). Email links — signup confirm,
+  // password recovery, email change — arrive with ?token_hash=&type=. The OTP
+  // path is STATELESS: unlike PKCE, it needs no code_verifier from the
+  // originating browser, so the link works when opened in a different browser /
+  // device / mail app (the common case) and the user lands signed in instead of
+  // being bounced to /sign-in.
   const code = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type = searchParams.get('type')
   // Optional: honour a `next` param for post-login destination, but only same-origin.
   const rawNext = searchParams.get('next') ?? '/home'
   // Reject protocol-relative (//evil.com) and backslash variants (/\evil.com)
@@ -42,8 +51,8 @@ export async function GET(request: NextRequest) {
       ? rawNext
       : '/home'
 
-  if (!code) {
-    // No code means user navigated here directly or link was malformed.
+  if (!code && !tokenHash) {
+    // Neither credential present — user navigated here directly or link was malformed.
     return NextResponse.redirect(`${origin}/sign-in?error=missing_code`)
   }
 
@@ -66,11 +75,32 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  let error
+  if (tokenHash) {
+    // Email OTP confirmation. Whitelist the type so only known email-link flows
+    // are accepted (never trust an arbitrary query value).
+    const allowed: EmailOtpType[] = [
+      'signup',
+      'recovery',
+      'email_change',
+      'email',
+      'magiclink',
+      'invite',
+    ]
+    const otpType = allowed.includes(type as EmailOtpType)
+      ? (type as EmailOtpType)
+      : null
+    if (!otpType) {
+      return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`)
+    }
+    ;({ error } = await supabase.auth.verifyOtp({ type: otpType, token_hash: tokenHash }))
+  } else {
+    ;({ error } = await supabase.auth.exchangeCodeForSession(code!))
+  }
 
   if (error) {
     // Never surface Supabase error details in the redirect URL.
-    console.error('[auth/callback] exchangeCodeForSession failed:', error.message)
+    console.error('[auth/callback] session exchange failed:', error.message)
     return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`)
   }
 

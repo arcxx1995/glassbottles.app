@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Glass Bottles</title>
+  <rect x="0" y="0" width="512" height="512" fill="#0A1628"/>
+
+  <!-- App bottle (BottleCanvas) geometry, centered + opaque for BIMI -->
+  <g transform="translate(112 40) scale(1.8)">
+    <!-- Cork -->
+    <rect x="54" y="8" width="52" height="24" rx="8" fill="#C4A882"/>
+    <rect x="62" y="13" width="36" height="5" rx="2.5" fill="#D8C49E"/>
+    <rect x="62" y="22" width="20" height="3" rx="1.5" fill="#A88E68"/>
+
+    <!-- Neck -->
+    <path d="M60 32 L54 66 L106 66 L100 32 Z" fill="#1D3645" stroke="#4ECDC4" stroke-width="1.5"/>
+    <!-- Neck shine -->
+    <path d="M62 36 L59 60" stroke="#7FD8D0" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Body outline -->
+    <path d="M36 66 Q22 98 22 146 Q22 212 80 218 Q138 212 138 146 Q138 98 124 66 Z" fill="#14303F" stroke="#4ECDC4" stroke-width="2"/>
+
+    <!-- Primary shine -->
+    <path d="M40 82 Q34 116 34 146" stroke="#A8E5DF" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <!-- Secondary shine -->
+    <path d="M50 72 Q45 90 45 108" stroke="#5C8A90" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+    <!-- Message scroll -->
+    <rect x="54" y="96" width="52" height="76" rx="5" fill="#EAD9B8"/>
+    <line x1="63" y1="112" x2="97" y2="112" stroke="#B0966E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="63" y1="126" x2="97" y2="126" stroke="#B0966E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="63" y1="140" x2="97" y2="140" stroke="#B0966E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="63" y1="154" x2="97" y2="154" stroke="#B0966E" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

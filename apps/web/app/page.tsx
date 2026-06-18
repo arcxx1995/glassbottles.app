@@ -10,6 +10,7 @@ import { selectUser, selectIsLoading } from '@/store/authSlice'
 import { useGetPublicStatsQuery } from '@/store/api/bottleApi'
 import WaveBackground from '@/components/shared/WaveBackground'
 import NightSky from '@/components/shared/NightSky'
+import { Github } from 'lucide-react'
 
 const BottleCanvas = dynamic(
   () => import('@/components/bottle/BottleCanvas'),
@@ -495,6 +496,21 @@ export default function LandingPage() {
 
       {/* ── Footer CTA ───────────────────────────────────────────────── */}
       <FooterCTA reduced={reduced} />
+
+      {/* GitHub repo — fixed bottom-right, floating just above the sea. */}
+      <a
+        href="https://github.com/arcxx1995/glassbottles.app"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="View glassbottles source on GitHub"
+        className="fixed bottom-6 right-6 z-20 inline-flex items-center gap-2 rounded-full
+                   border border-sand/15 bg-ocean-mid/70 px-4 py-2 backdrop-blur-md
+                   font-ui text-xs text-sand/60 transition-colors duration-200
+                   hover:border-seafoam/30 hover:text-seafoam"
+      >
+        <Github size={15} strokeWidth={1.6} aria-hidden="true" />
+        <span>GitHub</span>
+      </a>
     </div>
   )
 }

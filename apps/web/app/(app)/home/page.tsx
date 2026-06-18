@@ -10,7 +10,7 @@ import {
   selectSendStatus,
   selectMessage,
 } from '@/store/bottleSlice'
-import { selectUser } from '@/store/authSlice'
+import { selectUser, selectIsLoading } from '@/store/authSlice'
 import {
   useSendBottleMutation,
   useGetTodayBottleStatusQuery,
@@ -28,6 +28,7 @@ export default function HomePage() {
   const sendStatus = useAppSelector(selectSendStatus)
   const message = useAppSelector(selectMessage)
   const user = useAppSelector(selectUser)
+  const authLoading = useAppSelector(selectIsLoading)
 
   const [sendBottle] = useSendBottleMutation()
   const [sendError, setSendError] = useState(false)
@@ -291,8 +292,8 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Guest prompt when no user loaded */}
-      {!user && sendStatus === 'idle' && (
+      {/* Guest prompt — only after auth has resolved (no flash during loading) */}
+      {!user && !authLoading && sendStatus === 'idle' && (
         <p className="font-ui text-xs text-sand/20 pb-4 text-center">
           Sign in to send your bottle
         </p>

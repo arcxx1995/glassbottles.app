@@ -639,10 +639,13 @@ export default function SettingsPage() {
   const [notifsSaving, setNotifsSaving] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null)
+    // getSession() reads from the local cookie — no Auth-server round-trip.
+    // Displaying email doesn't need server-verified identity (middleware guards the route).
+    supabase.auth.getSession().then(({ data }) => {
+      setEmail(data.session?.user?.email ?? null)
     })
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Keep the local toggle in sync once the profile hydrates into Redux.
   useEffect(() => {
@@ -708,55 +711,46 @@ export default function SettingsPage() {
 
           {/* ── Column 1: Account · Notifications · Privacy ─────────── */}
           <div className="flex w-full max-w-[27rem] flex-col gap-5">
-            <div style={{ transform: 'translate(-240px, 0px)' }}>
-              <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
-                <SectionLabel>Account</SectionLabel>
-                <ChangeEmailRow currentEmail={email} />
-                <ChangePasswordRow />
-              </motion.section>
-            </div>
+            <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
+              <SectionLabel>Account</SectionLabel>
+              <ChangeEmailRow currentEmail={email} />
+              <ChangePasswordRow />
+            </motion.section>
 
-            <div style={{ transform: 'translate(220px, -238px)' }}>
-              <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
-                <SectionLabel>Notifications</SectionLabel>
-                <ToggleRow
-                  icon={<Bell size={17} strokeWidth={1.5} />}
-                  iconBg="bg-coral/10"
-                  iconColor="text-coral"
-                  label="Email on bottle arrival"
-                  meta="When a stranger's bottle reaches you"
-                  checked={emailNotifs}
-                  disabled={notifsSaving}
-                  onChange={handleToggleNotifs}
-                />
-              </motion.section>
-            </div>
+            <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
+              <SectionLabel>Notifications</SectionLabel>
+              <ToggleRow
+                icon={<Bell size={17} strokeWidth={1.5} />}
+                iconBg="bg-coral/10"
+                iconColor="text-coral"
+                label="Email on bottle arrival"
+                meta="When a stranger's bottle reaches you"
+                checked={emailNotifs}
+                disabled={notifsSaving}
+                onChange={handleToggleNotifs}
+              />
+            </motion.section>
           </div>
 
           {/* ── Column 2: Session · Danger zone ─────────────────────── */}
           <div className="flex w-full max-w-[27rem] flex-col gap-5">
+            <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
+              <SectionLabel>Session</SectionLabel>
+              <SettingsRow
+                icon={<LogOut size={17} strokeWidth={1.5} />}
+                iconBg="bg-coral/10"
+                iconColor="text-coral"
+                label="Sign out"
+                meta="End your session on this device"
+                onClick={() => void handleSignOut()}
+                destructive
+              />
+            </motion.section>
 
-            <div style={{ transform: 'translate(-700px, 250px)' }}>
-              <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
-                <SectionLabel>Session</SectionLabel>
-                <SettingsRow
-                  icon={<LogOut size={17} strokeWidth={1.5} />}
-                  iconBg="bg-coral/10"
-                  iconColor="text-coral"
-                  label="Sign out"
-                  meta="End your session on this device"
-                  onClick={() => void handleSignOut()}
-                  destructive
-                />
-              </motion.section>
-            </div>
-
-            <div style={{ transform: 'translate(220px, -145px)' }}>
-              <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
-                <SectionLabel>Danger zone</SectionLabel>
-                <DeleteAccountRow />
-              </motion.section>
-            </div>
+            <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
+              <SectionLabel>Danger zone</SectionLabel>
+              <DeleteAccountRow />
+            </motion.section>
           </div>
 
         </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, LogOut, Shield, Info, Mail, KeyRound, Trash2 } from 'lucide-react'
+import { Bell, LogOut, Mail, KeyRound, Trash2 } from 'lucide-react'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -81,7 +81,7 @@ function SettingsRow({
       <div className="flex flex-col flex-1 min-w-0">
         <span
           className={`
-            font-ui text-sm font-medium transition-colors duration-200 truncate
+            font-ui text-sm font-medium transition-colors duration-200 whitespace-nowrap
             ${destructive
               ? 'text-coral/70 group-hover:text-coral'
               : 'text-sand/60 group-hover:text-sand/90'
@@ -91,7 +91,7 @@ function SettingsRow({
           {label}
         </span>
         {meta && (
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
             {meta}
           </span>
         )}
@@ -130,9 +130,9 @@ function ToggleRow({
       </div>
 
       <div className="flex flex-col flex-1 min-w-0">
-        <span className="font-ui text-sm font-medium text-sand/60 truncate">{label}</span>
+        <span className="font-ui text-sm font-medium text-sand/60 whitespace-nowrap">{label}</span>
         {meta && (
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">{meta}</span>
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">{meta}</span>
         )}
       </div>
 
@@ -248,10 +248,10 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
           <Mail size={17} strokeWidth={1.5} className="text-seafoam" />
         </div>
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 truncate">
+          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
             Change email
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
             {currentEmail ?? 'Update the address tied to your account'}
           </span>
         </div>
@@ -390,10 +390,10 @@ function ChangePasswordRow() {
           <KeyRound size={17} strokeWidth={1.5} className="text-seafoam" />
         </div>
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 truncate">
+          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
             Change password
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
             Update the password you sign in with
           </span>
         </div>
@@ -542,10 +542,10 @@ function DeleteAccountRow() {
           <Trash2 size={17} strokeWidth={1.5} className="text-coral" />
         </div>
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-coral/70 group-hover:text-coral transition-colors duration-200 truncate">
+          <span className="font-ui text-sm font-medium text-coral/70 group-hover:text-coral transition-colors duration-200 whitespace-nowrap">
             Delete account
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
             Permanently erase your account and all your bottles
           </span>
         </div>
@@ -681,7 +681,7 @@ export default function SettingsPage() {
   return (
     <div className="flex h-full flex-col overflow-hidden pt-14 px-5">
       {/* Settings fits the viewport — no scroll (overflow-hidden frame) */}
-      <motion.div className="mb-8" {...staggerItem(0)}>
+      <motion.div className="mb-6 shrink-0" {...staggerItem(0)}>
         <h1 className="font-display text-2xl text-sand">Settings</h1>
         {email && (
           <p className="font-mono text-xs text-sand/30 mt-1 truncate max-w-[240px]">
@@ -700,90 +700,80 @@ export default function SettingsPage() {
         )}
       </motion.div>
 
-      {/* Explicit columns side by side. Sections stack vertically WITHIN a
-          column, so expanding a row cascades (pushes) only its column-mates —
-          it never re-flows the other columns. Account is the starting column. */}
-      <div className="flex flex-1 flex-col overflow-hidden pb-4 min-h-0">
-        <div className="flex flex-row gap-6 items-start overflow-y-auto min-h-0">
+      {/* Two centered columns that share the available height. Full text (no
+          truncation), no page scroll, and the lower band is kept clear so the
+          wave animation reads underneath. Account is the starting column. */}
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-row justify-center gap-5 overflow-hidden sm:gap-6">
 
-          {/* ── Column 1: Account · Notifications ───────────────────── */}
-          <div className="flex flex-col gap-5 w-80 shrink-0">
-            <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
-              <SectionLabel>Account</SectionLabel>
-              <ChangeEmailRow currentEmail={email} />
-              <ChangePasswordRow />
-            </motion.section>
+          {/* ── Column 1: Account · Notifications · Privacy ─────────── */}
+          <div className="flex w-full max-w-[27rem] flex-col gap-5">
+            <div style={{ transform: 'translate(-240px, 0px)' }}>
+              <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
+                <SectionLabel>Account</SectionLabel>
+                <ChangeEmailRow currentEmail={email} />
+                <ChangePasswordRow />
+              </motion.section>
+            </div>
 
-            <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
-              <SectionLabel>Notifications</SectionLabel>
-              <ToggleRow
-                icon={<Bell size={17} strokeWidth={1.5} />}
-                iconBg="bg-coral/10"
-                iconColor="text-coral"
-                label="Email on bottle arrival"
-                meta="When a stranger's bottle reaches you"
-                checked={emailNotifs}
-                disabled={notifsSaving}
-                onChange={handleToggleNotifs}
-              />
-            </motion.section>
+            <div style={{ transform: 'translate(220px, -238px)' }}>
+              <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
+                <SectionLabel>Notifications</SectionLabel>
+                <ToggleRow
+                  icon={<Bell size={17} strokeWidth={1.5} />}
+                  iconBg="bg-coral/10"
+                  iconColor="text-coral"
+                  label="Email on bottle arrival"
+                  meta="When a stranger's bottle reaches you"
+                  checked={emailNotifs}
+                  disabled={notifsSaving}
+                  onChange={handleToggleNotifs}
+                />
+              </motion.section>
+            </div>
           </div>
 
-          {/* ── Column 2: Privacy · About ───────────────────────────── */}
-          <div className="flex flex-col gap-5 w-80 shrink-0">
-            <motion.section className="flex flex-col gap-3" {...staggerItem(3)}>
-              <SectionLabel>Privacy</SectionLabel>
-              <SettingsRow
-                icon={<Shield size={17} strokeWidth={1.5} />}
-                iconBg="bg-seafoam/10"
-                iconColor="text-seafoam"
-                label="Anonymous by design"
-                meta="Your identity is never shared with message receivers"
-              />
-            </motion.section>
+          {/* ── Column 2: Session · Danger zone ─────────────────────── */}
+          <div className="flex w-full max-w-[27rem] flex-col gap-5">
 
-            <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
-              <SectionLabel>About</SectionLabel>
-              <SettingsRow
-                icon={<Info size={17} strokeWidth={1.5} />}
-                iconBg="bg-sand/[0.06]"
-                iconColor="text-sand/50"
-                label="How it works"
-                meta="One bottle per day, matched to a random stranger"
-              />
-            </motion.section>
-          </div>
+            <div style={{ transform: 'translate(-700px, 250px)' }}>
+              <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
+                <SectionLabel>Session</SectionLabel>
+                <SettingsRow
+                  icon={<LogOut size={17} strokeWidth={1.5} />}
+                  iconBg="bg-coral/10"
+                  iconColor="text-coral"
+                  label="Sign out"
+                  meta="End your session on this device"
+                  onClick={() => void handleSignOut()}
+                  destructive
+                />
+              </motion.section>
+            </div>
 
-          {/* ── Column 3: Session · Danger zone ─────────────────────── */}
-          <div className="flex flex-col gap-5 w-80 shrink-0">
-            <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
-              <SectionLabel>Session</SectionLabel>
-              <SettingsRow
-                icon={<LogOut size={17} strokeWidth={1.5} />}
-                iconBg="bg-coral/10"
-                iconColor="text-coral"
-                label="Sign out"
-                meta="End your session on this device"
-                onClick={() => void handleSignOut()}
-                destructive
-              />
-            </motion.section>
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
-              <SectionLabel>Danger zone</SectionLabel>
-              <DeleteAccountRow />
-            </motion.section>
+            <div style={{ transform: 'translate(220px, -145px)' }}>
+              <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
+                <SectionLabel>Danger zone</SectionLabel>
+                <DeleteAccountRow />
+              </motion.section>
+            </div>
           </div>
 
         </div>
 
-        {/* ── Build footer ──────────────────────────────────────────── */}
-        <motion.p
-          className="font-mono text-[10px] text-sand/15 text-center mt-8"
+        {/* Footer — anonymity note over the brand line, above the wave band. */}
+        <motion.div
+          className="text-center shrink-0 pt-5 pb-3"
           {...staggerItem(7)}
         >
-          glassbottles · one bottle, one stranger
-        </motion.p>
+          <p className="font-ui text-xs text-sand/45 leading-relaxed max-w-[420px] mx-auto">
+            You&rsquo;re anonymous by design — the strangers who find your bottles
+            never learn who you are.
+          </p>
+          <p className="font-mono text-[10px] text-sand/15 mt-2">
+            glassbottles · one bottle, one stranger
+          </p>
+        </motion.div>
       </div>
     </div>
   )

@@ -310,13 +310,22 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         </Link>
       </motion.div>
 
-      <nav aria-label="Footer" className="flex items-center justify-center gap-5">
+      <nav aria-label="Footer" className="flex items-center justify-center gap-6">
         <Link
           href="/sign-in"
           className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
         >
           Sign in
         </Link>
+        <a
+          href="https://github.com/arcxx1995/glassbottles.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View glassbottles source on GitHub"
+          className="text-sand/35 hover:text-sand/65 transition-colors duration-200"
+        >
+          <Github size={18} strokeWidth={1.6} aria-hidden="true" />
+        </a>
       </nav>
     </footer>
   )

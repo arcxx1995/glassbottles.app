@@ -125,12 +125,11 @@ export async function POST(req: NextRequest) {
     .update({ last_active: new Date().toISOString() })
     .eq('id', user.id)
 
-  // ── 7. Fire-and-forget: trigger match-bottle edge function ─────────────────
-  service.functions
-    .invoke('match-bottle', { body: { bottle_id: bottle.id } })
-    .catch(() => {
-      // Swallow — matching is also attempted by pg_cron on failed bottles
-    })
+  // ── 7. Matching is intentionally NOT triggered at send time. ──────────────
+  // The "1 hour adrift" rule (migration 022) means a bottle cannot be matched
+  // until it has floated for at least an hour; match_bottle() would just return
+  // 'too early' here. The retry cron (every 15 min) finds it on the first tick
+  // after it crosses the hour, so it drifts in the sender's sea until then.
 
   // Never return sender_id (not needed by client, and receiver must not see it)
   return NextResponse.json(bottle, { status: 201 })

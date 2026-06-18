@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       subject: 'A bottle washed up 🫙',
       html: `
         <p>Hey,</p>
-        <p>Someone sent you a message in a bottle. Open the app to read it — don't leave them drifting.</p>
+        <p>You received a message in a bottle. Open the app to read it — don't leave them drifting.</p>
         <p style="margin-top:32px;font-size:0.85em;color:#888;">
           You're getting this because someone sent you a glassbottle.
           If you no longer want email notifications, you can turn them off in your account settings.

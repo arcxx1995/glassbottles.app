@@ -243,11 +243,12 @@ function MessageCard({ reduced }: { reduced: boolean }) {
         >
           <div className="flex items-center gap-3 mb-7">
             <span
-              className="text-xl select-none"
+              className="select-none inline-flex"
               role="img"
               aria-label="glass bottle"
             >
-              🫙
+              {/* Same wiggling bottle as the hero title. */}
+              <BottleCanvas size="1.5rem" />
             </span>
             <span className="font-ui text-[11px] text-sand/40 tracking-widest uppercase">
               Found you
@@ -475,11 +476,16 @@ export default function LandingPage() {
           bottles adrift right now
         </p>
 
-        {/* Secondary metric — cumulative total, refreshed daily. */}
-        <p className="font-ui text-xs text-sand/30 tracking-wide mt-5">
-          <span className="text-sand/50 tabular-nums font-medium">
-            {stats && counterInView ? totalCount.toLocaleString() : '—'}
-          </span>{' '}
+        {/* Cumulative total — same display size as the adrift counter above. */}
+        <p
+          className="font-display text-sand tabular-nums leading-none mb-2 mt-10"
+          style={{ fontSize: 'clamp(2.5rem, 8vw, 4rem)' }}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {stats && counterInView ? totalCount.toLocaleString() : '—'}
+        </p>
+        <p className="font-ui text-sm text-sand/45 tracking-wide">
           bottles in the sea till now
         </p>
       </div>

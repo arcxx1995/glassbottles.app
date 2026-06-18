@@ -27,6 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'glassbottles',
   description: 'One bottle. One stranger. Every day.',
+  icons: { icon: '/icon.png' },
 }
 
 export default function RootLayout({

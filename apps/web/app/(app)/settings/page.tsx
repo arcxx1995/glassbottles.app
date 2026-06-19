@@ -732,9 +732,14 @@ export default function SettingsPage() {
             </motion.section>
           </div>
 
-          {/* ── Column 2: Session · Danger zone ─────────────────────── */}
+          {/* ── Column 2: Danger zone · Session ─────────────────────── */}
           <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
             <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
+              <SectionLabel>Danger zone</SectionLabel>
+              <DeleteAccountRow />
+            </motion.section>
+
+            <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
               <SectionLabel>Session</SectionLabel>
               <SettingsRow
                 icon={<LogOut size={17} strokeWidth={1.5} />}
@@ -745,11 +750,6 @@ export default function SettingsPage() {
                 onClick={() => void handleSignOut()}
                 destructive
               />
-            </motion.section>
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
-              <SectionLabel>Danger zone</SectionLabel>
-              <DeleteAccountRow />
             </motion.section>
           </div>
 

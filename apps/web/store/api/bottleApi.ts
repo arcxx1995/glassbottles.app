@@ -64,11 +64,47 @@ export const bottleApi = createApi({
       providesTags: ['BottleStatus'],
     }),
     sendBottle: builder.mutation<Bottle, SendBottleRequest>({
-      query: (body) => ({
-        url: '/bottles/send',
-        method: 'POST',
-        body,
-      }),
+      // Single atomic Supabase RPC (migration 024) — replaces the
+      // /api/bottles/send Vercel route. One round trip, no Function cold start.
+      queryFn: async ({ message }) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('send_bottle', {
+          p_message: message,
+        })
+        if (error) {
+          // Surface the SQLSTATE so the UI can distinguish "already sent" (23505)
+          // from a real failure. RTK's CUSTOM_ERROR carries it on `data`.
+          return {
+            error: {
+              status: 'CUSTOM_ERROR' as const,
+              error: error.message,
+              data: { code: error.code },
+            },
+          }
+        }
+        return { data: data as Bottle }
+      },
+      // Optimistic: flip today's quota.has_sent the instant the throw fires so
+      // "Sent today ✓", the drift copy and the DailyTimer appear immediately
+      // instead of waiting on the round trip (the old perceived freeze). The
+      // BottleStatus invalidation then reconciles with server truth (and swaps
+      // the optimistic sea placeholder for the real bottle).
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData(
+            'getTodayBottleStatus',
+            undefined,
+            (draft) => {
+              if (draft?.quota) draft.quota.has_sent = true
+            }
+          )
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
       // Invalidate both status (quota + sent bottle) and the ambient counter so the
       // "X bottles in the ocean" display refreshes immediately after a successful throw.
       invalidatesTags: ['BottleStatus', 'BottleCount'],

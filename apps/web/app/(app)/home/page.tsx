@@ -22,6 +22,7 @@ import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
 import { cn } from '@/lib/utils'
+import { buildSeaBottles } from './seaBottles'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -59,20 +60,31 @@ export default function HomePage() {
   // status route fetches at most 21 — length 21 means "at or above the ceiling".
   const atCeiling = sailingBottles.length >= 21
 
+  // True only during a genuine in-session throw hand-off. Set when the bottle
+  // lands in the sea; cleared on the next status refetch (which resolves the
+  // bottle's fate — now sailing, or already delivered). This gates the optimistic
+  // placeholder so it NEVER appears on reload: a bottle that was delivered is
+  // legitimately absent from sailingBottles, and without this gate the absence
+  // was misread as "throw still settling" → a phantom bottle floated next to the
+  // "your bottle found someone" banner.
+  const [justThrew, setJustThrew] = useState(false)
+
+  useEffect(() => {
+    if (justThrew) setJustThrew(false)
+    // Clear on the first refetch after the throw — never re-run on justThrew
+    // itself, or it would clear instantly before the bridge is needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayStatus])
+
   // While the throw settles, the real "today" bottle may not be in sailingBottles
   // yet (the refetch lags the drop animation). Render an optimistic placeholder at
   // the measured landing spot so the hand-off never blinks; the real bottle takes
-  // its place (same spot, same look) once the refetch lands.
-  const seaBottles = useMemo(() => {
-    if (
-      sendStatus === 'thrown' &&
-      todayKey &&
-      !sailingBottles.some((b) => b.day_key === todayKey)
-    ) {
-      return [...sailingBottles, { id: '__pending_today__', day_key: todayKey }]
-    }
-    return sailingBottles
-  }, [sailingBottles, sendStatus, todayKey])
+  // its place (same spot, same look) once the refetch lands. Gated by justThrew
+  // so it only bridges an actual throw, not a reload of an already-delivered one.
+  const seaBottles = useMemo(
+    () => buildSeaBottles(sailingBottles, sendStatus, todayKey, justThrew),
+    [sailingBottles, sendStatus, todayKey, justThrew],
+  )
 
   // Idle (throw entry) shows only when the user hasn't sent today AND the sea
   // isn't full. Otherwise → sailing. When a bottle is delivered, the realtime
@@ -123,6 +135,9 @@ export default function HomePage() {
       return
     }
     dispatch(setSendStatus('thrown'))
+    // A real throw just landed — arm the optimistic placeholder for the
+    // animation→refetch bridge. Cleared by the next status refetch.
+    setJustThrew(true)
   }
 
   // Show skeleton while we wait for server state so we don't flash

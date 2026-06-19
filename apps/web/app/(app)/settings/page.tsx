@@ -81,8 +81,7 @@ function SettingsRow({
       <div className="flex flex-col flex-1 min-w-0">
         <span
           className={`
-            font-ui text-sm font-medium transition-colors duration-200 whitespace-nowrap
-            ${destructive
+            font-ui text-sm font-medium transition-colors duration-200            ${destructive
               ? 'text-coral/70 group-hover:text-coral'
               : 'text-sand/60 group-hover:text-sand/90'
             }
@@ -682,8 +681,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden pt-14 px-5">
-      {/* Settings fits the viewport — no scroll (overflow-hidden frame) */}
+    <div className="flex h-full flex-col overflow-y-auto px-5 pt-10 pb-10 sm:overflow-hidden sm:pt-14 sm:pb-0">
+      {/* Mobile: single column, page scrolls. sm+: two columns fit the viewport
+          with no scroll (overflow-hidden frame). */}
       <motion.div className="mb-6 shrink-0" {...staggerItem(0)}>
         <h1 className="font-display text-2xl text-sand">Settings</h1>
         {email && (
@@ -706,11 +706,11 @@ export default function SettingsPage() {
       {/* Two centered columns that share the available height. Full text (no
           truncation), no page scroll, and the lower band is kept clear so the
           wave animation reads underneath. Account is the starting column. */}
-      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-row justify-center gap-5 overflow-hidden sm:gap-6">
+      <div className="flex flex-col sm:min-h-0 sm:flex-1 sm:overflow-hidden">
+        <div className="flex flex-col gap-5 sm:min-h-0 sm:flex-1 sm:flex-row sm:justify-center sm:gap-6 sm:overflow-hidden">
 
           {/* ── Column 1: Account · Notifications · Privacy ─────────── */}
-          <div className="flex w-full max-w-[27rem] flex-col gap-5">
+          <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
             <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
               <SectionLabel>Account</SectionLabel>
               <ChangeEmailRow currentEmail={email} />
@@ -733,7 +733,7 @@ export default function SettingsPage() {
           </div>
 
           {/* ── Column 2: Session · Danger zone ─────────────────────── */}
-          <div className="flex w-full max-w-[27rem] flex-col gap-5">
+          <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
             <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
               <SectionLabel>Session</SectionLabel>
               <SettingsRow

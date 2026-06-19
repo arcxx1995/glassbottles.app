@@ -100,6 +100,18 @@ body {
   }
 }
 
+/* ─── Safe-area helpers (iOS notch / home indicator) ──────────────────────── */
+/* viewport-fit=cover (set in app/layout.tsx) exposes env(safe-area-inset-*).   */
+
+@layer utilities {
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+  /* App content region: full small-viewport height minus the bottom nav (4rem)
+     and the home-indicator inset, so content never hides behind either. */
+  .h-app-main { height: calc(100svh - 4rem - env(safe-area-inset-bottom)); }
+}
+
 /* ─── Focus ring system ───────────────────────────────────────────────────── */
 /* All interactive elements: use focus-visible, not focus                     */
 

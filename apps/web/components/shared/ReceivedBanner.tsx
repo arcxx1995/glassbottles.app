@@ -10,6 +10,7 @@ import {
   dismissReceivedBanner,
 } from '@/store/uiSlice'
 import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
+import { BottleSVG } from '@/components/bottle/ThrowAnimation'
 
 interface ReceivedBannerProps {
   /** Preview-only: render regardless of server state (/preview page). */
@@ -94,16 +95,10 @@ export default function ReceivedBanner({
             onClick={handleTap}
             className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
           >
-            {/* Bottle icon pulse */}
-            <motion.span
-              className="text-2xl select-none shrink-0"
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              role="img"
-              aria-label="glass bottle"
-            >
-              🫙
-            </motion.span>
+            {/* The app bottle — static, signals an arrival */}
+            <span className="shrink-0 select-none" role="img" aria-label="glass bottle">
+              <BottleSVG glowing width={26} height={39} />
+            </span>
 
             <div className="flex-1 min-w-0">
               <p className="font-ui text-sm font-medium text-sand leading-snug">

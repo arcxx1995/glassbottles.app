@@ -34,7 +34,7 @@ export default function InboxPage() {
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 
   return (
-    <div className="flex h-full flex-col overflow-hidden pt-14">
+    <div className="flex h-full flex-col overflow-hidden pt-10 sm:pt-14">
       {/* Header — fixed; only the list region below scrolls */}
       <div className="px-5 mb-6">
         <div className="flex items-center gap-2">

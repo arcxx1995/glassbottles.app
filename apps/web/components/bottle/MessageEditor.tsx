@@ -28,7 +28,12 @@ export default function MessageEditor({
   const canSend = message.trim().length > 0 && !isOverLimit
 
   useEffect(() => {
-    textareaRef.current?.focus()
+    // Auto-focus only on devices with a fine pointer (desktop). On touch this
+    // would pop the keyboard the instant you land on the throw screen, hiding
+    // the bottle scene and the "Seal & Throw" CTA — let mobile users tap to type.
+    if (window.matchMedia?.('(pointer: fine)').matches) {
+      textareaRef.current?.focus()
+    }
   }, [])
 
   function autoResize(el: HTMLTextAreaElement) {
@@ -59,7 +64,7 @@ export default function MessageEditor({
           rows={6}
           className="w-full bg-transparent font-display text-sand text-lg leading-relaxed
                      placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none
-                     min-h-[132px] max-h-[168px] overflow-y-hidden"
+                     min-h-[104px] sm:min-h-[132px] max-h-[168px] overflow-y-hidden"
           aria-label="Message to place in your bottle"
         />
       </div>
@@ -94,7 +99,7 @@ export default function MessageEditor({
                      text-base tracking-wide transition-all duration-150
                      active:scale-[0.97] hover:brightness-110"
         >
-          Seal &amp; Throw 🫙
+          Seal &amp; Throw
         </motion.button>
       )}
     </motion.div>

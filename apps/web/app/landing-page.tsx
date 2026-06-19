@@ -20,6 +20,10 @@ const BottleCanvas = dynamic(
 // ── Constants ─────────────────────────────────────────────────────────────
 const EASE_OUT_QUART = [0.25, 1, 0.5, 1] as const
 
+// Public Spotify playlist for the landing-page soundtrack. Paste only the ID
+// from the share link: https://open.spotify.com/playlist/<THIS_PART>?si=...
+const SPOTIFY_PLAYLIST_ID = '0PNQlJpYD7qkyBGlK6gNUV'
+
 // ── Count-up on inView ────────────────────────────────────────────────────
 function useCountUp(target: number, active: boolean, reduced: boolean, duration = 2000) {
   const [value, setValue] = useState(reduced ? target : 0)
@@ -273,6 +277,59 @@ function MessageCard({ reduced }: { reduced: boolean }) {
   )
 }
 
+// ── Soundtrack ────────────────────────────────────────────────────────────
+// A public Spotify playlist embedded for ambient listening — plain iframe, no
+// API or keys. Full-height embed so the track list is visible and individually
+// playable. Spotify-logged-in visitors hear full tracks; others get 30s
+// previews (a Spotify limitation, not ours). The embed is a sealed third party:
+// it never receives anything about the visitor's bottles or identity, so it
+// cannot touch the app's anonymity.
+function Soundtrack({ reduced }: { reduced: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+
+  return (
+    <section className="relative z-10 px-6 py-20" aria-label="Soundtrack">
+      <div className="max-w-lg mx-auto">
+        <motion.div
+          ref={ref}
+          className="overflow-hidden rounded-[1.75rem] border border-seafoam/20
+                     bg-ocean-mid/55 backdrop-blur-md shadow-[0_12px_48px_-16px_rgba(0,0,0,0.55)]"
+          initial={reduced ? {} : { opacity: 0, y: 18 }}
+          animate={inView || reduced ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, ease: EASE_OUT_QUART }}
+        >
+          {/* Site chrome wrapped around Spotify's player — the bottle, the
+              display font and the seafoam accent make it read as our own. */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
+            <span className="shrink-0 select-none" aria-hidden="true">
+              <BottleCanvas size="1.4rem" />
+            </span>
+            <span className="font-display text-lg text-sand leading-tight">
+              Music while you drift
+            </span>
+            <span
+              className="ml-auto h-2 w-2 rounded-full bg-seafoam/70 shadow-[0_0_8px_rgba(78,205,196,0.7)]"
+              aria-hidden="true"
+            />
+          </div>
+
+          {/* Spotify embed (dark theme) nested flush inside the card */}
+          <iframe
+            title="glassbottles soundtrack on Spotify"
+            src={`https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLIST_ID}?theme=0`}
+            width="100%"
+            height={352}
+            style={{ border: 0, display: 'block' }}
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          />
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 // ── Footer CTA ────────────────────────────────────────────────────────────
 function FooterCTA({ reduced }: { reduced: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -505,6 +562,9 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
           bottles in the sea till now
         </p>
       </div>
+
+      {/* ── Soundtrack ────────────────────────────────────────────────── */}
+      <Soundtrack reduced={reduced} />
 
       {/* ── Message in a bottle ───────────────────────────────────────── */}
       <MessageCard reduced={reduced} />

@@ -9,6 +9,7 @@ import {
   useGetTodayBottleStatusQuery,
   useAckDeliveredBottlesMutation,
 } from '@/store/api/bottleApi'
+import { BottleSVG } from '@/components/bottle/ThrowAnimation'
 
 interface DeliveredBannerProps {
   /** Preview-only: render regardless of server state (/preview page). */
@@ -87,16 +88,10 @@ export default function DeliveredBanner({
           role="status"
           aria-live="polite"
         >
-          {/* Wave pulse — coral signals "your bottle reached someone" */}
-          <motion.span
-            className="text-2xl select-none shrink-0"
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            role="img"
-            aria-label="bottle delivered"
-          >
-            🌊
-          </motion.span>
+          {/* The app bottle — static, signals your bottle reached someone */}
+          <span className="shrink-0 select-none" role="img" aria-label="bottle delivered">
+            <BottleSVG glowing width={26} height={39} />
+          </span>
 
           <div className="flex-1 min-w-0">
             <p className="font-ui text-sm font-medium text-sand leading-snug">

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Playfair_Display, DM_Sans, JetBrains_Mono } from 'next/font/google'
 import { ReduxProvider } from '@/components/providers/ReduxProvider'
 import AuthProvider from '@/components/providers/AuthProvider'
@@ -28,6 +28,17 @@ export const metadata: Metadata = {
   title: 'glassbottles',
   description: 'One bottle. One stranger. Every day.',
   icons: { icon: '/icon.png' },
+}
+
+// Mobile-first viewport: cover the notch (viewport-fit), tint the browser chrome
+// to the ocean, and let the layout shrink when the keyboard opens so the throw
+// CTA stays reachable. Zoom is left enabled for accessibility.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0A1628',
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({

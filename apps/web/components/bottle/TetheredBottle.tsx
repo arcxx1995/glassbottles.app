@@ -22,7 +22,10 @@ export default function TetheredBottle({
   const reduced = useReducedMotion() ?? false
 
   return (
-    <div className="fixed top-3 right-4 z-50 pointer-events-none select-none">
+    <div
+      className="fixed right-4 z-50 pointer-events-none select-none"
+      style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}
+    >
       <motion.div
         className="relative"
         style={{ width: W, height: H, transformOrigin: '50% 50%' }}

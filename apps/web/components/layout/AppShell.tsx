@@ -19,7 +19,7 @@ export default function AppShell({
   return (
     <div className="relative h-[100svh] overflow-hidden">
       <WaveBackground />
-      <main className="relative z-10 h-[calc(100svh-4rem)] overflow-hidden">
+      <main className="relative z-10 h-app-main overflow-hidden pt-safe">
         {children}
       </main>
       <BottomNav />

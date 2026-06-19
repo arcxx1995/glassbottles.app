@@ -289,7 +289,7 @@ function Soundtrack({ reduced }: { reduced: boolean }) {
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   return (
-    <section className="relative z-10 px-6 py-12" aria-label="Soundtrack">
+    <section className="relative z-10 px-4 py-12 sm:px-6" aria-label="Soundtrack">
       <div className="max-w-lg mx-auto">
         <motion.div
           ref={ref}

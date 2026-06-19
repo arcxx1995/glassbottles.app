@@ -235,7 +235,7 @@ function MessageCard({ reduced }: { reduced: boolean }) {
 
   return (
     <section
-      className="relative z-10 px-6 py-20"
+      className="relative z-10 px-6 py-12"
       aria-label="An example message"
     >
       <div className="max-w-lg mx-auto">
@@ -289,7 +289,7 @@ function Soundtrack({ reduced }: { reduced: boolean }) {
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   return (
-    <section className="relative z-10 px-6 py-20" aria-label="Soundtrack">
+    <section className="relative z-10 px-6 py-12" aria-label="Soundtrack">
       <div className="max-w-lg mx-auto">
         <motion.div
           ref={ref}
@@ -337,7 +337,7 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
 
   return (
     <footer
-      className="relative z-10 px-6 pt-20 pb-16 text-center"
+      className="relative z-10 px-6 pt-12 pb-12 text-center"
       aria-label="Sign up"
     >
       <motion.div
@@ -442,7 +442,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
-        className="relative z-10 flex flex-col items-center justify-center px-6 pb-20 text-center"
+        className="relative z-10 flex flex-col items-center justify-center px-6 pb-12 text-center"
         style={{ minHeight: 'calc(100svh - 64px)' }}
         aria-labelledby="hero-heading"
       >
@@ -504,7 +504,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
 
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section
-        className="relative z-10 px-6 py-20 max-w-2xl mx-auto flex flex-col gap-16 md:gap-20"
+        className="relative z-10 px-6 py-12 max-w-2xl mx-auto flex flex-col gap-10 md:gap-12"
         aria-label="How glassbottles works"
       >
         <Beat
@@ -533,7 +533,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
       {/* ── Ocean counter ─────────────────────────────────────────────── */}
       <div
         ref={counterRef}
-        className="relative z-10 py-14 text-center border-y border-seafoam/[0.08]"
+        className="relative z-10 py-10 text-center border-y border-seafoam/[0.08]"
         role="complementary"
         aria-label="Bottles at sea"
       >

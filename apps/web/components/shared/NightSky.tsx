@@ -193,8 +193,8 @@ function Galaxy({ reduced }: { reduced: boolean }) {
 function CrescentMoon() {
   return (
     <div
-      className="absolute pointer-events-none"
-      style={{ right: '14%', top: '20%', width: 62, height: 62 }}
+      className="absolute pointer-events-none right-[6%] top-[9%] sm:right-[14%] sm:top-[20%]"
+      style={{ width: 62, height: 62 }}
     >
       {/* Glow halo */}
       <div

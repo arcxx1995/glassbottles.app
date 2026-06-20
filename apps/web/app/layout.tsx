@@ -27,7 +27,16 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'glassbottles',
   description: 'One bottle. One stranger. Every day.',
-  icons: { icon: '/icon.png' },
+  icons: {
+    icon: '/icon.png',
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'glassbottles',
+    statusBarStyle: 'black-translucent',
+  },
+  manifest: '/manifest.webmanifest',
 }
 
 // Mobile-first viewport: cover the notch (viewport-fit), tint the browser chrome

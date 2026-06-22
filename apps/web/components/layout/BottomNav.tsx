@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
-import { Anchor, Mail, MessageCircle, Bookmark, Settings, type LucideIcon } from 'lucide-react'
+import { Anchor, MessageCircle, Bookmark, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -11,7 +11,6 @@ import { useGetReceivedBottlesQuery, useGetThreadsQuery } from '@/store/api/bott
 
 const NAV_ITEMS: { href: Route; label: string; Icon: LucideIcon }[] = [
   { href: '/home', label: 'Bottle', Icon: Anchor },
-  { href: '/inbox', label: 'Inbox', Icon: Mail },
   { href: '/threads', label: 'Threads', Icon: MessageCircle },
   { href: '/shelf', label: 'Shelf', Icon: Bookmark },
   { href: '/settings', label: 'Settings', Icon: Settings },
@@ -21,7 +20,7 @@ export default function BottomNav() {
   const pathname = usePathname()
   const user = useAppSelector(selectUser)
 
-  // Unread count for inbox badge. Realtime is the primary signal
+  // Unread count for shelf badge. Realtime is the primary signal
   // (RealtimeBottleListener invalidates this cache on delivery) — polling is
   // only a slow safety net, and hidden tabs don't poll at all.
   const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
@@ -52,7 +51,7 @@ export default function BottomNav() {
           const isActive =
             pathname === href || pathname.startsWith(href + '/')
           const badgeCount =
-            href === '/inbox' ? unreadCount :
+            href === '/shelf' ? unreadCount :
             href === '/threads' ? threadBadge : 0
           const showBadge = badgeCount > 0
 

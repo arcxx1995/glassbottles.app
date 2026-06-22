@@ -29,7 +29,7 @@ interface ReceivedBannerProps {
  * invalidation, 5-min poll, navigation) resurfaces it. The toast disappears
  * for good only when the bottle is actually read (is_read flips in the DB).
  *
- * No auto-dismiss. Tap → /inbox (hides for the session); X hides for the
+ * No auto-dismiss. Tap → /shelf (hides for the session); X hides for the
  * session. Both reappear after reload while the bottle stays unread —
  * the banner is only ever shown when it is true.
  *
@@ -67,7 +67,7 @@ export default function ReceivedBanner({
 
   function handleTap() {
     hide()
-    router.push('/inbox')
+    router.push('/shelf')
   }
 
   return (

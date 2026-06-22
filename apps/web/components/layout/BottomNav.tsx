@@ -1,18 +1,20 @@
 'use client'
 
 import Link from 'next/link'
+import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
-import { Anchor, Mail, Settings } from 'lucide-react'
+import { Anchor, Mail, Bookmark, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { href: Route; label: string; Icon: LucideIcon }[] = [
   { href: '/home', label: 'Bottle', Icon: Anchor },
   { href: '/inbox', label: 'Inbox', Icon: Mail },
+  { href: '/shelf', label: 'Shelf', Icon: Bookmark },
   { href: '/settings', label: 'Settings', Icon: Settings },
-] as const
+]
 
 export default function BottomNav() {
   const pathname = usePathname()

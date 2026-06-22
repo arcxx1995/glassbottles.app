@@ -1,6 +1,14 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { createClient } from '@/lib/supabase/client'
-import type { Bottle, DailyQuota } from '@/types'
+import type {
+  Bottle,
+  DailyQuota,
+  Mood,
+  MoodStreakStatus,
+  MoodCheckInResult,
+  SavedBottle,
+  SaveResult,
+} from '@/types'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
  *  No message/receiver fields leak; just id (key) and day_key (date label). */
@@ -47,7 +55,13 @@ export interface PublicStats {
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount'],
+  tagTypes: [
+    'BottleStatus',
+    'ReceivedBottles',
+    'BottleCount',
+    'MoodStreak',
+    'SavedBottles',
+  ],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -166,6 +180,89 @@ export const bottleApi = createApi({
       providesTags: ['BottleCount'],
     }),
 
+    // ── Mood check-in + streak (migration 025) ──────────────────────────────
+    // Supabase-direct RPCs (queryFn), no Vercel route. The retention spine:
+    // a low-bar daily ritual that anchors the ADHD-safe streak.
+    getMoodStreak: builder.query<MoodStreakStatus, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_mood_streak_status')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as MoodStreakStatus }
+      },
+      providesTags: ['MoodStreak'],
+    }),
+    checkInMood: builder.mutation<MoodCheckInResult, Mood>({
+      queryFn: async (mood) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('check_in_mood', { p_mood: mood })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as MoodCheckInResult }
+      },
+      // Optimistic: paint today's mood + checked-in state instantly so the
+      // weather picker collapses to the chosen mood with no round-trip flicker.
+      async onQueryStarted(mood, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getMoodStreak', undefined, (draft) => {
+            if (draft) {
+              draft.today_mood = mood
+              draft.checked_in_today = true
+              draft.at_risk = false
+            }
+          })
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
+      invalidatesTags: ['MoodStreak'],
+    }),
+
+    // ── Save shelf (migration 026) ──────────────────────────────────────────
+    getSavedBottles: builder.query<SavedBottle[], void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_saved_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: (data ?? []) as SavedBottle[] }
+      },
+      providesTags: ['SavedBottles'],
+    }),
+    saveBottle: builder.mutation<SaveResult, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('save_bottle', {
+          p_bottle_id: bottleId,
+        })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as SaveResult }
+      },
+      invalidatesTags: ['SavedBottles'],
+    }),
+    unsaveBottle: builder.mutation<SaveResult, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('unsave_bottle', {
+          p_bottle_id: bottleId,
+        })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as SaveResult }
+      },
+      invalidatesTags: ['SavedBottles'],
+    }),
+
     // Public landing-page stats — reads ONE precomputed row (migration 021),
     // never a live COUNT. Granted to anon, so it works unauthenticated.
     //   adrift_count = undelivered bottles at sea now (refreshed hourly)
@@ -199,4 +296,9 @@ export const {
   useGetBottleCountQuery,
   useGetPublicStatsQuery,
   useAckDeliveredBottlesMutation,
+  useGetMoodStreakQuery,
+  useCheckInMoodMutation,
+  useGetSavedBottlesQuery,
+  useSaveBottleMutation,
+  useUnsaveBottleMutation,
 } = bottleApi

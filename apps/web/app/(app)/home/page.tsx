@@ -21,8 +21,20 @@ import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
+import MoodCheckIn from '@/components/mood/MoodCheckIn'
+import StreakBadge from '@/components/mood/StreakBadge'
 import { cn } from '@/lib/utils'
+import type { Mood } from '@/types'
 import { buildSeaBottles } from './seaBottles'
+
+// Gentle, mood-seeded variants of the compose subheading. Turns a feeling into
+// the core action without pressure — shown once the user has checked in.
+const MOOD_PROMPT: Record<Mood, string> = {
+  sunny: 'Feeling sunny? Send some of that light to a stranger.',
+  calm: 'A calm day. Set down a few quiet words for someone.',
+  foggy: 'Foggy today? Write through it — a stranger will hold it.',
+  stormy: 'Stormy today? Throw a bottle about it. No one will know it’s you.',
+}
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -33,6 +45,8 @@ export default function HomePage() {
 
   const [sendBottle] = useSendBottleMutation()
   const [sendError, setSendError] = useState(false)
+  // Today's checked-in mood (from MoodCheckIn) — seeds the compose subheading.
+  const [mood, setMood] = useState<Mood | null>(null)
 
   // Restore send state after page refresh — a user who already sent today
   // should land on the sailing sea, not the "Your bottle awaits" idle screen.
@@ -171,17 +185,20 @@ export default function HomePage() {
         <h1 className="font-display text-2xl text-sand tracking-tight">
           glassbottles
         </h1>
-        <AnimatePresence>
-          {hasSent && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full"
-            >
-              Sent today ✓
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <div className="flex items-center gap-2">
+          <StreakBadge />
+          <AnimatePresence>
+            {hasSent && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full"
+              >
+                Sent today ✓
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Stage */}
@@ -227,9 +244,18 @@ export default function HomePage() {
                   >
                     <div className="text-center">
                       <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                      <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
-                        Write something for a stranger. They won&apos;t know it&apos;s you.
+                      <p className="font-ui text-xs text-sand/55 max-w-[260px] mx-auto leading-relaxed mt-1">
+                        {mood
+                          ? MOOD_PROMPT[mood]
+                          : 'Write something for a stranger. They won’t know it’s you.'}
                       </p>
+
+                      {/* Daily mood check-in — the low-bar ritual that anchors the
+                          streak and seeds the prompt above. */}
+                      <div className="mt-4">
+                        <MoodCheckIn onMood={setMood} />
+                      </div>
+
                       {sendError && (
                         <p
                           className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"

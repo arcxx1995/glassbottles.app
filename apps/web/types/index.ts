@@ -35,3 +35,41 @@ export interface DailyQuota {
 
 export type BottleSendStatus = 'idle' | 'composing' | 'throwing' | 'thrown'
 export type BottleReceiveStatus = 'idle' | 'pending' | 'received' | 'read'
+
+// ─── Mood check-in + streak (migration 025) ──────────────────────────────────
+
+/** Daily mood as a weather metaphor. Ordered calm→stormy for the picker. */
+export type Mood = 'sunny' | 'calm' | 'foggy' | 'stormy'
+
+export interface MoodStreakStatus {
+  today_mood: Mood | null
+  checked_in_today: boolean
+  current_streak: number
+  longest_streak: number
+  /** Live streak that hasn't checked in yet today — drives a gentle nudge. */
+  at_risk: boolean
+}
+
+/** Result of check_in_mood — `advanced` is false when only re-setting today's mood. */
+export interface MoodCheckInResult {
+  mood: Mood
+  current_streak: number
+  longest_streak: number
+  checked_in_today: boolean
+  advanced: boolean
+}
+
+// ─── Save shelf (migration 026) ──────────────────────────────────────────────
+
+/** A received bottle kept on the shelf — a Bottle plus when it was saved. */
+export interface SavedBottle extends Bottle {
+  saved_at: string
+}
+
+/** Result of save_bottle / unsave_bottle. `capped` = free shelf full. */
+export interface SaveResult {
+  saved: boolean
+  capped?: boolean
+  saved_count: number
+  cap?: number
+}

@@ -3,10 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, LogOut, Mail, KeyRound, Trash2 } from 'lucide-react'
+import { Bell, BellRing, LogOut, Mail, KeyRound, Trash2 } from 'lucide-react'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import {
+  isPushSupported,
+  getPushSubscribed,
+  enablePush,
+  disablePush,
+} from '@/lib/push'
 import {
   isValidEmail,
   isValidPassword,
@@ -156,6 +162,65 @@ function ToggleRow({
         />
       </button>
     </div>
+  )
+}
+
+// ─── Push-notification toggle ─────────────────────────────────────────────────
+// Registers the service worker + PushManager subscription (lib/push) and persists
+// it via the save_push_subscription RPC. iOS only exposes PushManager once the PWA
+// is installed to the home screen, so unsupported browsers get a hint instead of a
+// dead toggle.
+
+function PushToggleRow() {
+  const [supported, setSupported] = useState<boolean | null>(null)
+  const [enabled, setEnabled] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const ok = isPushSupported()
+    setSupported(ok)
+    if (ok) void getPushSubscribed().then(setEnabled)
+  }, [])
+
+  async function handleToggle(next: boolean) {
+    setBusy(true)
+    try {
+      const success = next ? await enablePush() : await disablePush()
+      // enablePush resolves false if permission was denied — reflect reality.
+      setEnabled(next ? success : false)
+    } catch {
+      setEnabled(!next)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // While probing support, render nothing to avoid a flash.
+  if (supported === null) return null
+
+  if (!supported) {
+    return (
+      <SettingsRow
+        icon={<BellRing size={17} strokeWidth={1.5} />}
+        iconBg="bg-seafoam/10"
+        iconColor="text-seafoam"
+        label="Push notifications"
+        meta="Add glassbottles to your home screen to enable push"
+      />
+    )
+  }
+
+  return (
+    <ToggleRow
+      icon={<BellRing size={17} strokeWidth={1.5} />}
+      iconBg="bg-seafoam/10"
+      iconColor="text-seafoam"
+      label="Push when a bottle is found"
+      meta="A nudge the moment your bottle reaches someone"
+      checked={enabled}
+      disabled={busy}
+      onChange={handleToggle}
+    />
   )
 }
 
@@ -719,6 +784,7 @@ export default function SettingsPage() {
 
             <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
               <SectionLabel>Notifications</SectionLabel>
+              <PushToggleRow />
               <ToggleRow
                 icon={<Bell size={17} strokeWidth={1.5} />}
                 iconBg="bg-coral/10"

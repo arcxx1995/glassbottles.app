@@ -1,8 +1,17 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Flag, CheckCheck } from 'lucide-react'
-import { useMarkBottleReadMutation, useReportBottleMutation } from '@/store/api/bottleApi'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Flag, CheckCheck, Bookmark } from 'lucide-react'
+import {
+  useMarkBottleReadMutation,
+  useReportBottleMutation,
+  useGetSavedBottlesQuery,
+  useSaveBottleMutation,
+  useUnsaveBottleMutation,
+} from '@/store/api/bottleApi'
+import { useAppSelector } from '@/store'
+import { selectUser } from '@/store/authSlice'
 import type { Bottle } from '@/types'
 
 interface ReceivedBottleProps {
@@ -10,8 +19,26 @@ interface ReceivedBottleProps {
 }
 
 export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
+  const user = useAppSelector(selectUser)
   const [markRead, { isLoading: isMarking }] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
+
+  // Saved-state comes from the shared shelf cache — one query, all cards read it.
+  const { data: saved } = useGetSavedBottlesQuery(undefined, { skip: !user?.id })
+  const [saveBottle, { isLoading: isSaving }] = useSaveBottleMutation()
+  const [unsaveBottle, { isLoading: isUnsaving }] = useUnsaveBottleMutation()
+  const isSaved = saved?.some((b) => b.id === bottle.id) ?? false
+  const [cappedMsg, setCappedMsg] = useState(false)
+
+  async function handleToggleSave() {
+    setCappedMsg(false)
+    if (isSaved) {
+      await unsaveBottle(bottle.id)
+      return
+    }
+    const res = await saveBottle(bottle.id).unwrap().catch(() => null)
+    if (res?.capped) setCappedMsg(true)
+  }
 
   const words = bottle.message.split(' ')
 
@@ -68,6 +95,25 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => void handleToggleSave()}
+            disabled={isSaving || isUnsaving}
+            className={`p-2 rounded-xl transition-colors disabled:opacity-40 disabled:pointer-events-none ${
+              isSaved
+                ? 'text-seafoam hover:text-seafoam/80'
+                : 'text-sand/25 hover:text-seafoam/80'
+            }`}
+            aria-label={isSaved ? 'Remove from shelf' : 'Keep on shelf'}
+            aria-pressed={isSaved}
+            title={isSaved ? 'On your shelf' : 'Keep'}
+          >
+            <Bookmark
+              size={15}
+              strokeWidth={1.5}
+              fill={isSaved ? 'currentColor' : 'none'}
+            />
+          </button>
+
+          <button
             onClick={() => void reportBottle(bottle.id)}
             disabled={isReporting || bottle.is_reported}
             className="p-2 rounded-xl text-sand/25 hover:text-coral/80 transition-colors
@@ -99,6 +145,21 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
           )}
         </div>
       </div>
+
+      {/* Free-shelf cap reached — gentle upsell, not an error. */}
+      <AnimatePresence>
+        {cappedMsg && (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="font-ui text-xs text-sand/45 leading-relaxed pt-3 mt-1"
+          >
+            Your shelf holds 3 bottles. Unkeep one to make room — or keep them all
+            with Plus.
+          </motion.p>
+        )}
+      </AnimatePresence>
     </motion.article>
   )
 }

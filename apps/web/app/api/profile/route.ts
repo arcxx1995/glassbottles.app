@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest) {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, timezone, email_notifications, created_at, last_active')
+    .select('id, timezone, email_notifications, is_plus, created_at, last_active')
     .eq('id', user.id)
     .single()
 
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
     .from('profiles')
     .update(update)
     .eq('id', user.id)
-    .select('id, timezone, email_notifications, created_at, last_active')
+    .select('id, timezone, email_notifications, is_plus, created_at, last_active')
     .single()
 
   if (error) {

@@ -3,15 +3,16 @@
 import Link from 'next/link'
 import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
-import { Anchor, Mail, Bookmark, Settings, type LucideIcon } from 'lucide-react'
+import { Anchor, Mail, MessageCircle, Bookmark, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
-import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
+import { useGetReceivedBottlesQuery, useGetThreadsQuery } from '@/store/api/bottleApi'
 
 const NAV_ITEMS: { href: Route; label: string; Icon: LucideIcon }[] = [
   { href: '/home', label: 'Bottle', Icon: Anchor },
   { href: '/inbox', label: 'Inbox', Icon: Mail },
+  { href: '/threads', label: 'Threads', Icon: MessageCircle },
   { href: '/shelf', label: 'Shelf', Icon: Bookmark },
   { href: '/settings', label: 'Settings', Icon: Settings },
 ]
@@ -31,6 +32,16 @@ export default function BottomNav() {
   })
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 
+  const { data: threads } = useGetThreadsQuery(undefined, {
+    skip: !user?.id,
+    // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
+    pollingInterval: 30_000,
+    skipPollingIfUnfocused: true,
+  })
+  const threadBadge =
+    (threads?.filter((t) => t.status === 'pending' && t.role === 'recipient').length ?? 0) +
+    (threads?.filter((t) => t.status === 'active' && t.unread_count > 0).length ?? 0)
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-ocean-mid/80 backdrop-blur-md border-t border-white/5 pb-safe"
@@ -40,7 +51,10 @@ export default function BottomNav() {
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const isActive =
             pathname === href || pathname.startsWith(href + '/')
-          const showBadge = href === '/inbox' && unreadCount > 0
+          const badgeCount =
+            href === '/inbox' ? unreadCount :
+            href === '/threads' ? threadBadge : 0
+          const showBadge = badgeCount > 0
 
           return (
             <Link
@@ -61,9 +75,9 @@ export default function BottomNav() {
                     className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full
                                bg-coral text-ocean-deep font-ui font-semibold text-[9px]
                                flex items-center justify-center px-[3px]"
-                    aria-label={`${unreadCount} unread`}
+                    aria-label={`${badgeCount} unread`}
                   >
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {badgeCount > 9 ? '9+' : badgeCount}
                   </span>
                 )}
               </span>

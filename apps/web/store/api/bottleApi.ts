@@ -8,6 +8,9 @@ import type {
   MoodCheckInResult,
   SavedBottle,
   SaveResult,
+  Thread,
+  ThreadMessage,
+  ThreadInitResult,
 } from '@/types'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
@@ -61,6 +64,7 @@ export const bottleApi = createApi({
     'BottleCount',
     'MoodStreak',
     'SavedBottles',
+    'Threads',
   ],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
@@ -263,6 +267,76 @@ export const bottleApi = createApi({
       invalidatesTags: ['SavedBottles'],
     }),
 
+    // ── Threads — mutual-consent pen-pal (migration 028) ───────────────────
+    // Supabase-direct RPCs (queryFn). Identity fields are stripped at the
+    // RPC layer; clients receive role:'initiator'|'recipient' and is_mine:bool.
+    getThreads: builder.query<Thread[], void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_threads')
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: (data ?? []) as Thread[] }
+      },
+      providesTags: ['Threads'],
+    }),
+    getThreadMessages: builder.query<ThreadMessage[], string>({
+      queryFn: async (threadId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_thread_messages', { p_thread_id: threadId })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: (data ?? []) as ThreadMessage[] }
+      },
+      providesTags: (_r, _e, id) => [{ type: 'Threads', id }],
+    }),
+    initiateThread: builder.mutation<ThreadInitResult, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('initiate_thread', { p_bottle_id: bottleId })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: data as ThreadInitResult }
+      },
+      invalidatesTags: ['Threads'],
+    }),
+    acceptThread: builder.mutation<{ thread_id: string; status: string }, string>({
+      queryFn: async (threadId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('accept_thread', { p_thread_id: threadId })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: data as { thread_id: string; status: string } }
+      },
+      invalidatesTags: ['Threads'],
+    }),
+    declineThread: builder.mutation<void, string>({
+      queryFn: async (threadId) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('decline_thread', { p_thread_id: threadId })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Threads'],
+    }),
+    sendThreadMessage: builder.mutation<{ id: string; thread_id: string; sent_at: string }, { threadId: string; message: string }>({
+      queryFn: async ({ threadId, message }) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('send_thread_message', {
+          p_thread_id: threadId,
+          p_message: message,
+        })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: data as { id: string; thread_id: string; sent_at: string } }
+      },
+      invalidatesTags: (_r, _e, { threadId }) => ['Threads', { type: 'Threads', id: threadId }],
+    }),
+    markThreadRead: builder.mutation<void, string>({
+      queryFn: async (threadId) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('mark_thread_read', { p_thread_id: threadId })
+        if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        return { data: undefined }
+      },
+      invalidatesTags: (_r, _e, id) => ['Threads', { type: 'Threads', id }],
+    }),
+
     // Public landing-page stats — reads ONE precomputed row (migration 021),
     // never a live COUNT. Granted to anon, so it works unauthenticated.
     //   adrift_count = undelivered bottles at sea now (refreshed hourly)
@@ -301,4 +375,11 @@ export const {
   useGetSavedBottlesQuery,
   useSaveBottleMutation,
   useUnsaveBottleMutation,
+  useGetThreadsQuery,
+  useGetThreadMessagesQuery,
+  useInitiateThreadMutation,
+  useAcceptThreadMutation,
+  useDeclineThreadMutation,
+  useSendThreadMessageMutation,
+  useMarkThreadReadMutation,
 } = bottleApi

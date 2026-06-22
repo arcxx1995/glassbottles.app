@@ -2,6 +2,7 @@ export interface Profile {
   id: string
   timezone: string
   email_notifications: boolean
+  is_plus: boolean
   created_at: string
   last_active: string | null
 }
@@ -72,4 +73,40 @@ export interface SaveResult {
   capped?: boolean
   saved_count: number
   cap?: number
+}
+
+// ─── Threads — mutual-consent pen-pal (migration 028) ────────────────────────
+
+export type ThreadStatus = 'pending' | 'active' | 'declined'
+
+/** role: 'initiator' = I received the bottle and asked to keep talking.
+ *        'recipient' = I sent the original bottle; someone wants to reply. */
+export interface Thread {
+  id: string
+  bottle_id: string
+  bottle_message: string
+  status: ThreadStatus
+  role: 'initiator' | 'recipient'
+  created_at: string
+  accepted_at: string | null
+  last_message: string | null
+  last_message_at: string | null
+  unread_count: number
+}
+
+/** is_mine replaces author_id — anonymity preserved at the RPC layer. */
+export interface ThreadMessage {
+  id: string
+  thread_id: string
+  message: string
+  sent_at: string
+  read_at: string | null
+  is_mine: boolean
+}
+
+export interface ThreadInitResult {
+  thread_id?: string
+  status?: ThreadStatus
+  already_exists?: boolean
+  error?: 'plus_required'
 }

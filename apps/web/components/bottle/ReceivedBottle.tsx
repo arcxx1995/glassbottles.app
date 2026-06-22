@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flag, CheckCheck, Bookmark } from 'lucide-react'
+import { Flag, CheckCheck, Bookmark, MessageCircle } from 'lucide-react'
 import {
   useMarkBottleReadMutation,
   useReportBottleMutation,
   useGetSavedBottlesQuery,
   useSaveBottleMutation,
   useUnsaveBottleMutation,
+  useGetThreadsQuery,
+  useInitiateThreadMutation,
 } from '@/store/api/bottleApi'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -19,6 +22,7 @@ interface ReceivedBottleProps {
 }
 
 export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
+  const router = useRouter()
   const user = useAppSelector(selectUser)
   const [markRead, { isLoading: isMarking }] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
@@ -29,6 +33,27 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
   const [unsaveBottle, { isLoading: isUnsaving }] = useUnsaveBottleMutation()
   const isSaved = saved?.some((b) => b.id === bottle.id) ?? false
   const [cappedMsg, setCappedMsg] = useState(false)
+
+  // Thread state — shared cache (one RPC call regardless of how many bottles shown).
+  const { data: threads } = useGetThreadsQuery(undefined, { skip: !user?.id })
+  const [initiateThread, { isLoading: isInitiating }] = useInitiateThreadMutation()
+  const [plusMsg, setPlusMsg] = useState(false)
+  const thread = threads?.find((t) => t.bottle_id === bottle.id)
+
+  async function handleKeepTalking() {
+    setPlusMsg(false)
+    if (thread?.status === 'active') {
+      router.push(`/threads/${thread.id}`)
+      return
+    }
+    if (thread) return // pending or declined — no action
+    const res = await initiateThread(bottle.id).unwrap().catch(() => null)
+    if (res?.error === 'plus_required') {
+      setPlusMsg(true)
+    } else if (res?.thread_id) {
+      router.push(`/threads/${res.thread_id}`)
+    }
+  }
 
   async function handleToggleSave() {
     setCappedMsg(false)
@@ -93,7 +118,40 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
           })}
         </time>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Keep talking — initiates a pen-pal thread (Plus feature) */}
+          {!thread && (
+            <button
+              onClick={() => void handleKeepTalking()}
+              disabled={isInitiating}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+                         bg-seafoam/8 text-seafoam/70 font-ui text-xs
+                         hover:bg-seafoam/15 hover:text-seafoam transition-colors
+                         disabled:opacity-40 disabled:pointer-events-none"
+              title="Keep talking (Plus)"
+            >
+              <MessageCircle size={13} strokeWidth={1.5} />
+              Keep talking
+            </button>
+          )}
+          {thread?.status === 'active' && (
+            <button
+              onClick={() => router.push(`/threads/${thread.id}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+                         bg-seafoam/15 text-seafoam font-ui text-xs font-medium
+                         hover:bg-seafoam/25 transition-colors"
+            >
+              <MessageCircle size={13} strokeWidth={1.5} />
+              Continue
+            </button>
+          )}
+          {thread?.status === 'pending' && (
+            <span className="font-ui text-xs text-sand/30 flex items-center gap-1">
+              <MessageCircle size={12} strokeWidth={1.5} />
+              Waiting…
+            </span>
+          )}
+
           <button
             onClick={() => void handleToggleSave()}
             disabled={isSaving || isUnsaving}
@@ -146,7 +204,7 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
         </div>
       </div>
 
-      {/* Free-shelf cap reached — gentle upsell, not an error. */}
+      {/* Upsell messages — soft, not errors */}
       <AnimatePresence>
         {cappedMsg && (
           <motion.p
@@ -157,6 +215,17 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
           >
             Your shelf holds 3 bottles. Unkeep one to make room — or keep them all
             with Plus.
+          </motion.p>
+        )}
+        {plusMsg && (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="font-ui text-xs text-sand/45 leading-relaxed pt-3 mt-1"
+          >
+            Threads are a Plus feature — one conversation at a time, still
+            anonymous. Coming soon.
           </motion.p>
         )}
       </AnimatePresence>

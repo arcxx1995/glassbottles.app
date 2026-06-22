@@ -57,6 +57,18 @@ export default function RealtimeBottleListener() {
           // sailingBottles (it animates out of the sea).
           dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
+        .on('broadcast', { event: 'thread_initiated' }, () => {
+          // Someone wants to keep talking — show in Threads tab as pending.
+          dispatch(bottleApi.util.invalidateTags(['Threads']))
+        })
+        .on('broadcast', { event: 'thread_accepted' }, () => {
+          // Recipient accepted — initiator's thread is now active.
+          dispatch(bottleApi.util.invalidateTags(['Threads']))
+        })
+        .on('broadcast', { event: 'thread_message' }, () => {
+          // New message in a thread — refresh threads + the specific messages.
+          dispatch(bottleApi.util.invalidateTags(['Threads']))
+        })
         .subscribe()
     }
 

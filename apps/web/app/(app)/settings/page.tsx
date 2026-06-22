@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellRing, LogOut, Mail, KeyRound, Trash2 } from 'lucide-react'
+import { Bell, BellRing, LogOut, Mail, KeyRound, Trash2, FlaskConical } from 'lucide-react'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -555,6 +555,45 @@ function ChangePasswordRow() {
   )
 }
 
+// ─── Dev: Plus toggle (owner-only) ───────────────────────────────────────────
+// Visible only when the session email is arcxx1995@gmail.com. Lets the owner
+// switch between free and Plus experience without a payment flow.
+
+function DevPlusRow({ isPlus }: { isPlus: boolean }) {
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const [busy, setBusy] = useState(false)
+  const [current, setCurrent] = useState(isPlus)
+
+  useEffect(() => { setCurrent(isPlus) }, [isPlus])
+
+  async function handleToggle() {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/admin/toggle-plus', { method: 'POST' })
+      if (!res.ok) return
+      const { is_plus } = (await res.json()) as { is_plus: boolean }
+      setCurrent(is_plus)
+      if (user) dispatch(setUser({ ...user, is_plus }))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ToggleRow
+      icon={<FlaskConical size={17} strokeWidth={1.5} />}
+      iconBg="bg-sand/10"
+      iconColor="text-sand/50"
+      label="Plus mode"
+      meta={current ? 'Viewing as Plus user' : 'Viewing as free user'}
+      checked={current}
+      disabled={busy}
+      onChange={() => void handleToggle()}
+    />
+  )
+}
+
 // ─── Delete-account row ──────────────────────────────────────────────────────
 // Irreversible hard delete. The actual deletion runs server-side
 // (POST /api/account/delete, service role) because Supabase has no client-side
@@ -782,7 +821,14 @@ export default function SettingsPage() {
               <ChangePasswordRow />
             </motion.section>
 
-            <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
+            {email?.toLowerCase() === 'arcxx1995@gmail.com' && (
+              <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
+                <SectionLabel>Dev</SectionLabel>
+                <DevPlusRow isPlus={user?.is_plus ?? false} />
+              </motion.section>
+            )}
+
+            <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
               <SectionLabel>Notifications</SectionLabel>
               <PushToggleRow />
               <ToggleRow

@@ -556,10 +556,8 @@ function ChangePasswordRow() {
 }
 
 // ─── Dev: Plus toggle (owner-only) ───────────────────────────────────────────
-// Visible only when the session email is arcxx1995@gmail.com. Lets the owner
-// switch between free and Plus experience without a payment flow.
 
-function DevPlusRow({ isPlus }: { isPlus: boolean }) {
+function DevPlusToggle({ isPlus }: { isPlus: boolean }) {
   const dispatch = useAppDispatch()
   const user = useAppSelector(selectUser)
   const [busy, setBusy] = useState(false)
@@ -581,16 +579,19 @@ function DevPlusRow({ isPlus }: { isPlus: boolean }) {
   }
 
   return (
-    <ToggleRow
-      icon={<FlaskConical size={17} strokeWidth={1.5} />}
-      iconBg="bg-sand/10"
-      iconColor="text-sand/50"
-      label="Plus mode"
-      meta={current ? 'Viewing as Plus user' : 'Viewing as free user'}
-      checked={current}
+    <button
+      type="button"
+      onClick={() => void handleToggle()}
       disabled={busy}
-      onChange={() => void handleToggle()}
-    />
+      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sand/20
+                 hover:text-sand/40 transition-colors disabled:opacity-30
+                 disabled:pointer-events-none"
+    >
+      <FlaskConical size={10} strokeWidth={1.5} />
+      <span className="font-mono text-[10px]">
+        {current ? 'plus' : 'free'}
+      </span>
+    </button>
   )
 }
 
@@ -821,12 +822,6 @@ export default function SettingsPage() {
               <ChangePasswordRow />
             </motion.section>
 
-            {email?.toLowerCase() === 'arcxx1995@gmail.com' && (
-              <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
-                <SectionLabel>Dev</SectionLabel>
-                <DevPlusRow isPlus={user?.is_plus ?? false} />
-              </motion.section>
-            )}
 
             <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
               <SectionLabel>Notifications</SectionLabel>
@@ -862,6 +857,11 @@ export default function SettingsPage() {
                 onClick={() => void handleSignOut()}
                 destructive
               />
+              {email?.toLowerCase() === 'arcxx1995@gmail.com' && (
+                <div className="flex justify-end pr-1">
+                  <DevPlusToggle isPlus={user?.is_plus ?? false} />
+                </div>
+              )}
             </motion.section>
           </div>
 

@@ -28,7 +28,7 @@ export default function ShelfBottleCard({
       transition={{ delay: index * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={() => onClick(bottle)}
       aria-label={`Bottle received ${new Date(bottle.received_at ?? bottle.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-      className="relative flex flex-col items-center gap-1.5 py-2 px-0.5 rounded-xl
+      className="relative flex flex-col items-center gap-1 py-2 px-0 rounded-none
                  active:scale-95 transition-transform duration-150 w-full"
     >
       {/* Unread dot */}
@@ -63,7 +63,7 @@ export default function ShelfBottleCard({
             : 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))',
         }}
       >
-        <BottleSVG glowing={unread} width={56} height={84} />
+        <BottleSVG glowing={unread} width={40} height={60} />
       </motion.div>
 
       {/* Date */}

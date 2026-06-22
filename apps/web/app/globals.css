@@ -74,6 +74,14 @@ body {
   background: rgba(78, 205, 196, 0.50);
 }
 
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ─── Skeleton shimmer utility ────────────────────────────────────────────── */
 /* Usage: add class="skeleton" to any loading placeholder element           */
 /* Override --skeleton-bg to match the parent surface                        */

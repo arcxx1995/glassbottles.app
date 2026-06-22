@@ -54,15 +54,15 @@ export default function ShelfPage() {
           <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
         </div>
 
-        {/* Scroll region */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-24 px-4">
+        {/* Scroll region — no visible scrollbar */}
+        <div className="hide-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto pb-24 px-3">
           {/* Skeletons */}
           {isLoading && (
-            <div className="grid grid-cols-3 gap-1">
-              {[1, 0.7, 0.5, 0.4, 0.3, 0.2].map((opacity, i) => (
+            <div className="grid grid-cols-7 gap-0">
+              {[1, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2].map((opacity, i) => (
                 <div
                   key={i}
-                  className="h-28 rounded-2xl bg-ocean-mid/40 animate-pulse"
+                  className="h-24 rounded-xl bg-ocean-mid/40 animate-pulse"
                   style={{ opacity }}
                 />
               ))}
@@ -89,9 +89,9 @@ export default function ShelfPage() {
             </motion.div>
           )}
 
-          {/* Grid */}
+          {/* Grid — 7 per row, no gap, bottles side by side */}
           {!isLoading && bottles && count > 0 && (
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-7 gap-0">
               {bottles.map((bottle, i) => {
                 const thread = threads?.find((t) => t.bottle_id === bottle.id)
                 return (

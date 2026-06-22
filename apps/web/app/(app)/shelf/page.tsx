@@ -58,11 +58,11 @@ export default function ShelfPage() {
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-24 px-4">
           {/* Skeletons */}
           {isLoading && (
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 0.7, 0.5, 0.35].map((opacity, i) => (
+            <div className="grid grid-cols-3 gap-1">
+              {[1, 0.7, 0.5, 0.4, 0.3, 0.2].map((opacity, i) => (
                 <div
                   key={i}
-                  className="aspect-[3/4] rounded-2xl bg-ocean-mid animate-pulse"
+                  className="h-28 rounded-2xl bg-ocean-mid/40 animate-pulse"
                   style={{ opacity }}
                 />
               ))}
@@ -91,7 +91,7 @@ export default function ShelfPage() {
 
           {/* Grid */}
           {!isLoading && bottles && count > 0 && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-1">
               {bottles.map((bottle, i) => {
                 const thread = threads?.find((t) => t.bottle_id === bottle.id)
                 return (

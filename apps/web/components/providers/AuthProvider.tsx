@@ -87,6 +87,7 @@ export default function AuthProvider({
       id: u.id,
       timezone: 'UTC',
       email_notifications: true,
+      is_plus: false,
       created_at: u.created_at ?? new Date().toISOString(),
       last_active: null,
     })

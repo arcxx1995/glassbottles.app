@@ -79,23 +79,25 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
         onClick={onClose}
       >
         <motion.article
-          key="paper"
+          key="popup"
           initial={{ opacity: 0, scale: 0.94, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-sm rounded-[20px] shadow-2xl overflow-hidden"
-          style={{ background: '#F2E8D5' }}
+          className="relative w-full max-w-sm rounded-[24px] overflow-hidden"
+          style={{
+            background: 'linear-gradient(160deg, #0E2540 0%, #0A1A2E 100%)',
+            boxShadow: '0 0 0 1px rgba(78,205,196,0.15), 0 24px 48px rgba(0,0,0,0.6)',
+          }}
         >
-          {/* Paper texture top bar */}
-          <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #D9C9A8 0%, #EAD9BC 50%, #D9C9A8 100%)' }} />
+          {/* Seafoam top accent line */}
+          <div className="h-[1px] w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(78,205,196,0.4), transparent)' }} />
 
           {/* Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-full transition-colors"
-            style={{ color: '#8B7355' }}
+            className="absolute top-4 right-4 p-1.5 rounded-full text-sand/30 hover:text-sand/60 transition-colors"
             aria-label="Close"
           >
             <X size={16} strokeWidth={2} />
@@ -103,10 +105,7 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
 
           {/* Message */}
           <div className="px-7 pt-8 pb-5">
-            <p
-              className="font-display leading-relaxed text-base"
-              style={{ color: '#1A2F4A' }}
-            >
+            <p className="font-display leading-relaxed text-base text-sand">
               {words.map((word, i) => (
                 <motion.span
                   key={i}
@@ -126,14 +125,13 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
           </div>
 
           {/* Divider */}
-          <div className="mx-7 border-t" style={{ borderColor: '#D4C4A8' }} />
+          <div className="mx-7 border-t border-white/[0.07]" />
 
           {/* Footer */}
           <div className="px-7 pt-3 pb-6">
             <time
               dateTime={bottle.sent_at}
-              className="font-mono text-[10px] block mb-4"
-              style={{ color: '#9B8B6E' }}
+              className="font-mono text-[10px] block mb-4 text-seafoam/50"
             >
               {new Date(bottle.sent_at).toLocaleDateString('en-US', {
                 month: 'long',
@@ -151,8 +149,8 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium font-ui transition-colors disabled:pointer-events-none"
                   style={
                     isPlus
-                      ? { background: 'rgba(78,205,196,0.15)', color: '#2E9E96' }
-                      : { background: 'rgba(0,0,0,0.06)', color: '#A89880' }
+                      ? { background: 'rgba(78,205,196,0.12)', color: '#4ECDC4' }
+                      : { background: 'rgba(255,255,255,0.05)', color: 'rgba(247,231,206,0.3)' }
                   }
                   title={isPlus ? 'Start a thread' : 'Plus feature'}
                 >
@@ -167,14 +165,14 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
                 <button
                   onClick={() => { onClose(); router.push(`/threads/${thread.id}`) }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium font-ui"
-                  style={{ background: 'rgba(78,205,196,0.15)', color: '#2E9E96' }}
+                  style={{ background: 'rgba(78,205,196,0.12)', color: '#4ECDC4' }}
                 >
                   <MessageCircle size={13} strokeWidth={1.5} />
                   Continue
                 </button>
               )}
               {thread?.status === 'pending' && (
-                <span className="font-ui text-xs flex items-center gap-1" style={{ color: '#A89880' }}>
+                <span className="font-ui text-xs flex items-center gap-1 text-sand/30">
                   <MessageCircle size={12} strokeWidth={1.5} />
                   Waiting…
                 </span>
@@ -187,7 +185,7 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
                 onClick={() => void handleToggleSave()}
                 disabled={isSaving || isUnsaving}
                 className="p-2 rounded-xl transition-colors disabled:opacity-40"
-                style={{ color: isSaved ? '#2E9E96' : '#A89880' }}
+                style={{ color: isSaved ? '#4ECDC4' : 'rgba(247,231,206,0.3)' }}
                 aria-label={isSaved ? 'Remove from shelf' : 'Keep'}
                 aria-pressed={isSaved}
               >
@@ -198,8 +196,7 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
               <button
                 onClick={() => void reportBottle(bottle.id)}
                 disabled={isReporting || bottle.is_reported}
-                className="p-2 rounded-xl transition-colors disabled:opacity-30"
-                style={{ color: '#C4957A' }}
+                className="p-2 rounded-xl transition-colors disabled:opacity-30 text-sand/20 hover:text-coral/60"
                 aria-label="Report"
               >
                 <Flag size={14} strokeWidth={1.5} />
@@ -207,7 +204,7 @@ export default function BottlePopup({ bottle, onClose }: BottlePopupProps) {
 
               {/* Read state */}
               {bottle.is_read && (
-                <span className="p-2" style={{ color: '#A89880' }} aria-label="Read">
+                <span className="p-2 text-seafoam/30" aria-label="Read">
                   <CheckCheck size={14} strokeWidth={1.5} />
                 </span>
               )}

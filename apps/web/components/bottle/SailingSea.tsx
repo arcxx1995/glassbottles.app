@@ -6,7 +6,7 @@ import {
   AnimatePresence,
   useAnimationControls,
   useReducedMotion,
-} from 'framer-motion'
+} from 'motion/react'
 import { BottleSVG } from './ThrowAnimation'
 
 export interface SailingBottleItem {
@@ -92,7 +92,7 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
       transition={{ duration: band.dur / 3, repeat: Infinity, ease: 'easeInOut' }}
     >
       <motion.div
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', willChange: 'transform' }}
         animate={reduced ? undefined : { x: ['0%', '-50%'] }}
         transition={{ duration: band.dur, repeat: Infinity, ease: 'linear' }}
       >
@@ -250,7 +250,7 @@ function StormClouds({ reduced }: { reduced: boolean }) {
       {/* Drifting cloud bank (200% wide → loops by translating -50%) */}
       <motion.div
         className="absolute left-0 top-0 pointer-events-none"
-        style={{ width: '200%', height: '34%' }}
+        style={{ width: '200%', height: '34%', willChange: 'transform' }}
         animate={reduced ? undefined : { x: ['0%', '-50%'] }}
         transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
       >
@@ -264,7 +264,10 @@ function StormClouds({ reduced }: { reduced: boolean }) {
               width: c.w,
               height: c.h,
               opacity: c.o,
-              transform: 'translateX(-50%)',
+              // translateZ promotes each blurred blob to its own layer so the
+              // blur(10px) rasterizes once instead of repainting every frame
+              // of the bank's drift.
+              transform: 'translateX(-50%) translateZ(0)',
               background:
                 'radial-gradient(50% 50% at 50% 50%, rgba(20,40,58,0.95) 0%, rgba(13,30,46,0.6) 45%, rgba(10,22,40,0) 72%)',
               filter: 'blur(10px)',

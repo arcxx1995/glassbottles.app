@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { motion, useAnimationControls, useReducedMotion } from 'framer-motion'
+import { motion, useAnimationControls, useReducedMotion } from 'motion/react'
 
 // ─── NightSky ────────────────────────────────────────────────────────────────
 // A bright night sky layered over the ocean gradient: a slowly spinning galaxy

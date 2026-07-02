@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, useReducedMotion, useInView, type Variants } from 'framer-motion'
+import { motion, useReducedMotion, useInView, type Variants } from 'motion/react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useAppSelector } from '@/store'

@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 
 /**
  * Official Google "G" multicolour mark, inlined as SVG so it works offline and

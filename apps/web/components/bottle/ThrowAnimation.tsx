@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 
 interface ThrowAnimationProps {
   onComplete: () => void
@@ -32,8 +32,13 @@ export default function ThrowAnimation({ onComplete }: ThrowAnimationProps) {
         }}
         transition={{
           duration: 0.85,
-          ease: [0.25, 0.46, 0.45, 0.94],
           times: [0, 0.55, 1],
+          // Parabolic arc: constant horizontal travel, vertical rises fast then
+          // falls under gravity. One shared ease flattened it into a diagonal slide.
+          x: { ease: 'linear' },
+          y: { ease: ['easeOut', 'easeIn'] },
+          rotate: { ease: 'linear' },
+          opacity: { ease: 'easeIn' },
         }}
         onAnimationComplete={onComplete}
       >

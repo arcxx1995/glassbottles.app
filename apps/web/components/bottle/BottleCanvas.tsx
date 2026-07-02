@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { useAppSelector } from '@/store'
 import { selectSendStatus } from '@/store/bottleSlice'
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Mail } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -97,7 +97,8 @@ export default function InboxPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: i * 0.06,
+                // Cap the stagger so deep lists don't leave late cards waiting.
+                delay: Math.min(i, 8) * 0.06,
                 duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}

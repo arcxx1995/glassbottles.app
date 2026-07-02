@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 
 const WAVE_LAYERS = [
   { speed: 8, offset: 0, opacity: 0.14, bottom: 0 },
@@ -42,6 +42,7 @@ export default function WaveBackground() {
             width: '200%',
             height: '80px',
             opacity: layer.opacity,
+            willChange: 'transform',
           }}
           animate={{ x: ['0%', '-50%'] }}
           transition={{

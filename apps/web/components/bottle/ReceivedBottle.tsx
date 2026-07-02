@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Flag, CheckCheck } from 'lucide-react'
 import { useMarkBottleReadMutation, useReportBottleMutation } from '@/store/api/bottleApi'
 import type { Bottle } from '@/types'
@@ -13,7 +13,15 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
   const [markRead, { isLoading: isMarking }] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
 
-  const words = bottle.message.split(' ')
+  // Split into lines, then words, so the staggered reveal preserves the
+  // sender's line breaks (a flat split(' ') collapsed paragraphs into one run).
+  const lines = bottle.message.split('\n').map((line) => line.split(' '))
+  const lineOffsets: number[] = []
+  let wordCount = 0
+  for (const line of lines) {
+    lineOffsets.push(wordCount)
+    wordCount += line.length
+  }
 
   return (
     <motion.article
@@ -36,20 +44,27 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
           className="font-display text-sand text-lg leading-relaxed"
           aria-label="Message content"
         >
-          {words.map((word, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.2 + Math.min(i * 0.025, 1.4),
-                duration: 0.28,
-                ease: 'easeOut',
-              }}
-              className="inline-block mr-[0.28em]"
-            >
-              {word}
-            </motion.span>
+          {lines.map((line, li) => (
+            <span key={li} className="block min-h-[1em]">
+              {line.map((word, wi) => {
+                const i = lineOffsets[li] + wi
+                return (
+                  <motion.span
+                    key={wi}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: 0.2 + Math.min(i * 0.025, 1.4),
+                      duration: 0.28,
+                      ease: 'easeOut',
+                    }}
+                    className="inline-block mr-[0.28em]"
+                  >
+                    {word}
+                  </motion.span>
+                )
+              })}
+            </span>
           ))}
         </p>
       </div>

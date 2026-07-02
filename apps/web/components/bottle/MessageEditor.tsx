@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { setMessage, selectMessage } from '@/store/bottleSlice'
 import { cn } from '@/lib/utils'
@@ -88,20 +88,30 @@ export default function MessageEditor({
         </span>
       </div>
 
-      {/* Throw CTA — appears once text exists */}
-      {canSend && onReady && (
-        <motion.button
-          onClick={onReady}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
-                     text-base tracking-wide transition-all duration-150
-                     active:scale-[0.97] hover:brightness-110"
-        >
-          Seal &amp; Throw
-        </motion.button>
-      )}
+      {/* Throw CTA — appears once text exists. Height animates so the layout
+          eases open/closed instead of jumping when the button (un)mounts. */}
+      <AnimatePresence initial={false}>
+        {canSend && onReady && (
+          <motion.div
+            key="throw-cta"
+            initial={{ opacity: 0, y: 6, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 6, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <motion.button
+              onClick={onReady}
+              whileTap={{ scale: 0.97 }}
+              className="w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
+                         text-base tracking-wide transition-all duration-150
+                         hover:brightness-110"
+            >
+              Seal &amp; Throw
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

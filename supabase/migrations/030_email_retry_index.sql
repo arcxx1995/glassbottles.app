@@ -1,6 +1,6 @@
--- Migration 027: partial index for the notification-retry pass.
+-- Migration 030: partial index for the notification-retry pass.
 --
--- retry_unmatched_bottles() (migration 026) added a second pass selecting
+-- retry_unmatched_bottles() (migration 029) added a second pass selecting
 -- matched bottles whose email never landed:
 --   received_at IS NOT NULL AND email_notified_at IS NULL AND is_stale = FALSE
 -- The existing partial indexes (idx_bottles_unmatched, idx_bottles_adrift)

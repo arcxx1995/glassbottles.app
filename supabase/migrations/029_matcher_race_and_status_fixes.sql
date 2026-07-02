@@ -1,4 +1,4 @@
--- Migration 026: matcher receiver-race fix + home status + orphaned-email retry
+-- Migration 029: matcher receiver-race fix + home status + orphaned-email retry
 --
 -- Three bugs, one migration:
 --
@@ -239,6 +239,8 @@ END;
 $$;
 
 -- ── 3. retry_unmatched_bottles: also re-fire orphaned notification emails ────
+-- Based on the migration 027 (web push) body — keeps the push-notify call on
+-- fresh matches — plus the new orphaned-email second pass.
 CREATE OR REPLACE FUNCTION public.retry_unmatched_bottles()
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -252,6 +254,7 @@ DECLARE
   v_supabase_url     TEXT;
   v_service_role_key TEXT;
   v_notify_url       TEXT;
+  v_push_url         TEXT;
 BEGIN
   BEGIN
     v_supabase_url     := current_setting('app.settings.supabase_url', true);
@@ -266,6 +269,11 @@ BEGIN
     THEN v_supabase_url || '/functions/v1/notify-receiver'
     ELSE NULL
   END;
+  v_push_url := CASE
+    WHEN v_supabase_url IS NOT NULL
+    THEN v_supabase_url || '/functions/v1/push-notify'
+    ELSE NULL
+  END;
 
   FOR v_id IN
     SELECT id
@@ -276,20 +284,34 @@ BEGIN
   LOOP
     v_result := public.match_bottle(v_id);
 
-    -- Fire notification only on a fresh match (a receiver was assigned now).
+    -- Fire notifications only on a fresh match (a receiver was assigned now).
     IF COALESCE((v_result ->> 'matched')::boolean, false)
        AND (v_result ? 'receiver_id') THEN
       v_matched_count := v_matched_count + 1;
 
-      IF v_notify_url IS NOT NULL AND v_service_role_key IS NOT NULL THEN
-        PERFORM net.http_post(
-          url     := v_notify_url,
-          headers := jsonb_build_object(
-                       'Content-Type',  'application/json',
-                       'Authorization', 'Bearer ' || v_service_role_key
-                     ),
-          body    := jsonb_build_object('bottle_id', v_id)
-        );
+      IF v_service_role_key IS NOT NULL THEN
+        -- Email the receiver (idempotent via email_notified_at).
+        IF v_notify_url IS NOT NULL THEN
+          PERFORM net.http_post(
+            url     := v_notify_url,
+            headers := jsonb_build_object(
+                         'Content-Type',  'application/json',
+                         'Authorization', 'Bearer ' || v_service_role_key
+                       ),
+            body    := jsonb_build_object('bottle_id', v_id)
+          );
+        END IF;
+        -- Push both parties ("your bottle was found" / "a bottle arrived").
+        IF v_push_url IS NOT NULL THEN
+          PERFORM net.http_post(
+            url     := v_push_url,
+            headers := jsonb_build_object(
+                         'Content-Type',  'application/json',
+                         'Authorization', 'Bearer ' || v_service_role_key
+                       ),
+            body    := jsonb_build_object('bottle_id', v_id)
+          );
+        END IF;
       END IF;
     END IF;
   END LOOP;
@@ -330,8 +352,8 @@ $$;
 
 COMMENT ON FUNCTION public.retry_unmatched_bottles() IS
   'Every-15-min retry: (1) iterate unmatched non-stale bottles in random order '
-  'and delegate each to match_bottle() (migration 026 — claim-first, race-free), '
-  'firing notify-receiver via pg_net for each fresh match; (2) re-fire '
-  'notify-receiver for matched bottles still missing email_notified_at '
-  '(released claim / lost call), 10min–7d window. Called by pg_cron job '
-  '''retry-unmatched-bottles''.';
+  'and delegate each to match_bottle() (migration 029 — claim-first, race-free), '
+  'firing notify-receiver (email) AND push-notify (web push, migration 027) via '
+  'pg_net for each fresh match; (2) re-fire notify-receiver for matched bottles '
+  'still missing email_notified_at (released claim / lost call), 10min–7d '
+  'window. Called by pg_cron job ''retry-unmatched-bottles''.';

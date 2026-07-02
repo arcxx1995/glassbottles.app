@@ -184,17 +184,22 @@ Deno.serve(async (req) => {
     } catch { /* non-JSON error body */ }
     console.error('[notify-receiver] Resend error:', resendRes.status, errBody?.message)
 
-    // Release the claim so the retry cron can re-attempt for this bottle.
-    // Guarded to our own claim timestamp so we never clobber a concurrent
-    // claim. If this release itself fails, the bottle stays stamped and the
-    // email is simply not retried — we prefer a missed email over a duplicate.
-    const { error: releaseErr } = await supabase
-      .from('bottles')
-      .update({ email_notified_at: null })
-      .eq('id', bottle_id)
-      .eq('email_notified_at', claimedAt)
-    if (releaseErr) {
-      console.error('[notify-receiver] failed to release claim:', releaseErr.message)
+    // Release the claim ONLY on a definite non-send (4xx: rejected, rate
+    // limited, validation error) so the retry cron re-attempts. A 5xx is
+    // ambiguous — Resend may have delivered before failing — so the claim
+    // stays and the email is not retried: we prefer a missed email over a
+    // duplicate. Release is guarded to our own claim timestamp so we never
+    // clobber a concurrent claim; if the release itself fails, the bottle
+    // stays stamped (same missed-over-duplicate preference).
+    if (resendRes.status < 500) {
+      const { error: releaseErr } = await supabase
+        .from('bottles')
+        .update({ email_notified_at: null })
+        .eq('id', bottle_id)
+        .eq('email_notified_at', claimedAt)
+      if (releaseErr) {
+        console.error('[notify-receiver] failed to release claim:', releaseErr.message)
+      }
     }
 
     return new Response(

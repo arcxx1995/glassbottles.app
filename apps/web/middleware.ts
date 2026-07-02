@@ -8,6 +8,10 @@ export async function middleware(request: NextRequest) {
   // verification). Doing getUser() here too meant TWO Auth round-trips per
   // API request, billed as Fluid provisioned-memory wall-clock time.
   if (request.nextUrl.pathname.startsWith('/api/')) {
+    // Health check must stay reachable by unauthenticated uptime monitors.
+    if (request.nextUrl.pathname === '/api/health') {
+      return NextResponse.next({ request })
+    }
     const hasSessionCookie = request.cookies
       .getAll()
       .some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'))

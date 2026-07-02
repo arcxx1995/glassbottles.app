@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { ArrowRight, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/GoogleButton'
@@ -27,7 +26,6 @@ const RESEND_COOLDOWN = 60 // seconds — mirrors server-side throttle
 
 export default function SignUpPage() {
   const supabase = createClient()
-  const router = useRouter()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -96,9 +94,10 @@ export default function SignUpPage() {
     // already-registered email returns 200 with no error but a null session
     // and an empty identities array. Treat as "already registered".
     if (data.session === null && data.user?.identities?.length === 0) {
+      // Stay on this page — a redirect discarded the state holding this
+      // message, so the user landed on sign-in with zero explanation.
       setFormError('An account with this email already exists. Sign in instead.')
       setLoading(false)
-      router.push('/sign-in')
       return
     }
 

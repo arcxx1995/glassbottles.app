@@ -62,8 +62,18 @@ export default function RealtimeBottleListener() {
 
     void subscribe()
 
+    // Access tokens rotate (~hourly). Without re-running setAuth() the socket
+    // keeps the expired JWT and the private channel silently stops delivering —
+    // realtime was effectively dead after the first refresh (polls masked it).
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') void supabase.realtime.setAuth()
+    })
+
     return () => {
       cancelled = true
+      subscription.unsubscribe()
       if (channel) supabase.removeChannel(channel)
     }
   }, [user?.id, dispatch])

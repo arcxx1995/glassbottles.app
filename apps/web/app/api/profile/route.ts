@@ -63,12 +63,19 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (timezone !== undefined) {
-    // Validate format before length: only IANA timezone characters allowed.
-    // Pattern: letters, digits, underscores, forward-slashes, plus, hyphens.
-    // Rejects any HTML/script payload — stored XSS mitigation. Also guards the
-    // per-user day model: an invalid tz would make user_local_date() throw.
-    if (typeof timezone !== 'string' || !/^[A-Za-z_/+\-]{1,64}$/.test(timezone)) {
+    // Character allowlist (letters, digits, underscores, slashes, plus, hyphens)
+    // rejects HTML/script payloads — stored XSS mitigation.
+    if (typeof timezone !== 'string' || !/^[A-Za-z0-9_/+\-]{1,64}$/.test(timezone)) {
       return NextResponse.json({ error: 'Invalid timezone format' }, { status: 400 })
+    }
+    // Must also be a REAL IANA zone: user_local_date() runs
+    // `now() AT TIME ZONE <tz>` inside the day_key default, the send quota
+    // check and the status RPC — a stored bogus zone bricks the account
+    // (every send and home load throws) until a valid tz is PATCHed back.
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone })
+    } catch {
+      return NextResponse.json({ error: 'Unknown timezone' }, { status: 400 })
     }
     update.timezone = timezone
   }

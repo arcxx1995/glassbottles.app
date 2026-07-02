@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'motion/react'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
   setSendStatus,
@@ -106,6 +106,9 @@ export default function HomePage() {
   const sendFailedRef = useRef(false)
 
   async function handleThrow() {
+    // Re-entrancy guard: a double tap on the CTA could fire a second send
+    // mid-animation before the button unmounts.
+    if (sendStatus !== 'idle') return
     sendFailedRef.current = false
     setSendError(false)
     dispatch(setSendStatus('throwing'))
@@ -115,9 +118,13 @@ export default function HomePage() {
       // Success — clear the draft so the editor isn't pre-filled with the sent
       // message on the next idle screen (debug report bug 8).
       dispatch(setMessage(''))
-    } catch {
+    } catch (err) {
       sendFailedRef.current = true
-      setSendError(true)
+      // 23505 = already sent today (second tab / device). Not a failure — the
+      // invalidated status refetch flips the screen to sailing; showing the
+      // generic "check your connection" copy here was a lie.
+      const code = (err as { data?: { code?: string } })?.data?.code
+      if (code !== '23505') setSendError(true)
       // If the drop already finished (it set 'thrown'), correct back to idle.
       dispatch(setThrowAnimating(false))
       dispatch(setSendStatus('idle'))

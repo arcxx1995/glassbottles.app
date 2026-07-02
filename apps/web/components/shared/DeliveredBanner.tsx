@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { X } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -36,40 +36,45 @@ export default function DeliveredBanner({
   onPreviewDismiss,
 }: DeliveredBannerProps = {}) {
   const user = useAppSelector(selectUser)
-  // Hide instantly on dismiss; the DB ack + refetch confirm in the background.
-  const [acking, setAcking] = useState(false)
+  // Ids snapshotted at dismiss time. Hiding by id (not a boolean) keeps the
+  // banner armed for a NEW delivery that lands during the ack window — a
+  // boolean `acking` never released while any unacked bottle existed, so that
+  // delivery was suppressed for the whole session.
+  const [ackedIds, setAckedIds] = useState<string[] | null>(null)
 
   const { data: status } = useGetTodayBottleStatusQuery(undefined, {
     skip: !user?.id || previewVisible !== undefined,
   })
   const [ackDelivered] = useAckDeliveredBottlesMutation()
 
-  const hasUnacked = (status?.unackedDelivered ?? []).length > 0
+  const unacked = status?.unackedDelivered ?? []
+  // Deliveries not covered by the local dismiss — a fresh one shows instantly.
+  const pending = ackedIds
+    ? unacked.filter((b) => !ackedIds.includes(b.id))
+    : unacked
 
-  // Release the local hide only once the refetched status confirms the ack —
-  // prevents a flash-back between mutation success and refetch completion,
-  // while keeping the banner armed for future deliveries.
+  // Drop the snapshot once the refetch confirms the ack (nothing unacked
+  // left). Holding it until then prevents a flash-back between mutation
+  // success and refetch completion.
   useEffect(() => {
-    if (!hasUnacked && acking) setAcking(false)
-  }, [hasUnacked, acking])
+    if (ackedIds && unacked.length === 0) setAckedIds(null)
+  }, [unacked.length, ackedIds])
 
   const isVisible =
-    previewVisible !== undefined
-      ? previewVisible
-      : hasUnacked && !acking
+    previewVisible !== undefined ? previewVisible : pending.length > 0
 
   function handleDismiss() {
     if (previewVisible !== undefined) {
       onPreviewDismiss?.()
       return
     }
-    setAcking(true)
-    // Persist the ack; invalidation refetches status and hasUnacked goes false
-    // (the effect above then releases the local hide). On failure, release
-    // immediately so the (still true) toast returns.
+    setAckedIds(unacked.map((b) => b.id))
+    // Persist the ack; invalidation refetches status and the snapshot is
+    // released by the effect above. On failure, release immediately so the
+    // (still true) toast returns.
     ackDelivered()
       .unwrap()
-      .catch(() => setAcking(false))
+      .catch(() => setAckedIds(null))
   }
 
   return (

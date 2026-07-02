@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -87,9 +87,9 @@ export default function ReceivedBanner({
                      flex items-center gap-3 overflow-hidden
                      bg-ocean-mid border border-seafoam/20 rounded-2xl
                      px-4 py-3.5 shadow-banner text-left"
-          aria-live="assertive"
+          aria-live="polite"
           aria-atomic="true"
-          role="alert"
+          role="status"
         >
           <button
             onClick={handleTap}

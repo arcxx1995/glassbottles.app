@@ -38,10 +38,11 @@ export async function POST(
   // (receiver_id = auth.uid()). No explicit .eq('receiver_id') — the column is
   // not SELECT-granted to authenticated (migration 015), so filtering on it
   // would fail the column ACL; the policy expression is exempt and authoritative.
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('bottles')
     .update({ is_reported: true })
     .eq('id', id)
+    .select('id')
 
   if (error) {
     if (error.code === '42501') {
@@ -49,6 +50,13 @@ export async function POST(
     }
     console.error('[bottles/report] update error:', error.code, error.message)
     return NextResponse.json({ error: 'Failed to report bottle' }, { status: 500 })
+  }
+
+  // RLS filtering the row to zero (not the caller's bottle, or no such id)
+  // produces no error — without this check the route claimed success for a
+  // report that never happened.
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'Bottle not found' }, { status: 404 })
   }
 
   return NextResponse.json({ ok: true })

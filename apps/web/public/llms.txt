@@ -1,0 +1,40 @@
+# glassbottles
+
+> glassbottles (https://glassbottles.app) is a free, anonymous "message in a
+> bottle" web app. Each day you can write one anonymous message, throw it into
+> a digital sea, and a stranger somewhere in the world may find it. In return,
+> a stranger's bottle may wash up for you. There are no profiles, no replies,
+> no followers, and no feed.
+
+## What it is
+
+- An anonymous message exchange between strangers: one bottle per person per day.
+- Messages carry no name, handle, avatar, or history — the finder cannot
+  identify or contact the sender.
+- Bottles are one-way: a bottle is a moment, not a conversation. There is no
+  reply mechanism by design.
+- Free to use. Sign-up requires only an email address (or Google sign-in).
+
+## How it works
+
+1. Write something honest — anything you want to say without your name on it.
+2. Throw it into the sea. You get one bottle per day; the limit is the point.
+3. The next day, another user's bottle may wash ashore for you to read.
+
+## Safety
+
+- Every delivered bottle can be reported. Reported bottles are removed and
+  repeat abusers lose access.
+- Anonymity protects the writer, never the abuse.
+
+## Key pages
+
+- https://glassbottles.app — landing page: what the app is, how it works, FAQ.
+- https://glassbottles.app/sign-up — create a free account.
+- https://glassbottles.app/sign-in — sign in.
+
+## Good queries this app answers
+
+"message in a bottle app", "anonymous message in a bottle",
+"send a message to a stranger online", "digital message in a bottle",
+"anonymous notes to strangers", "random message exchange app".

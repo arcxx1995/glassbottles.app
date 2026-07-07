@@ -1,5 +1,46 @@
 import type { PublicStats } from '@/store/api/bottleApi'
 import LandingPage from './landing-page'
+import { FAQ_ITEMS } from './faq-data'
+
+const SITE_URL = 'https://glassbottles.app'
+
+// Structured data for rich results + AI answer engines. One @graph keeps
+// WebSite / WebApplication / FAQPage in a single script tag. FAQ text comes
+// from faq-data.ts so it always matches the visible FAQ section.
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: 'glassbottles',
+      alternateName: 'Glass Bottles',
+      description: 'Anonymous message in a bottle app — one message, one stranger, every day.',
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE_URL}/#app`,
+      name: 'glassbottles',
+      url: SITE_URL,
+      description:
+        'Write one anonymous message a day, throw it into a digital sea, and receive a stranger’s bottle in return. No profiles, no replies, no feed.',
+      applicationCategory: 'SocialNetworkingApplication',
+      operatingSystem: 'Any',
+      browserRequirements: 'Requires JavaScript',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE_URL}/#faq`,
+      mainEntity: FAQ_ITEMS.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    },
+  ],
+}
 
 // Fetch public stats server-side so the counter section has real numbers on
 // first paint — no client-side loading flash or '—' placeholder. The result
@@ -35,5 +76,13 @@ async function fetchPublicStats(): Promise<PublicStats> {
 
 export default async function Page() {
   const initialStats = await fetchPublicStats()
-  return <LandingPage initialStats={initialStats} />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
+      <LandingPage initialStats={initialStats} />
+    </>
+  )
 }

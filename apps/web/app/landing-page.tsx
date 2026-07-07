@@ -11,6 +11,7 @@ import { useGetPublicStatsQuery, type PublicStats } from '@/store/api/bottleApi'
 import WaveBackground from '@/components/shared/WaveBackground'
 import NightSky from '@/components/shared/NightSky'
 import { Github, Star } from 'lucide-react'
+import { FAQ_ITEMS } from './faq-data'
 
 const BottleCanvas = dynamic(
   () => import('@/components/bottle/BottleCanvas'),
@@ -36,8 +37,10 @@ function useCountUp(target: number, active: boolean, reduced: boolean, duration 
     }
     if (!active || hasRun.current) return
     hasRun.current = true
+    let cancelled = false
     const start = Date.now()
     function tick() {
+      if (cancelled) return
       const elapsed = Date.now() - start
       const progress = Math.min(elapsed / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 4)
@@ -45,6 +48,9 @@ function useCountUp(target: number, active: boolean, reduced: boolean, duration 
       if (progress < 1) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
+    return () => {
+      cancelled = true
+    }
   }, [active, target, duration, reduced])
 
   return value
@@ -228,50 +234,197 @@ function Beat({
   )
 }
 
-// ── Received message preview ──────────────────────────────────────────────
-function MessageCard({ reduced }: { reduced: boolean }) {
+// ── Scroll reveal (the one animation idiom for landing sections) ──────────
+// MotionConfig reducedMotion="user" (root) strips the y-slide for reduced
+// users automatically, leaving a plain crossfade.
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode
+  delay?: number
+  className?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   return (
-    <section
-      className="relative z-10 px-6 py-12"
-      aria-label="An example message"
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: 0, y: 18 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.7, ease: EASE_OUT_QUART, delay }}
     >
-      <div className="max-w-lg mx-auto">
-        <motion.div
-          ref={ref}
-          className="rounded-2xl border border-sand/[0.09] bg-sand/[0.04] px-8 py-9 md:px-10"
-          initial={reduced ? {} : { opacity: 0, y: 18 }}
-          animate={inView || reduced ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, ease: EASE_OUT_QUART }}
-        >
-          <div className="flex items-center gap-3 mb-7">
-            <span
-              className="select-none inline-flex"
-              role="img"
-              aria-label="glass bottle"
-            >
-              {/* Same wiggling bottle as the hero title. */}
-              <BottleCanvas size="1.5rem" />
-            </span>
-            <span className="font-ui text-[11px] text-sand/40 tracking-widest uppercase">
-              Found you
-            </span>
+      {children}
+    </motion.div>
+  )
+}
+
+// ── What washes ashore — a small wall of example messages ─────────────────
+// ILLUSTRATIVE, not real user messages (real bottles are private between
+// sender and finder — we couldn't quote them if we wanted to). The closing
+// caption in QuoteWall says so on the page; keep it if you edit these.
+const SHORE_QUOTES = [
+  {
+    text: 'I finally told my sister what I’d been meaning to say for three years. It went okay.',
+    primary: true,
+  },
+  {
+    text: 'Someone in another timezone knows the thing I can’t say out loud. We will never meet. Somehow that makes it lighter.',
+    primary: false,
+  },
+  {
+    text: 'I threw a bottle about my dad. Today a stranger’s bottle about their dad washed up. The ocean has a sense of humour.',
+    primary: false,
+  },
+] as const
+
+function QuoteWall() {
+  return (
+    <section className="relative z-10 px-6 py-16" aria-label="Example messages">
+      <div className="max-w-lg mx-auto flex flex-col gap-8">
+        <Reveal>
+          <h2
+            className="font-display text-2xl md:text-3xl text-sand text-center"
+            style={{ textWrap: 'balance' } as React.CSSProperties}
+          >
+            What washes ashore
+          </h2>
+        </Reveal>
+
+        {/* Primary card — the app's received-bottle framing. */}
+        <Reveal delay={0.08}>
+          <div className="rounded-2xl border border-sand/[0.09] bg-sand/[0.04] px-8 py-9 md:px-10">
+            <div className="flex items-center gap-3 mb-7">
+              <span className="select-none inline-flex" role="img" aria-label="glass bottle">
+                {/* Same wiggling bottle as the hero title. */}
+                <BottleCanvas size="1.5rem" />
+              </span>
+              <span className="font-ui text-[11px] text-sand/40 tracking-widest uppercase">
+                Found you
+              </span>
+            </div>
+            <blockquote>
+              <p
+                className="font-display text-xl md:text-2xl text-sand/90 leading-[1.6] mb-6"
+                style={{ textWrap: 'balance' } as React.CSSProperties}
+              >
+                &ldquo;{SHORE_QUOTES[0].text}&rdquo;
+              </p>
+              <footer className="font-ui text-sm text-sand/40">— a stranger, somewhere</footer>
+            </blockquote>
           </div>
-          <blockquote>
-            <p
-              className="font-display text-xl md:text-2xl text-sand/90 leading-[1.6] mb-6"
-              style={{ textWrap: 'balance' } as React.CSSProperties}
-            >
-              &ldquo;I finally told my sister what I&apos;d been meaning to say
-              for three years. It went okay.&rdquo;
+        </Reveal>
+
+        {/* Two quieter quotes drift off the card — bare text, offset like flotsam. */}
+        <Reveal delay={0.14} className="self-start max-w-[85%]">
+          <blockquote className="border-none">
+            <p className="font-display text-lg text-sand/70 leading-[1.65]">
+              &ldquo;{SHORE_QUOTES[1].text}&rdquo;
             </p>
-            <footer className="font-ui text-sm text-sand/40">
-              — a stranger, somewhere
-            </footer>
+            <footer className="font-ui text-xs text-sand/30 mt-3">— adrift 4 days before landing</footer>
           </blockquote>
-        </motion.div>
+        </Reveal>
+        <Reveal delay={0.2} className="self-end max-w-[85%] text-right">
+          <blockquote className="border-none">
+            <p className="font-display text-lg text-sand/70 leading-[1.65]">
+              &ldquo;{SHORE_QUOTES[2].text}&rdquo;
+            </p>
+            <footer className="font-ui text-xs text-sand/30 mt-3">— found at 2:14 am</footer>
+          </blockquote>
+        </Reveal>
+
+        {/* Honesty note: these are illustrations. Real bottles are private —
+            only the sender and the finder ever see them. */}
+        <Reveal delay={0.24}>
+          <p className="font-ui text-[11px] text-sand/30 text-center leading-relaxed">
+            The kind of thing that washes ashore. Real bottles stay between
+            you and the stranger who finds them.
+          </p>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+// ── Why anonymous — the trust section ──────────────────────────────────────
+const ANON_POINTS = [
+  {
+    heading: 'No names in the water.',
+    body: 'A bottle carries your words and nothing else — no handle, no avatar, no history. The stranger who finds it can’t follow you, look you up, or write back.',
+  },
+  {
+    heading: 'One bottle a day, by design.',
+    body: 'The limit isn’t a paywall — it’s the point. When you only get one, you say the thing that actually matters.',
+  },
+  {
+    heading: 'The tide is watched.',
+    body: 'Anything cruel can be reported and is pulled from the water. Anonymity protects the writer, never the abuse.',
+  },
+] as const
+
+function WhyAnonymous() {
+  return (
+    <section className="relative z-10 px-6 py-16" aria-label="Why glassbottles is anonymous">
+      <div className="max-w-lg mx-auto flex flex-col gap-10">
+        <Reveal>
+          <h2
+            className="font-display text-2xl md:text-3xl text-sand text-center"
+            style={{ textWrap: 'balance' } as React.CSSProperties}
+          >
+            Anonymous, on purpose
+          </h2>
+        </Reveal>
+        {ANON_POINTS.map((point, i) => (
+          <Reveal key={point.heading} delay={0.06 + i * 0.06}>
+            <h3 className="font-display text-xl text-sand mb-2">{point.heading}</h3>
+            <p className="font-ui text-[15px] leading-[1.7] text-sand/70 max-w-[52ch]">
+              {point.body}
+            </p>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ── FAQ — native <details>, no JS accordion ────────────────────────────────
+// Copy lives in faq-data.ts so the FAQPage JSON-LD (page.tsx) stays in sync.
+
+function FAQ() {
+  return (
+    <section className="relative z-10 px-6 py-16" aria-label="Frequently asked questions">
+      <div className="max-w-lg mx-auto">
+        <Reveal>
+          <h2 className="font-display text-2xl md:text-3xl text-sand text-center mb-8">
+            Questions from the shore
+          </h2>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <div className="flex flex-col divide-y divide-white/[0.06] border-y border-white/[0.06]">
+            {FAQ_ITEMS.map((item) => (
+              <details key={item.q} className="group py-4">
+                <summary
+                  className="flex items-center justify-between gap-4 cursor-pointer list-none
+                             font-ui text-[15px] text-sand/85 [&::-webkit-details-marker]:hidden"
+                >
+                  {item.q}
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-seafoam/70 transition-transform duration-200 group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="font-ui text-sm leading-[1.7] text-sand/55 pt-3 max-w-[56ch]">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </Reveal>
       </div>
     </section>
   )
@@ -337,7 +490,7 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
 
   return (
     <footer
-      className="relative z-10 px-6 pt-12 pb-12 text-center"
+      className="relative z-10 px-6 pt-16 pb-12 text-center"
       aria-label="Sign up"
     >
       <motion.div
@@ -504,9 +657,22 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
 
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section
-        className="relative z-10 px-6 py-12 max-w-2xl mx-auto flex flex-col gap-10 md:gap-12"
+        className="relative z-10 px-6 py-16 max-w-2xl mx-auto flex flex-col gap-10 md:gap-14"
         aria-label="How glassbottles works"
       >
+        <Reveal>
+          <h2
+            className="font-display text-2xl md:text-3xl text-sand text-center"
+            style={{ textWrap: 'balance' } as React.CSSProperties}
+          >
+            A message in a bottle, online
+          </h2>
+          <p className="font-ui text-[15px] leading-[1.7] text-sand/70 max-w-[52ch] mx-auto mt-3 text-center">
+            glassbottles is a digital message in a bottle: you throw one
+            anonymous message into the sea each day, and the tide carries a
+            stranger&apos;s bottle back to you. Here&apos;s how it works.
+          </p>
+        </Reveal>
         <Beat
           index={0}
           visual={<MiniBottle glowing />}
@@ -563,11 +729,17 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
         </p>
       </div>
 
+      {/* ── Messages that washed ashore ───────────────────────────────── */}
+      <QuoteWall />
+
+      {/* ── Why anonymous ─────────────────────────────────────────────── */}
+      <WhyAnonymous />
+
       {/* ── Soundtrack ────────────────────────────────────────────────── */}
       <Soundtrack reduced={reduced} />
 
-      {/* ── Message in a bottle ───────────────────────────────────────── */}
-      <MessageCard reduced={reduced} />
+      {/* ── FAQ ───────────────────────────────────────────────────────── */}
+      <FAQ />
 
       {/* ── Footer CTA ───────────────────────────────────────────────── */}
       <FooterCTA reduced={reduced} />

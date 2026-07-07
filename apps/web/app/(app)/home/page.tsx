@@ -105,10 +105,16 @@ export default function HomePage() {
   // thrown → sailing → idle before settling back.
   const sendFailedRef = useRef(false)
 
+  // Re-entrancy guard that works within a single render: `sendStatus` below is
+  // a render-captured closure value, so two taps landing before React commits
+  // the 'throwing' re-render BOTH see 'idle' and double-fire the RPC (the DB
+  // UNIQUE constraint rejects the second, but it still burns a round trip and
+  // trips the 23505 path). The ref is live across taps.
+  const throwBusyRef = useRef(false)
+
   async function handleThrow() {
-    // Re-entrancy guard: a double tap on the CTA could fire a second send
-    // mid-animation before the button unmounts.
-    if (sendStatus !== 'idle') return
+    if (sendStatus !== 'idle' || throwBusyRef.current) return
+    throwBusyRef.current = true
     sendFailedRef.current = false
     setSendError(false)
     dispatch(setSendStatus('throwing'))
@@ -128,6 +134,10 @@ export default function HomePage() {
       // If the drop already finished (it set 'thrown'), correct back to idle.
       dispatch(setThrowAnimating(false))
       dispatch(setSendStatus('idle'))
+    } finally {
+      // Safe to release here: by now sendStatus is 'throwing'/'thrown' (or a
+      // committed 'idle' after failure), so the state guard has taken over.
+      throwBusyRef.current = false
     }
   }
 

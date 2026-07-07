@@ -204,7 +204,9 @@ function Ship({
 // the clouds (no sharp bolt). A soft scene flash washes the sea below.
 // Disabled under prefers-reduced-motion.
 
-// Soft cloud blobs, positioned (%) across the 200%-wide drifting bank.
+// Soft cloud blobs, positioned (%) across ONE 100%-viewport tile. The bank is
+// 200% wide and loops by translating -50%, so each blob renders twice — at
+// left/2 and left/2 + 50 (both halves identical) — or the loop restart jumps.
 const CLOUD_BLOBS = [
   { left: 6, top: 14, w: 220, h: 90, o: 0.85 },
   { left: 15, top: 6, w: 300, h: 120, o: 0.95 },
@@ -254,9 +256,12 @@ function StormClouds({ reduced }: { reduced: boolean }) {
         animate={reduced ? undefined : { x: ['0%', '-50%'] }}
         transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
       >
-        {CLOUD_BLOBS.map((c, i) => (
+        {CLOUD_BLOBS.flatMap((c, i) => [
+          { ...c, left: c.left / 2, key: i },
+          { ...c, left: c.left / 2 + 50, key: i + CLOUD_BLOBS.length },
+        ]).map((c) => (
           <div
-            key={i}
+            key={c.key}
             className="absolute"
             style={{
               left: `${c.left}%`,

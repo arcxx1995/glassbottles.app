@@ -7,7 +7,7 @@ import type { Config } from 'tailwindcss'
 //   receive-spring: { type: 'spring', stiffness: 320, damping: 28 }
 //
 // CSS keyframe tokens (use via animation utilities below):
-//   throw-arc:      cubic-bezier(0.25, 0.46, 0.45, 0.94) 800ms
+//   throw-arc:      TetheredBottle wind-up + arc + splash, 1.15s (motion keyframes)
 //   wave-ambient:   sinusoidal 4s linear loop (3 staggered layers)
 //   bottle-bob:     y -10px, rotate ±1.2deg, 3.2s ease-in-out (Framer Motion)
 //   reveal-words:   staggered 40ms/word, delay cap 1.4s, 280ms easeOut per word
@@ -84,13 +84,6 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(4px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
-        // throw-arc: bottle launch trajectory
-        // Keyframe splits: 0% origin → 55% peak (apex) → 100% splash entry
-        'throw-arc': {
-          '0%':   { transform: 'translateX(0) translateY(0) rotate(0deg)', opacity: '1' },
-          '55%':  { transform: 'translateX(60px) translateY(-120px) rotate(12deg)', opacity: '1' },
-          '100%': { transform: 'translateX(200px) translateY(40px) rotate(42deg)', opacity: '0' },
-        },
         // shimmer: loading state sweep — more expressive than plain pulse
         // Use on skeleton elements over ocean-mid background
         'shimmer': {
@@ -117,7 +110,6 @@ const config: Config = {
         'wave-ambient':   'wave-ambient 4s ease-in-out infinite',
         'bottle-bob':     'bottle-bob 3.2s ease-in-out infinite',
         'fade-in':        'fade-in 0.3s ease-out forwards',
-        'throw-arc':      'throw-arc 0.85s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
         'shimmer':        'shimmer 1.6s ease-in-out infinite',
         'skeleton-pulse': 'skeleton-pulse 1.8s ease-in-out infinite',
         'reveal-up':      'reveal-up 0.4s cubic-bezier(0.25,0.46,0.45,0.94) forwards',

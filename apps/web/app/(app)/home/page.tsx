@@ -179,6 +179,7 @@ export default function HomePage() {
       {!isInitializing && (sendStatus === 'idle' || sendStatus === 'throwing') && (
         <TetheredBottle
           dropping={sendStatus === 'throwing'}
+          landingDayKey={todayKey}
           onDropComplete={handleDropComplete}
         />
       )}

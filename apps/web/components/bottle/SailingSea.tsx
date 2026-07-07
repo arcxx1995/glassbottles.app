@@ -30,6 +30,23 @@ function rand(seed: number): number {
   return x - Math.floor(x)
 }
 
+/**
+ * Where a bottle with this day_key sits in the sea (viewport %). Exported so
+ * TetheredBottle can throw TO this exact spot — the optimistic FloatingBottle
+ * (same day_key, same hash) then surfaces in place, no teleport.
+ */
+export function computeSeaSpot(dayKey: string) {
+  const seed = hashId(dayKey)
+  const depth = rand(seed + 1) // 0 = far/back, 1 = near/front
+  return {
+    left: 7 + rand(seed) * 84, // % of viewport
+    top: 50 + depth * 36, // % — back bottles higher (near horizon)
+    scale: 0.6 + depth * 0.5,
+    depth,
+    drift: rand(seed + 4) > 0.5 ? 1 : -1,
+  }
+}
+
 function formatDay(dayKey: string): string {
   const d = new Date(`${dayKey}T00:00:00`)
   if (Number.isNaN(d.getTime())) return dayKey
@@ -305,28 +322,23 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
   // optimistic just-thrown placeholder and the real refetched bottle — same
   // day_key — land on the SAME spot (no jump on swap).
   const layout = useMemo(() => {
-    const seed = hashId(item.day_key)
-    const depth = rand(seed + 1) // 0 = far/back, 1 = near/front
-    const top = 50 + depth * 36 // % of viewport — back bottles higher (near horizon)
+    const spot = computeSeaSpot(item.day_key)
 
     // Which wave band the bottle floats on (by vertical position). Its bob is
     // matched to that band's vertical wave frequency (and phase) so the bottle
     // rides the wave instead of bobbing on its own clock.
     let bandIndex = 0
     for (let i = 0; i < WAVE_BANDS.length; i++) {
-      if (top >= parseFloat(WAVE_BANDS[i].top)) bandIndex = i
+      if (spot.top >= parseFloat(WAVE_BANDS[i].top)) bandIndex = i
     }
     const band = WAVE_BANDS[bandIndex]
 
     return {
-      left: 7 + rand(seed) * 84, // %
-      top,
-      scale: 0.6 + depth * 0.5,
-      opacity: 0.62 + depth * 0.38,
-      z: Math.round(depth * 100),
+      ...spot,
+      opacity: 0.62 + spot.depth * 0.38,
+      z: Math.round(spot.depth * 100),
       bobDelay: 0, // in phase with the band
       bobDur: band.dur / 3, // same frequency as the band's vertical wave
-      drift: rand(seed + 4) > 0.5 ? 1 : -1,
     }
   }, [item.day_key])
 

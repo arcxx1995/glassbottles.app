@@ -158,7 +158,10 @@ function Galaxy({ reduced }: { reduced: boolean }) {
             top: `${n.y}%`,
             width: `${n.w}%`,
             height: `${n.h}%`,
-            transform: 'translate(-50%, -50%)',
+            // translateZ promotes each blurred cloud to its own layer so the
+            // blur(15px) rasterizes once instead of repainting every frame of
+            // the opacity throb (same trick as SailingSea's storm clouds).
+            transform: 'translate(-50%, -50%) translateZ(0)',
             background: `radial-gradient(closest-side, ${n.color} 0%, transparent 78%)`,
             filter: 'blur(15px)',
           }}

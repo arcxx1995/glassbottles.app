@@ -40,6 +40,11 @@ export const uiSlice = createSlice({
         state.receivedBannerDismissedIds.push(action.payload)
       }
     },
+    // Sign-out purge: dismissed-banner ids must not carry into the next
+    // account on a shared device (dispatched by AuthProvider on SIGNED_OUT).
+    resetUiState() {
+      return initialState
+    },
   },
 })
 
@@ -48,6 +53,7 @@ export const {
   closeReportModal,
   setActiveBottleId,
   dismissReceivedBanner,
+  resetUiState,
 } = uiSlice.actions
 
 export const selectIsReportModalOpen = (state: RootState) =>

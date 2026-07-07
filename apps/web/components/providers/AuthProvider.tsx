@@ -27,7 +27,7 @@
 
 import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAppDispatch } from '@/store'
+import { useAppDispatch, purgeSessionState } from '@/store'
 import { setUser, clearUser, setLoading } from '@/store/authSlice'
 import type { Profile } from '@/types'
 
@@ -116,6 +116,7 @@ export default function AuthProvider({
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         dispatch(clearUser())
+        purgeSessionState(dispatch) // no cross-account cache on shared devices
         return
       }
 

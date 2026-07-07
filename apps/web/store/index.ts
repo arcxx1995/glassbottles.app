@@ -3,8 +3,8 @@ import { setupListeners } from '@reduxjs/toolkit/query'
 import { useDispatch, useSelector } from 'react-redux'
 import type { TypedUseSelectorHook } from 'react-redux'
 import authReducer from './authSlice'
-import bottleReducer from './bottleSlice'
-import uiReducer from './uiSlice'
+import bottleReducer, { resetBottleState } from './bottleSlice'
+import uiReducer, { resetUiState } from './uiSlice'
 import { bottleApi } from './api/bottleApi'
 import { authApi } from './api/authApi'
 
@@ -29,6 +29,21 @@ setupListeners(store.dispatch)
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
+
+/**
+ * Purge everything session-scoped from the store. The store is module-scoped
+ * and sign-out is a client-side navigation (no reload), so without this the
+ * RTK Query cache (received bottles, status, banners, profile), the draft
+ * message, and dismissed-banner ids all survive into the NEXT account on a
+ * shared device. Called by AuthProvider on SIGNED_OUT — the single shared
+ * path for explicit sign-out and account deletion.
+ */
+export function purgeSessionState(dispatch: AppDispatch) {
+  dispatch(bottleApi.util.resetApiState())
+  dispatch(authApi.util.resetApiState())
+  dispatch(resetBottleState())
+  dispatch(resetUiState())
+}
 
 export const useAppDispatch: () => AppDispatch = useDispatch
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector

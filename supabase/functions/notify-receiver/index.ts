@@ -22,8 +22,8 @@ interface ResendError {
 Deno.serve(async (req) => {
   // ── 0. Caller auth — service role key required ────────────────────────────
   // This function mutates the bottles table (email_notified_at) and sends email.
-  // It must only be reachable from trusted internal callers: match-bottle edge
-  // function and the pg_cron retry path via pg_net.
+  // It must only be reachable from trusted internal callers: the pg_cron retry
+  // path (retry_unmatched_bottles) via pg_net.
   const authHeader = req.headers.get('Authorization')
   const token = authHeader?.replace('Bearer ', '')
   if (token !== SERVICE_ROLE_KEY) {

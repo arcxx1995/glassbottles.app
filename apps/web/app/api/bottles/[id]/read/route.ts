@@ -37,7 +37,7 @@ export async function PATCH(
   // (receiver_id = auth.uid()). No explicit .eq('receiver_id') — the column is
   // not SELECT-granted to authenticated (migration 015), so filtering on it
   // would fail the column ACL; the policy expression is exempt and authoritative.
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('bottles')
     .update({
       is_read: true,
@@ -45,6 +45,7 @@ export async function PATCH(
     })
     .eq('id', id)
     .eq('is_read', false) // IS NULL guard equivalent for boolean — idempotent
+    .select('id')
 
   if (error) {
     // RLS violation means user is not the receiver
@@ -53,6 +54,23 @@ export async function PATCH(
     }
     console.error('[bottles/read] update error:', error.code, error.message)
     return NextResponse.json({ error: 'Failed to mark as read' }, { status: 500 })
+  }
+
+  if (!updated || updated.length === 0) {
+    // 0 rows is ambiguous: already read (legit idempotent no-op) vs not this
+    // user's received bottle / nonexistent (should 404 like the report
+    // route). One extra read on this rare path disambiguates. RLS also lets
+    // a SENDER select their own sent bottle, so `found` alone isn't enough —
+    // found with is_read=false means the update didn't match because the
+    // caller is not the receiver.
+    const { data: bottle } = await supabase
+      .from('bottles')
+      .select('id, is_read')
+      .eq('id', id)
+      .maybeSingle()
+    if (!bottle || bottle.is_read === false) {
+      return NextResponse.json({ error: 'Bottle not found' }, { status: 404 })
+    }
   }
 
   return NextResponse.json({ ok: true })

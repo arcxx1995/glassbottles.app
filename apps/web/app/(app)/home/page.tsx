@@ -10,7 +10,7 @@ import {
   selectSendStatus,
   selectMessage,
 } from '@/store/bottleSlice'
-import { selectUser, selectIsLoading } from '@/store/authSlice'
+import { selectUser } from '@/store/authSlice'
 import {
   useSendBottleMutation,
   useGetTodayBottleStatusQuery,
@@ -29,7 +29,6 @@ export default function HomePage() {
   const sendStatus = useAppSelector(selectSendStatus)
   const message = useAppSelector(selectMessage)
   const user = useAppSelector(selectUser)
-  const authLoading = useAppSelector(selectIsLoading)
 
   const [sendBottle] = useSendBottleMutation()
   const [sendError, setSendError] = useState(false)
@@ -158,8 +157,16 @@ export default function HomePage() {
   }
 
   // Show skeleton while we wait for server state so we don't flash
-  // "Your bottle awaits" to a user who already sent today
-  const isInitializing = !!user?.id && isStatusLoading && !todayStatus
+  // "Your bottle awaits" to a user who already sent today.
+  //
+  // /home is middleware-protected (redirects unauthenticated → /sign-in), so a
+  // null user here never means "guest" — it means auth hasn't seeded client-side
+  // yet (AuthProvider dispatches setUser a frame or two after first paint). Both
+  // the pre-seed frame AND the post-seed status fetch must hold the skeleton, or
+  // the idle "Your bottle awaits" compose flashes for a user who already sent —
+  // the post-login phantom. authLoading alone doesn't cover this: the guest
+  // bootstrap on /sign-in already flipped it false before we reach /home.
+  const isInitializing = !user?.id || (isStatusLoading && !todayStatus)
   const isThrown = sendStatus === 'thrown'
 
   return (
@@ -324,13 +331,6 @@ export default function HomePage() {
           </>
         )}
       </div>
-
-      {/* Guest prompt — only after auth has resolved (no flash during loading) */}
-      {!user && !authLoading && sendStatus === 'idle' && (
-        <p className="font-ui text-xs text-sand/20 pb-4 text-center">
-          Sign in to send your bottle
-        </p>
-      )}
     </div>
   )
 }

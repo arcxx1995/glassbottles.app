@@ -79,6 +79,14 @@ body {
 /* Override --skeleton-bg to match the parent surface                        */
 
 @layer utilities {
+  /* Scrollable but no visible scrollbar (Firefox + WebKit). */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .skeleton {
     position: relative;
     overflow: hidden;

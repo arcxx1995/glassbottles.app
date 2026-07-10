@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'motion/react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import WaveBackground from '@/components/shared/WaveBackground'
@@ -72,7 +72,10 @@ function SignInForm() {
       return
     }
 
-    router.refresh()
+    // Cookies are already set by signInWithPassword above, so a plain push runs
+    // middleware with the fresh session. No router.refresh(): it re-requests
+    // /sign-in, which middleware redirects to /home — a second route resolution
+    // racing this push and doubling the post-login loading frame.
     router.push('/home')
   }
 
@@ -104,6 +107,16 @@ function SignInForm() {
       <WaveBackground />
       <NightSky />
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 inline-flex items-center gap-1.5 font-ui text-sm
+                   text-sand/45 hover:text-sand/80 transition-colors
+                   focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seafoam
+                   focus-visible:rounded px-1 -mx-1"
+      >
+        <ArrowLeft size={16} strokeWidth={2} />
+        Back
+      </Link>
       <div className={AUTH_BOX_CLASS}>
         {/* Logo */}
         <motion.div

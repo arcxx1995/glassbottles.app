@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowRight, Mail } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import WaveBackground from '@/components/shared/WaveBackground'
@@ -29,6 +29,7 @@ export default function SignUpPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [touched, setTouched] = useState(false)
 
   const [loading, setLoading] = useState(false)
@@ -43,7 +44,7 @@ export default function SignUpPage() {
 
   const emailOk = isValidEmail(email)
   const passwordOk = isValidPassword(password)
-  const canSubmit = emailOk && passwordOk && !loading && !googleLoading
+  const canSubmit = emailOk && passwordOk && agreed && !loading && !googleLoading
 
   useEffect(() => {
     return () => {
@@ -68,7 +69,7 @@ export default function SignUpPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setTouched(true)
-    if (!emailOk || !passwordOk) return
+    if (!emailOk || !passwordOk || !agreed) return
 
     setLoading(true)
     setFormError(null)
@@ -107,6 +108,8 @@ export default function SignUpPage() {
   }
 
   async function handleGoogle() {
+    setTouched(true)
+    if (!agreed) return
     setGoogleLoading(true)
     setFormError(null)
     const { error } = await supabase.auth.signInWithOAuth({
@@ -142,6 +145,16 @@ export default function SignUpPage() {
       <WaveBackground />
       <NightSky />
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 inline-flex items-center gap-1.5 font-ui text-sm
+                   text-sand/45 hover:text-sand/80 transition-colors
+                   focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seafoam
+                   focus-visible:rounded px-1 -mx-1"
+      >
+        <ArrowLeft size={16} strokeWidth={2} />
+        Back
+      </Link>
       <div className={AUTH_BOX_CLASS}>
         {/* Hero */}
         <motion.div
@@ -217,6 +230,40 @@ export default function SignUpPage() {
                   <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
                 )}
 
+                <label className="flex items-start gap-2.5 px-1 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-sand/30 bg-transparent
+                               text-seafoam accent-seafoam focus-visible:outline-none
+                               focus-visible:ring-2 focus-visible:ring-seafoam"
+                    aria-label="Agree to Terms & Conditions and Privacy Policy"
+                  />
+                  <span className="font-ui text-xs leading-relaxed text-sand/55">
+                    I agree to the{' '}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="text-seafoam hover:underline"
+                    >
+                      Terms &amp; Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="text-seafoam hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+                {touched && !agreed && (
+                  <FieldError>Please accept the Terms &amp; Conditions to continue.</FieldError>
+                )}
+
                 <FormError>{formError}</FormError>
 
                 <button type="submit" disabled={!canSubmit} className={AUTH_PRIMARY_BTN_CLASS}>
@@ -239,7 +286,7 @@ export default function SignUpPage() {
               <GoogleButton
                 onClick={() => void handleGoogle()}
                 loading={googleLoading}
-                disabled={loading}
+                disabled={loading || !agreed}
               />
             </motion.div>
           )}

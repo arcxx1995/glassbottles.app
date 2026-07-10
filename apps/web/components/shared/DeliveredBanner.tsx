@@ -110,7 +110,7 @@ export default function DeliveredBanner({
               Your bottle found someone
             </p>
             <p className="font-ui text-xs text-sand/45 mt-0.5">
-              A stranger is reading your message right now.
+              A stranger somewhere now has your message.
             </p>
           </div>
 

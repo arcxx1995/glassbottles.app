@@ -681,7 +681,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto px-5 pt-10 pb-10 sm:overflow-hidden sm:pt-14 sm:pb-0">
+    <div className="no-scrollbar flex h-full flex-col overflow-y-auto px-5 pt-10 pb-10 sm:overflow-hidden sm:pt-14 sm:pb-0">
       {/* Mobile: single column, page scrolls. sm+: two columns fit the viewport
           with no scroll (overflow-hidden frame). */}
       <motion.div className="mb-6 shrink-0" {...staggerItem(0)}>
@@ -707,7 +707,7 @@ export default function SettingsPage() {
           truncation), no page scroll, and the lower band is kept clear so the
           wave animation reads underneath. Account is the starting column. */}
       <div className="flex flex-col sm:min-h-0 sm:flex-1 sm:overflow-hidden">
-        <div className="flex flex-col gap-5 sm:min-h-0 sm:flex-1 sm:flex-row sm:justify-center sm:gap-6 sm:overflow-hidden">
+        <div className="no-scrollbar flex flex-col gap-5 sm:min-h-0 sm:flex-1 sm:flex-row sm:justify-center sm:gap-6 sm:overflow-y-auto">
 
           {/* ── Column 1: Account · Notifications · Privacy ─────────── */}
           <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">

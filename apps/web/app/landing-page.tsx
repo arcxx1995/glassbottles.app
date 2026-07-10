@@ -268,16 +268,12 @@ function Reveal({
 // caption in QuoteWall says so on the page; keep it if you edit these.
 const SHORE_QUOTES = [
   {
-    text: 'I finally told my sister what I’d been meaning to say for three years. It went okay.',
-    primary: true,
-  },
-  {
     text: 'Someone in another timezone knows the thing I can’t say out loud. We will never meet. Somehow that makes it lighter.',
-    primary: false,
+    footer: '— adrift 4 days before landing',
   },
   {
     text: 'I threw a bottle about my dad. Today a stranger’s bottle about their dad washed up. The ocean has a sense of humour.',
-    primary: false,
+    footer: '— found at 2:14 am',
   },
 ] as const
 
@@ -294,52 +290,32 @@ function QuoteWall() {
           </h2>
         </Reveal>
 
-        {/* Primary card — the app's received-bottle framing. */}
-        <Reveal delay={0.08}>
-          <div className="rounded-2xl border border-sand/[0.09] bg-sand/[0.04] px-8 py-9 md:px-10">
-            <div className="flex items-center gap-3 mb-7">
-              <span className="select-none inline-flex" role="img" aria-label="glass bottle">
-                {/* Same wiggling bottle as the hero title. */}
-                <BottleCanvas size="1.5rem" />
-              </span>
-              <span className="font-ui text-[11px] text-sand/40 tracking-widest uppercase">
-                Found you
-              </span>
+        {/* Each quote sits in its own card with the wiggling bottle. */}
+        {SHORE_QUOTES.map((quote, i) => (
+          <Reveal key={quote.text} delay={0.08 + i * 0.06}>
+            <div className="rounded-2xl border border-sand/[0.09] bg-sand/[0.04] px-8 py-9 md:px-10">
+              <div className="flex items-center gap-3 mb-7">
+                <span className="select-none inline-flex" role="img" aria-label="glass bottle">
+                  <BottleCanvas size="1.5rem" />
+                </span>
+                <span className="font-ui text-[11px] text-sand/40 tracking-widest uppercase">
+                  Found you
+                </span>
+              </div>
+              <blockquote>
+                <p className="font-display text-lg text-sand/70 leading-[1.65] mb-6">
+                  &ldquo;{quote.text}&rdquo;
+                </p>
+                <footer className="font-ui text-xs text-sand/30">{quote.footer}</footer>
+              </blockquote>
             </div>
-            <blockquote>
-              <p
-                className="font-display text-xl md:text-2xl text-sand/90 leading-[1.6] mb-6"
-                style={{ textWrap: 'balance' } as React.CSSProperties}
-              >
-                &ldquo;{SHORE_QUOTES[0].text}&rdquo;
-              </p>
-              <footer className="font-ui text-sm text-sand/40">— a stranger, somewhere</footer>
-            </blockquote>
-          </div>
-        </Reveal>
-
-        {/* Two quieter quotes drift off the card — bare text, offset like flotsam. */}
-        <Reveal delay={0.14} className="self-start max-w-[85%]">
-          <blockquote className="border-none">
-            <p className="font-display text-lg text-sand/70 leading-[1.65]">
-              &ldquo;{SHORE_QUOTES[1].text}&rdquo;
-            </p>
-            <footer className="font-ui text-xs text-sand/30 mt-3">— adrift 4 days before landing</footer>
-          </blockquote>
-        </Reveal>
-        <Reveal delay={0.2} className="self-end max-w-[85%] text-right">
-          <blockquote className="border-none">
-            <p className="font-display text-lg text-sand/70 leading-[1.65]">
-              &ldquo;{SHORE_QUOTES[2].text}&rdquo;
-            </p>
-            <footer className="font-ui text-xs text-sand/30 mt-3">— found at 2:14 am</footer>
-          </blockquote>
-        </Reveal>
+          </Reveal>
+        ))}
 
         {/* Honesty note: these are illustrations. Real bottles are private —
             only the sender and the finder ever see them. */}
         <Reveal delay={0.24}>
-          <p className="font-ui text-[11px] text-sand/30 text-center leading-relaxed">
+          <p className="font-ui text-[13px] text-sand/30 text-center leading-relaxed">
             The kind of thing that washes ashore. Real bottles stay between
             you and the stranger who finds them.
           </p>
@@ -526,6 +502,18 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
           className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
         >
           Sign in
+        </Link>
+        <Link
+          href="/privacy"
+          className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
+        >
+          Privacy
+        </Link>
+        <Link
+          href="/terms"
+          className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
+        >
+          Terms
         </Link>
         <a
           href="https://github.com/arcxx1995/glassbottles.app"
@@ -732,11 +720,11 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
       {/* ── Messages that washed ashore ───────────────────────────────── */}
       <QuoteWall />
 
-      {/* ── Why anonymous ─────────────────────────────────────────────── */}
-      <WhyAnonymous />
-
       {/* ── Soundtrack ────────────────────────────────────────────────── */}
       <Soundtrack reduced={reduced} />
+
+      {/* ── Why anonymous ─────────────────────────────────────────────── */}
+      <WhyAnonymous />
 
       {/* ── FAQ ───────────────────────────────────────────────────────── */}
       <FAQ />

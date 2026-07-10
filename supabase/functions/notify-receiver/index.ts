@@ -155,7 +155,12 @@ Deno.serve(async (req) => {
   }
 
   // ── 5. Send via Resend HTTP API (no npm package needed in Deno) ──────────
-  const resendRes = await fetch('https://api.resend.com/emails', {
+  // pg_net dispatches a cron tick's posts as one burst (they all commit
+  // together), so concurrent invocations can trip Resend's ~2 req/s limit.
+  // A 429 is a definite non-send — retry it here with jittered backoff
+  // (1s/2s/4s) instead of releasing the claim and burning a 15-min cron
+  // retry (and one of the 8 capped attempts) per collision.
+  const sendOnce = () => fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -176,6 +181,12 @@ Deno.serve(async (req) => {
       text: `Someone sent you a message. Open glassbottles.app to read it.`,
     }),
   })
+
+  let resendRes = await sendOnce()
+  for (let attempt = 0; resendRes.status === 429 && attempt < 3; attempt++) {
+    await new Promise((r) => setTimeout(r, (2 ** attempt) * 1000 + Math.random() * 500))
+    resendRes = await sendOnce()
+  }
 
   if (!resendRes.ok) {
     let errBody: ResendError = {}

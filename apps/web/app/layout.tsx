@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.webmanifest',
   alternates: { canonical: '/' },
-  // og:image / twitter:image come from app/opengraph-image.tsx (file
+  // og:image / twitter:image come from app/opengraph-image.png (file
   // convention — takes precedence over anything listed here).
   openGraph: {
     type: 'website',

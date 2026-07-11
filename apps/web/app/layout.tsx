@@ -49,10 +49,7 @@ export const metadata: Metadata = {
     'anonymous notes to strangers',
     'random message exchange app',
   ],
-  icons: {
-    icon: '/icon.png',
-    apple: '/apple-touch-icon.png',
-  },
+  // icons come from app/icon.tsx + app/apple-icon.tsx (file convention)
   appleWebApp: {
     capable: true,
     title: 'glassbottles',

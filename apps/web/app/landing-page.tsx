@@ -567,7 +567,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
       <NightSky />
 
       {/* ── Nav ──────────────────────────────────────────────────────── */}
-      <header className="relative z-10 flex items-center justify-between px-6 pt-7 pb-4 max-w-5xl mx-auto">
+      <header className="relative z-10 flex items-center justify-between px-6 pt-[calc(1.75rem+env(safe-area-inset-top))] pb-4 max-w-5xl mx-auto">
         <span className="font-display text-xl text-sand tracking-tight select-none">
           glassbottles
         </span>
@@ -584,7 +584,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
         className="relative z-10 flex flex-col items-center justify-center px-6 pb-12 text-center"
-        style={{ minHeight: 'calc(100svh - 64px)' }}
+        style={{ minHeight: 'calc(100svh - 64px - env(safe-area-inset-top))' }}
         aria-labelledby="hero-heading"
       >
         <motion.h1

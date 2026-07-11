@@ -583,7 +583,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
-        className="relative z-10 flex flex-col items-center justify-center px-6 pb-12 text-center"
+        className="relative z-10 flex flex-col items-center justify-center px-6 pb-8 text-center"
         style={{ minHeight: 'calc(100svh - 64px - env(safe-area-inset-top))' }}
         aria-labelledby="hero-heading"
       >
@@ -645,10 +645,10 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
 
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section
-        className="relative z-10 px-6 py-16 max-w-2xl mx-auto flex flex-col gap-10 md:gap-14"
+        className="relative z-10 px-6 pt-4 pb-16 max-w-2xl mx-auto flex flex-col gap-10 md:gap-14"
         aria-label="How glassbottles works"
       >
-        <Reveal>
+        <Reveal className="mb-4 md:mb-6">
           <h2
             className="font-display text-2xl md:text-3xl text-sand text-center"
             style={{ textWrap: 'balance' } as React.CSSProperties}

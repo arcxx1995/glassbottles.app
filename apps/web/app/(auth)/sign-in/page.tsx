@@ -109,8 +109,8 @@ function SignInForm() {
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
       <Link
         href="/"
-        className="absolute top-6 left-6 inline-flex items-center gap-1.5 font-ui text-sm
-                   text-sand/45 hover:text-sand/80 transition-colors
+        className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] left-6 inline-flex items-center gap-1.5 font-ui text-sm
+                   text-sand/70 hover:text-sand/90 transition-colors
                    focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seafoam
                    focus-visible:rounded px-1 -mx-1"
       >

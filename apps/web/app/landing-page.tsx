@@ -573,7 +573,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
         </span>
         <Link
           href="/sign-in"
-          className="font-ui text-sm text-sand/60 hover:text-sand/90 transition-colors duration-200
+          className="hidden sm:inline-block font-ui text-sm text-sand/60 hover:text-sand/90 transition-colors duration-200
                      focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seafoam
                      focus-visible:rounded px-1 -mx-1"
         >

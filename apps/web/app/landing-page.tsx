@@ -648,7 +648,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
         className="relative z-10 px-6 pt-4 pb-16 max-w-2xl mx-auto flex flex-col gap-10 md:gap-14"
         aria-label="How glassbottles works"
       >
-        <Reveal className="mb-4 md:mb-6">
+        <Reveal>
           <h2
             className="font-display text-2xl md:text-3xl text-sand text-center"
             style={{ textWrap: 'balance' } as React.CSSProperties}
@@ -661,6 +661,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
             stranger&apos;s bottle back to you. Here&apos;s how it works.
           </p>
         </Reveal>
+        <div aria-hidden className="h-px w-full bg-sand/[0.09]" />
         <Beat
           index={0}
           visual={<MiniBottle glowing />}

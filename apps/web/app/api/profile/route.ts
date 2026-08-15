@@ -95,6 +95,13 @@ export async function PATCH(req: NextRequest) {
     .single()
 
   if (error) {
+    // 23514 = the profiles BEFORE trigger rejected the write: an unknown IANA
+    // zone (migration 032) or a second timezone change inside 24h (036, which
+    // stops the day-boundary flip that re-granted the daily quota). Both are
+    // the caller's fault, and the message is safe to surface verbatim.
+    if (error.code === '23514') {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error('[profile] update error:', error.code, error.message)
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
   }

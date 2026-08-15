@@ -13,6 +13,12 @@ export default function InboxPage() {
 
   const { data, isLoading } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id,
+    // The inbox has no poll of its own — its refresh comes from the realtime
+    // listener's invalidation and BottomNav's 5-minute safety poll. If the
+    // socket is dead and the nav unmounts, an open tab would show a stale list
+    // forever. Refetch on mount when the cache is older than 30s: navigating
+    // back to the inbox is the moment the user expects it to be current.
+    refetchOnMountOrArgChange: 30,
   })
 
   // Most recently received on top. Sort client-side so the order is correct

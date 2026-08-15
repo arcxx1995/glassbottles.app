@@ -12,9 +12,17 @@ import { createServiceClient } from '@/lib/supabase/service'
 // Cascade is manual on purpose: profiles.id CASCADEs from auth.users, but the
 // rows that reference profiles(id) — bottles.sender_id, bottles.receiver_id,
 // daily_quotas.user_id — were created with NO ON DELETE action (migration 001),
-// so admin.deleteUser() would fail on the FK while those rows exist. Remove the
-// children first (service role, bypasses RLS), then delete the auth user, which
-// cascades the profile.
+// so admin.deleteUser() would fail on the FK while those rows exist. Clear the
+// references first (service role, bypasses RLS), then delete the auth user,
+// which cascades the profile.
+//
+// The bottles are UNLINKED, not deleted. Deleting them took the counterparty's
+// message with them: every bottle this user sent vanished from a stranger's
+// inbox, and every bottle they received vanished from its sender's delivered
+// history — a second, silent cause of "my old messages are gone". Nulling the
+// id keeps the message where it landed and severs the identity, which is all
+// the deletion actually has to guarantee. Unmatched bottles (nobody has read
+// them) are deleted outright so they do not drift on behalf of a dead account.
 export async function POST(_req: NextRequest) {
   const supabase = createClient()
 
@@ -40,13 +48,40 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
   }
 
-  // 2. bottles this user sent OR received (sender_id / receiver_id → profiles.id)
-  const { error: bottleErr } = await admin
+  // 2a. Bottles this user sent that are still adrift: nobody has ever seen
+  //     them, and with sender_id cleared the matcher could never place them
+  //     (its "not the sender" test is NULL-poisoned). Delete outright.
+  const { error: adriftErr } = await admin
     .from('bottles')
     .delete()
-    .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`)
-  if (bottleErr) {
-    console.error('[account/delete] bottles:', bottleErr.code, bottleErr.message)
+    .eq('sender_id', uid)
+    .is('received_at', null)
+  if (adriftErr) {
+    console.error('[account/delete] adrift bottles:', adriftErr.code, adriftErr.message)
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
+  }
+
+  // 2b. Delivered bottles they sent: keep the message in the receiver's inbox,
+  //     drop the link back to this account.
+  const { error: sentErr } = await admin
+    .from('bottles')
+    .update({ sender_id: null })
+    .eq('sender_id', uid)
+  if (sentErr) {
+    console.error('[account/delete] sent bottles:', sentErr.code, sentErr.message)
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
+  }
+
+  // 2c. Bottles they received: keep the sender's "found someone" record, drop
+  //     the link. The message text goes with the inbox that no longer exists —
+  //     receiver_id NULL makes it unreadable by anyone (get_received_bottles
+  //     matches on receiver_id = auth.uid(), which never equals NULL).
+  const { error: recvErr } = await admin
+    .from('bottles')
+    .update({ receiver_id: null })
+    .eq('receiver_id', uid)
+  if (recvErr) {
+    console.error('[account/delete] received bottles:', recvErr.code, recvErr.message)
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
   }
 

@@ -73,5 +73,14 @@ export async function PATCH(
     }
   }
 
+  // Liveness signal. The matcher prefers receivers active in the last 30 days
+  // (migration 036); without this, someone who reads every bottle but rarely
+  // sends one decays into the dormant pool and stops being matched. Failure
+  // here is not worth failing the read for.
+  await supabase
+    .from('profiles')
+    .update({ last_active: new Date().toISOString() })
+    .eq('id', user.id)
+
   return NextResponse.json({ ok: true })
 }

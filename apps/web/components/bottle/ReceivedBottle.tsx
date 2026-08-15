@@ -13,9 +13,18 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
   const [markRead, { isLoading: isMarking }] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
 
+  // The staggered word reveal is the moment a message is FIRST read — it costs
+  // one motion node per word (~180 for a full-length bottle). Rendering the
+  // whole inbox that way mounted thousands of animated components at once and
+  // janked the list on mobile. History renders as plain text; only the unread
+  // bottle animates.
+  const reveal = !bottle.is_read
+
   // Split into lines, then words, so the staggered reveal preserves the
   // sender's line breaks (a flat split(' ') collapsed paragraphs into one run).
-  const lines = bottle.message.split('\n').map((line) => line.split(' '))
+  const lines = reveal
+    ? bottle.message.split('\n').map((line) => line.split(' '))
+    : []
   const lineOffsets: number[] = []
   let wordCount = 0
   for (const line of lines) {
@@ -44,6 +53,9 @@ export default function ReceivedBottle({ bottle }: ReceivedBottleProps) {
           className="font-display text-sand text-lg leading-relaxed"
           aria-label="Message content"
         >
+          {!reveal && (
+            <span className="whitespace-pre-line">{bottle.message}</span>
+          )}
           {lines.map((line, li) => (
             <span key={li} className="block min-h-[1em]">
               {line.map((word, wi) => {

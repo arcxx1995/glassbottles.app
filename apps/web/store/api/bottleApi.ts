@@ -133,18 +133,33 @@ export const bottleApi = createApi({
       },
       invalidatesTags: ['BottleStatus'],
     }),
+    // Read and report are Supabase RPCs (migration 038), off Vercel like
+    // send_bottle — opening a bottle marks it read, so this is a hot path.
+    // Each returns false when the bottle is not the caller's received bottle.
     markBottleRead: builder.mutation<void, string>({
-      query: (bottleId) => ({
-        url: `/bottles/${bottleId}/read`,
-        method: 'PATCH',
-      }),
-      invalidatesTags: ['BottleStatus', 'ReceivedBottles'],
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('mark_bottle_read', {
+          p_bottle_id: bottleId,
+        })
+        if (error || data !== true) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error?.message ?? 'Bottle not found' } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['ReceivedBottles'],
     }),
     reportBottle: builder.mutation<void, string>({
-      query: (bottleId) => ({
-        url: `/bottles/${bottleId}/report`,
-        method: 'POST',
-      }),
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('report_bottle', {
+          p_bottle_id: bottleId,
+        })
+        if (error || data !== true) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error?.message ?? 'Bottle not found' } }
+        }
+        return { data: undefined }
+      },
       invalidatesTags: ['ReceivedBottles'],
     }),
     // Ambient social proof counter — total bottles thrown today across all users.

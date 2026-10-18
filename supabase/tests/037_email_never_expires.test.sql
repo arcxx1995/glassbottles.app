@@ -12,7 +12,10 @@ INSERT INTO auth.users (id, email) VALUES
 INSERT INTO public.profiles (id, timezone, email_notifications) VALUES
   ('00000000-0000-4000-8000-000000000170', 'UTC', TRUE),
   ('00000000-0000-4000-8000-000000000171', 'UTC', TRUE),
-  ('00000000-0000-4000-8000-000000000172', 'UTC', FALSE);
+  ('00000000-0000-4000-8000-000000000172', 'UTC', FALSE)
+-- on_auth_user_created already made the rows; overwrite its defaults.
+ON CONFLICT (id) DO UPDATE SET timezone = EXCLUDED.timezone,
+  email_notifications = EXCLUDED.email_notifications;
 
 -- Three matched-but-unemailed bottles: one far outside the old 7-day window,
 -- one at the attempt cap, one whose receiver opted out.

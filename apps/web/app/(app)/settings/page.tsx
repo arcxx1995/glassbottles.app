@@ -545,7 +545,7 @@ function DeleteAccountRow() {
             Delete account
           </span>
           <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
-            Permanently erase your account and all your bottles
+            Permanently erase your account and your inbox
           </span>
         </div>
         <span
@@ -570,8 +570,10 @@ function DeleteAccountRow() {
           >
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
               <p className="font-ui text-xs text-sand/50 leading-relaxed">
-                This can&rsquo;t be undone. Your account, profile, and every bottle
-                you&rsquo;ve sent or received are permanently deleted. Type{' '}
+                This can&rsquo;t be undone. Your account, profile, inbox and any
+                bottles still drifting are permanently deleted. Bottles that already
+                washed ashore stay with the strangers who found them, unlinked from
+                your account. Type{' '}
                 <span className="text-coral font-semibold">{DELETE_PHRASE}</span> to
                 confirm.
               </p>

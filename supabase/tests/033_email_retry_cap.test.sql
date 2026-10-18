@@ -12,7 +12,10 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-000000000134', 'retry-cap-r@example.invalid');
 INSERT INTO public.profiles (id, timezone, email_notifications) VALUES
   ('00000000-0000-4000-8000-000000000133', 'UTC', TRUE),
-  ('00000000-0000-4000-8000-000000000134', 'UTC', TRUE);
+  ('00000000-0000-4000-8000-000000000134', 'UTC', TRUE)
+-- on_auth_user_created already made the rows; overwrite its defaults.
+ON CONFLICT (id) DO UPDATE SET timezone = EXCLUDED.timezone,
+  email_notifications = EXCLUDED.email_notifications;
 
 INSERT INTO public.bottles
   (id, sender_id, receiver_id, message, sent_at, received_at, day_key, email_retry_count)

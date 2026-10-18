@@ -26,15 +26,18 @@ END;
 $$;
 
 -- Fixtures: one dormant profile, one active profile, one adrift bottle.
-INSERT INTO auth.users (id, email) VALUES
-  ('00000000-0000-4000-8000-000000000160', 'harden-s@example.invalid'),
-  ('00000000-0000-4000-8000-000000000161', 'harden-dormant@example.invalid'),
-  ('00000000-0000-4000-8000-000000000162', 'harden-active@example.invalid');
+INSERT INTO auth.users (id, email, email_confirmed_at) VALUES
+  ('00000000-0000-4000-8000-000000000160', 'harden-s@example.invalid', now()),
+  ('00000000-0000-4000-8000-000000000161', 'harden-dormant@example.invalid', now()),
+  ('00000000-0000-4000-8000-000000000162', 'harden-active@example.invalid', now());
 INSERT INTO public.profiles (id, timezone, created_at, last_active) VALUES
   ('00000000-0000-4000-8000-000000000160', 'UTC', now() - interval '1 year', now()),
   ('00000000-0000-4000-8000-000000000161', 'UTC', now() - interval '1 year',
    now() - interval '200 days'),
-  ('00000000-0000-4000-8000-000000000162', 'UTC', now() - interval '1 year', now());
+  ('00000000-0000-4000-8000-000000000162', 'UTC', now() - interval '1 year', now())
+-- on_auth_user_created already made the rows; overwrite its defaults.
+ON CONFLICT (id) DO UPDATE SET timezone = EXCLUDED.timezone,
+  created_at = EXCLUDED.created_at, last_active = EXCLUDED.last_active;
 
 -- ── 2. Live receivers are preferred over dormant ones ───────────────────────
 -- Every other profile in the DB is made ineligible by claiming its quota, so

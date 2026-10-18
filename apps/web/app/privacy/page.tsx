@@ -89,8 +89,10 @@ export default function PrivacyPolicyPage() {
       <LegalH2>Data retention</LegalH2>
       <p>
         We keep your account information for as long as your account is active. You can delete
-        your account at any time, after which we remove your personal data, except where we are
-        required to retain limited records to comply with legal obligations or prevent abuse.
+        your account at any time, after which we remove your personal data, your inbox, and any
+        bottles still drifting. Bottles you sent that were already delivered stay in the
+        recipient&rsquo;s inbox, unlinked from you &mdash; we keep no record of who wrote them. We may
+        retain limited records where required to comply with legal obligations or prevent abuse.
       </p>
 
       <LegalH2>Your rights</LegalH2>

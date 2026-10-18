@@ -14,7 +14,9 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-000000000042', 'tz-guard-b@example.invalid');
 INSERT INTO public.profiles (id, timezone) VALUES
   ('00000000-0000-4000-8000-000000000032', 'UTC'),
-  ('00000000-0000-4000-8000-000000000042', 'UTC');
+  ('00000000-0000-4000-8000-000000000042', 'UTC')
+-- on_auth_user_created already made the rows; overwrite its defaults.
+ON CONFLICT (id) DO UPDATE SET timezone = EXCLUDED.timezone;
 
 -- 1. Invalid timezone must be REJECTED by the trigger.
 DO $$

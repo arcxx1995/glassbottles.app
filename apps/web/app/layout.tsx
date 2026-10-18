@@ -4,7 +4,11 @@ import { ReduxProvider } from '@/components/providers/ReduxProvider'
 import AuthProvider from '@/components/providers/AuthProvider'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import ConsentAnalytics from '@/components/providers/ConsentAnalytics'
 import './globals.css'
+
+// Unset in dev/preview → GA stays off, no junk hits.
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -100,6 +104,7 @@ export default function RootLayout({
         </ReduxProvider>
         <Analytics />
         <SpeedInsights />
+        <ConsentAnalytics gaId={GA_ID} />
       </body>
     </html>
   )

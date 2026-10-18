@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import LegalPage, { LegalH2 } from '@/components/legal/LegalPage'
+import { CookieSettingsButton } from '@/components/providers/ConsentAnalytics'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -13,7 +14,7 @@ const CONTACT = 'hello@glassbottles.app'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="11 July 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="18 October 2026">
       <p>
         glassbottles (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;the service&rdquo;) is an
         anonymous message-in-a-bottle app. We keep the amount of personal data we collect to
@@ -40,9 +41,25 @@ export default function PrivacyPolicyPage() {
         subscription details.
       </p>
       <p>
-        <strong className="text-sand/85">Usage analytics.</strong> We use privacy-friendly
-        analytics (Vercel Analytics and Speed Insights) to understand aggregate traffic and
-        performance. These do not use cookies to track you across other sites.
+        <strong className="text-sand/85">Usage analytics.</strong> We use Vercel Analytics and
+        Speed Insights to understand aggregate traffic and performance. These do not use cookies
+        to track you across other sites.
+      </p>
+      <p>
+        We also use Google Analytics to learn how people find and use the site (for example,
+        which pages are visited and from which country). Google Analytics sets cookies and
+        collects your IP address, device and browser details, and pages viewed. It never sees
+        your messages. You can opt out with the{' '}
+        <a
+          href="https://tools.google.com/dlpage/gaoptout"
+          className="text-seafoam hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Google Analytics opt-out browser add-on
+        </a>{' '}
+        or by blocking cookies in your browser. It only loads after you accept it in the cookie
+        banner; you can change your choice any time via <CookieSettingsButton />.
       </p>
 
       <LegalH2>How we use your information</LegalH2>
@@ -64,7 +81,7 @@ export default function PrivacyPolicyPage() {
       <p>
         We do not sell your personal data. We share it only with the infrastructure providers
         that run the service on our behalf — such as Supabase (database and authentication) and
-        Vercel (hosting and analytics) — and only to the extent needed to operate glassbottles.
+        Vercel (hosting and analytics), and Google (analytics) — and only to the extent needed to operate glassbottles.
         We may disclose information if required by law or to protect the safety and rights of our
         users.
       </p>

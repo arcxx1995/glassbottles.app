@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@next/third-parties": "14.2.21",
     "@reduxjs/toolkit": "^2.3.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",

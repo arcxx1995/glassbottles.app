@@ -48,6 +48,10 @@ export async function signIn(page: Page, email: string, path = '/sign-in') {
   await page.getByPlaceholder('your@email.com').fill(email)
   await page.getByPlaceholder('Password').fill(PASSWORD)
   await page.locator('button[type="submit"]').click()
+  // Let sign-in's own client-side navigation finish before the test navigates,
+  // or a following page.goto() races it.
+  await page.waitForURL((u) => !u.pathname.startsWith('/sign-in'))
+  await page.waitForLoadState('networkidle')
 }
 
 /**

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAppSelector } from '@/store'
+import { useAppDispatch, useAppSelector } from '@/store'
+import { bottleApi } from '@/store/api/bottleApi'
 import { selectUser } from '@/store/authSlice'
 
 interface TimeLeft {
@@ -61,15 +62,23 @@ function pad(n: number): string {
 export default function DailyTimer() {
   const user = useAppSelector(selectUser)
   const tz = user?.timezone
+  const dispatch = useAppDispatch()
   const [time, setTime] = useState<TimeLeft | null>(null)
 
   useEffect(() => {
-    setTime(getTimeUntilMidnightInTz(tz))
+    const secs = (t: TimeLeft) => t.hours * 3600 + t.minutes * 60 + t.seconds
+    let prev = getTimeUntilMidnightInTz(tz)
+    setTime(prev)
     const interval = setInterval(() => {
-      setTime(getTimeUntilMidnightInTz(tz))
+      const next = getTimeUntilMidnightInTz(tz)
+      // The countdown wrapped: local midnight just passed and a new throw is
+      // available. Refetch now instead of sitting on 00:00:00 until the poll.
+      if (secs(next) > secs(prev)) dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+      prev = next
+      setTime(next)
     }, 1000)
     return () => clearInterval(interval)
-  }, [tz])
+  }, [tz, dispatch])
 
   if (!time) return null
 

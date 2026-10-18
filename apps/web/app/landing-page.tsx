@@ -28,23 +28,27 @@ const SPOTIFY_PLAYLIST_ID = '0PNQlJpYD7qkyBGlK6gNUV'
 // ── Count-up on inView ────────────────────────────────────────────────────
 function useCountUp(target: number, active: boolean, reduced: boolean, duration = 2000) {
   const [value, setValue] = useState(reduced ? target : 0)
-  const hasRun = useRef(false)
+  // Where the number currently stands. A new target (the live stats refetch
+  // landing after the SSR value) animates on from here — it used to cancel the
+  // running count and, guarded by a run-once flag, leave it frozen mid-way.
+  const valueRef = useRef(value)
 
   useEffect(() => {
     if (reduced) {
+      valueRef.current = target
       setValue(target)
       return
     }
-    if (!active || hasRun.current) return
-    hasRun.current = true
+    if (!active) return
     let cancelled = false
-    const start = Date.now()
-    function tick() {
+    const from = valueRef.current
+    const start = performance.now()
+    function tick(now: number) {
       if (cancelled) return
-      const elapsed = Date.now() - start
-      const progress = Math.min(elapsed / duration, 1)
+      const progress = Math.min((now - start) / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 4)
-      setValue(Math.round(eased * target))
+      valueRef.current = Math.round(from + (target - from) * eased)
+      setValue(valueRef.current)
       if (progress < 1) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)

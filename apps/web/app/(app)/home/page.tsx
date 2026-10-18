@@ -41,8 +41,13 @@ export default function HomePage() {
   // the sea still reconciles for every user when the socket misses the event
   // (backgrounded tab, dropped connection, prod auth hiccup) — without it a
   // found bottle lingered until a manual reload.
-  const { data: todayStatus, isLoading: isStatusLoading } =
-    useGetTodayBottleStatusQuery(undefined, {
+  const {
+    data: todayStatus,
+    isLoading: isStatusLoading,
+    isError: isStatusError,
+    isFetching: isStatusFetching,
+    refetch: refetchStatus,
+  } = useGetTodayBottleStatusQuery(undefined, {
       skip: !user?.id,
       // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
       pollingInterval: 30_000,
@@ -167,6 +172,10 @@ export default function HomePage() {
   // the post-login phantom. authLoading alone doesn't cover this: the guest
   // bootstrap on /sign-in already flipped it false before we reach /home.
   const isInitializing = !user?.id || (isStatusLoading && !todayStatus)
+  // A failed first load used to fall through to the idle compose screen —
+  // "Your bottle awaits" for someone who may have thrown already. Without
+  // server state there is nothing honest to show but a retry.
+  const statusFailed = !isInitializing && isStatusError && !todayStatus
   const isThrown = sendStatus === 'thrown'
 
   return (
@@ -176,14 +185,14 @@ export default function HomePage() {
           Floating bottles only appear once sailing (idle/throwing pass []).
           Mounted here (not inside the animated stage) so its `fixed` positioning
           stays relative to the viewport rather than a transformed ancestor. */}
-      {!isInitializing && (
+      {!isInitializing && !statusFailed && (
         <SailingSea bottles={seaBottles} />
       )}
 
       {/* The throwable bottle — pinned to the screen top-right, wiggling with a
           shimmer. Shown only while a throw is available; on throw it vanishes and
           re-appears at a random spot on the sea. */}
-      {!isInitializing && (sendStatus === 'idle' || sendStatus === 'throwing') && (
+      {!isInitializing && !statusFailed && (sendStatus === 'idle' || sendStatus === 'throwing') && (
         <TetheredBottle
           dropping={sendStatus === 'throwing'}
           landingDayKey={todayKey}
@@ -224,7 +233,24 @@ export default function HomePage() {
           </motion.div>
         )}
 
-        {!isInitializing && (
+        {statusFailed && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
+            <p className="font-display text-xl text-sand">The tide is out</p>
+            <p className="font-ui text-xs text-sand/55 max-w-[240px] leading-relaxed">
+              We couldn&apos;t reach the ocean just now. Check your connection.
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetchStatus()}
+              disabled={isStatusFetching}
+              className="px-6 py-2.5 rounded-2xl bg-seafoam/10 text-seafoam font-ui text-sm font-medium hover:bg-seafoam/20 transition-colors disabled:opacity-50"
+            >
+              {isStatusFetching ? 'Trying…' : 'Try again'}
+            </button>
+          </div>
+        )}
+
+        {!isInitializing && !statusFailed && (
           <>
             {/* ── COMPOSE LAYER — the bottle tied beneath the compose box,
                 bobbing on the sea. Mounts only when a throw is available

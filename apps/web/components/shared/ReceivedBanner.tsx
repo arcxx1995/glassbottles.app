@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'motion/react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -42,6 +42,8 @@ export default function ReceivedBanner({
 }: ReceivedBannerProps = {}) {
   const dispatch = useAppDispatch()
   const router = useRouter()
+  // Already looking at the inbox: the banner would only cover it.
+  const onInbox = usePathname() === '/inbox'
   const user = useAppSelector(selectUser)
   const dismissedIds = useAppSelector(selectReceivedBannerDismissedIds)
 
@@ -55,7 +57,7 @@ export default function ReceivedBanner({
   const unreadCount = unreadList.length
 
   const isVisible =
-    previewVisible !== undefined ? previewVisible : Boolean(unread)
+    previewVisible !== undefined ? previewVisible : Boolean(unread) && !onInbox
 
   function hide() {
     if (previewVisible !== undefined) {
@@ -83,7 +85,7 @@ export default function ReceivedBanner({
             stiffness: 340,
             damping: 30,
           }}
-          className="fixed top-4 right-4 z-[100] w-80 max-w-[calc(100vw-2rem)]
+          className="pointer-events-auto w-full
                      flex items-center gap-3 overflow-hidden
                      bg-ocean-mid border border-seafoam/20 rounded-2xl
                      px-4 py-3.5 shadow-banner text-left"

@@ -21,10 +21,12 @@ export default defineConfig({
     { name: 'iphone-14', use: { ...devices['iPhone 14'] } },
     { name: 'pixel-5', use: { ...devices['Pixel 5'] } },
   ],
+  // A production build, not `next dev`: dev compiles routes on first visit and
+  // can full-reload mid-test, which shows up as phantom navigations.
   webServer: {
-    command: 'pnpm exec next dev -p 3000',
+    command: 'pnpm exec next build && pnpm exec next start -p 3000',
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: true,
-    timeout: 120_000,
+    timeout: 300_000,
   },
 })

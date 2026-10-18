@@ -23,8 +23,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
       <RealtimeBottleListener />
-      <ReceivedBanner />
-      <DeliveredBanner />
+      {/* One stack for both toasts, so they never overlap each other — and
+          above the bottom nav, clear of the throwable bottle pinned top-right. */}
+      <div
+        className="pointer-events-none fixed right-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
+        style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
+      >
+        <ReceivedBanner />
+        <DeliveredBanner />
+      </div>
       {children}
     </AppShell>
   )

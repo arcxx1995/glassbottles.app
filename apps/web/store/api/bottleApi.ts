@@ -147,7 +147,25 @@ export const bottleApi = createApi({
         }
         return { data: undefined }
       },
-      invalidatesTags: ['ReceivedBottles'],
+      // Optimistic: the unread dot, nav badge and ReceivedBanner all read this
+      // cache, so they clear the instant the bottle opens. Server state then
+      // already matches — no refetch.
+      async onQueryStarted(bottleId, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) => {
+            const b = draft.find((x) => x.id === bottleId)
+            if (b) {
+              b.is_read = true
+              b.read_at ??= new Date().toISOString()
+            }
+          })
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
     }),
     reportBottle: builder.mutation<void, string>({
       queryFn: async (bottleId) => {
@@ -160,7 +178,20 @@ export const bottleApi = createApi({
         }
         return { data: undefined }
       },
-      invalidatesTags: ['ReceivedBottles'],
+      // Optimistic: a reported bottle leaves the inbox at once (038 keeps it
+      // out of get_received_bottles); a failed report puts it back.
+      async onQueryStarted(bottleId, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) =>
+            draft.filter((x) => x.id !== bottleId)
+          )
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
     }),
     // Ambient social proof counter — total bottles thrown today across all users.
     // No PII. Refreshes every 5 minutes; not critical-path.

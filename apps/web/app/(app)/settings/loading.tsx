@@ -1,6 +1,6 @@
 export default function SettingsLoading() {
   return (
-    <div className="flex flex-col min-h-screen pt-14 px-5">
+    <div className="flex h-full flex-col px-5 pt-10 sm:pt-14">
       {/* Header ghost */}
       <div className="mb-8">
         <div className="skeleton h-7 w-24 rounded-xl" />

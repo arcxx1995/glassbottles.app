@@ -93,7 +93,7 @@ export default function DeliveredBanner({
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 80, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-          className="fixed top-4 right-4 z-[100] w-80 max-w-[calc(100vw-2rem)]
+          className="pointer-events-auto w-full
                      flex items-center gap-3 overflow-hidden
                      bg-ocean-mid border border-coral/25 rounded-2xl
                      px-4 py-3.5 shadow-banner text-left"

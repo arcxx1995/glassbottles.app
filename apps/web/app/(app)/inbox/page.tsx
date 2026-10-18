@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { motion } from 'motion/react'
+import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Mail } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -11,7 +11,7 @@ import ReceivedBottle from '@/components/bottle/ReceivedBottle'
 export default function InboxPage() {
   const user = useAppSelector(selectUser)
 
-  const { data, isLoading } = useGetReceivedBottlesQuery(undefined, {
+  const { data, isLoading: isQueryLoading, isError, isFetching, refetch } = useGetReceivedBottlesQuery(undefined, {
     skip: !user?.id,
     // The inbox has no poll of its own — its refresh comes from the realtime
     // listener's invalidation and BottomNav's 5-minute safety poll. If the
@@ -38,6 +38,18 @@ export default function InboxPage() {
   )
 
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
+
+  // While AuthProvider seeds the user the query is skipped, and a skipped
+  // query is not "loading" — the inbox flashed "No bottles yet" on reload.
+  const isLoading = isQueryLoading || (!user?.id && !data)
+  const failed = isError && !data
+
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 3200)
+    return () => clearTimeout(t)
+  }, [notice])
 
   return (
     <div className="flex h-full flex-col overflow-hidden pt-10 sm:pt-14">
@@ -74,8 +86,23 @@ export default function InboxPage() {
         </div>
       )}
 
+      {/* Failed load — distinct from an empty inbox */}
+      {!isLoading && failed && (
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8 pt-16" role="alert">
+          <p className="font-ui text-sand/50 text-sm">Couldn&rsquo;t reach your inbox.</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="px-5 py-2 rounded-2xl bg-seafoam/10 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/20 transition-colors disabled:opacity-50"
+          >
+            {isFetching ? 'Trying…' : 'Try again'}
+          </button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!isLoading && (!bottles || bottles.length === 0) && (
+      {!isLoading && !failed && (!bottles || bottles.length === 0) && (
         <motion.div
           className="flex flex-col items-center justify-center flex-1 gap-5 text-center px-8 pt-16"
           initial={{ opacity: 0, y: 12 }}
@@ -109,11 +136,33 @@ export default function InboxPage() {
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
-              <ReceivedBottle bottle={bottle} />
+              <ReceivedBottle
+                bottle={bottle}
+                onReported={(ok) =>
+                  setNotice(ok ? 'Reported. That bottle is gone from your inbox.' : 'Couldn’t report that bottle. Try again.')
+                }
+              />
             </motion.div>
           ))}
         </div>
       )}
+      </div>
+
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4"
+        style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}>
+        <AnimatePresence>
+          {notice && (
+            <motion.p
+              key={notice}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="rounded-2xl bg-ocean-deep/95 border border-white/10 px-4 py-2.5 font-ui text-xs text-sand/80 shadow-card"
+            >
+              {notice}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

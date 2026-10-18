@@ -8,12 +8,15 @@ interface BottleSVGProps {
   glowing?: boolean
   width?: number
   height?: number
+  /** false draws the bottle open — the inbox animates its own cork off. */
+  corked?: boolean
 }
 
 export function BottleSVG({
   glowing = false,
   width = 80,
   height = 120,
+  corked = true,
 }: BottleSVGProps) {
   return (
     <svg
@@ -28,9 +31,13 @@ export function BottleSVG({
           : undefined,
       }}
     >
-      {/* Cork */}
-      <rect x="27" y="3" width="26" height="13" rx="4" fill="#C4A882" />
-      <rect x="32" y="6" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.18)" />
+      {corked && (
+        <>
+          {/* Cork */}
+          <rect x="27" y="3" width="26" height="13" rx="4" fill="#C4A882" />
+          <rect x="32" y="6" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.18)" />
+        </>
+      )}
 
       {/* Neck */}
       <path

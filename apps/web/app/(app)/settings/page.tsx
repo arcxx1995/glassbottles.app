@@ -366,7 +366,7 @@ function ChangePasswordRow() {
 
   const pwOk = isValidPassword(pw)
   const matches = pw === confirm
-  const canSave = current.length > 0 && pwOk && matches
+  const canSave = !!passwordEmail && current.length > 0 && pwOk && matches
 
   function close() {
     setOpen(false)
@@ -381,7 +381,7 @@ function ChangePasswordRow() {
   async function handleSave() {
     setTouched(true)
     setError(null)
-    if (!canSave || !passwordEmail) return
+    if (!canSave || !passwordEmail) return // passwordEmail narrows for TS
     setLoading(true)
     const { error: authErr } = await supabase.auth.signInWithPassword({
       email: passwordEmail,

@@ -15,6 +15,15 @@ export const admin = createClient(url, serviceKey, {
 
 export const PASSWORD = 'bottle-pass-e2e-1'
 
+/** Whether email+password signs in — on a throwaway client, so the shared
+ *  service-role `admin` client never picks up a user session. */
+export async function canSignIn(email: string, password: string) {
+  const c = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  return !(await c.auth.signInWithPassword({ email, password })).error
+}
+
 /** A fresh confirmed (or unconfirmed) user with a known timezone. */
 export async function makeUser(name: string, opts: { timezone?: string; confirmed?: boolean } = {}) {
   const email = `${name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`

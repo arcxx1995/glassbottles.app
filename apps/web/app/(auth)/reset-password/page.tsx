@@ -33,10 +33,19 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  // The callback exchange should have established a recovery session. Verify it.
+  // Only a session the recovery link itself just created may set a password
+  // here. Any other signed-in session (an unlocked phone, a borrowed laptop)
+  // would otherwise change the password with no proof of ownership — the
+  // settings page asks for the current one instead. The token's newest amr
+  // entry says how it was obtained: recovery links verify as otp/recovery.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setPhase(data.session ? 'ready' : 'no-session')
+    supabase.auth.getClaims().then(({ data }) => {
+      const latest = (data?.claims?.amr as { method: string; timestamp: number }[] | undefined)?.[0]
+      const fromRecoveryLink =
+        !!latest &&
+        (latest.method === 'recovery' || latest.method === 'otp') &&
+        Date.now() / 1000 - latest.timestamp < 60 * 60
+      setPhase(fromRecoveryLink ? 'ready' : 'no-session')
     })
   }, [supabase])
 

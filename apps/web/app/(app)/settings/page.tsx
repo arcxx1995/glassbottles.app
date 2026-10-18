@@ -338,24 +338,39 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
 
 // ─── Change-password row ─────────────────────────────────────────────────────
 // Client-side supabase.auth.updateUser({ password }). secure_password_change is
-// off (config.toml), so no reauthentication step is required.
+// off (config.toml), so the app proves ownership itself: the current password
+// is re-verified first, or an unlocked session could take over the account.
+// Google-only accounts have no current password; they get a reset link, which
+// proves ownership through the inbox instead.
 
 function ChangePasswordRow() {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
   const [pw, setPw] = useState('')
   const [confirm, setConfirm] = useState('')
   const [touched, setTouched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  // null = still loading; '' = no email/password identity (Google-only).
+  const [passwordEmail, setPasswordEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    void supabase.auth.getUser().then(({ data }) => {
+      const hasPassword = data.user?.identities?.some((i) => i.provider === 'email')
+      setPasswordEmail(hasPassword ? (data.user?.email ?? '') : '')
+    })
+  }, [open, supabase])
 
   const pwOk = isValidPassword(pw)
   const matches = pw === confirm
-  const canSave = pwOk && matches
+  const canSave = current.length > 0 && pwOk && matches
 
   function close() {
     setOpen(false)
+    setCurrent('')
     setPw('')
     setConfirm('')
     setTouched(false)
@@ -366,8 +381,17 @@ function ChangePasswordRow() {
   async function handleSave() {
     setTouched(true)
     setError(null)
-    if (!canSave) return
+    if (!canSave || !passwordEmail) return
     setLoading(true)
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email: passwordEmail,
+      password: current,
+    })
+    if (authErr) {
+      setLoading(false)
+      setError('Current password is incorrect.')
+      return
+    }
     const { error: err } = await supabase.auth.updateUser({ password: pw })
     setLoading(false)
     if (err) {
@@ -375,6 +399,20 @@ function ChangePasswordRow() {
       return
     }
     setDone(true)
+  }
+
+  async function sendResetLink() {
+    setLoading(true)
+    setError(null)
+    const { data } = await supabase.auth.getUser()
+    const { error: err } = data.user?.email
+      ? await supabase.auth.resetPasswordForEmail(data.user.email, {
+          redirectTo: `${location.origin}/auth/callback?next=/reset-password`,
+        })
+      : { error: new Error('no email') }
+    setLoading(false)
+    if (err) setError('Could not send the link. Please try again.')
+    else setDone(true)
   }
 
   return (
@@ -419,10 +457,39 @@ function ChangePasswordRow() {
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
               {done ? (
                 <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
-                  Password updated. You&rsquo;ll use it next time you sign in.
+                  {passwordEmail
+                    ? <>Password updated. You&rsquo;ll use it next time you sign in.</>
+                    : <>Check your inbox for a link to set your password.</>}
                 </p>
+              ) : passwordEmail === '' ? (
+                <>
+                  <p className="font-ui text-xs text-sand/50 leading-relaxed">
+                    You sign in with Google, so there&rsquo;s no password yet. We&rsquo;ll
+                    email you a link to set one.
+                  </p>
+                  {error && (
+                    <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void sendResetLink()}
+                    disabled={loading}
+                    className="py-2.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.97] hover:brightness-110 disabled:opacity-50"
+                  >
+                    {loading ? 'Sending…' : 'Email me a link'}
+                  </button>
+                </>
               ) : (
                 <>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Current password"
+                    value={current}
+                    disabled={loading}
+                    onChange={(e) => setCurrent(e.target.value)}
+                    className={AUTH_INPUT_CLASS}
+                  />
                   <input
                     type="password"
                     autoComplete="new-password"

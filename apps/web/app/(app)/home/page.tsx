@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useAppDispatch, useAppSelector } from '@/store'
+import { useStore } from 'react-redux'
+import { useAppDispatch, useAppSelector, type RootState } from '@/store'
 import {
   setSendStatus,
   setThrowAnimating,
   setMessage,
   selectSendStatus,
-  selectMessage,
 } from '@/store/bottleSlice'
 import { selectUser } from '@/store/authSlice'
 import {
@@ -27,7 +27,9 @@ import { buildSeaBottles } from './seaBottles'
 export default function HomePage() {
   const dispatch = useAppDispatch()
   const sendStatus = useAppSelector(selectSendStatus)
-  const message = useAppSelector(selectMessage)
+  // The draft is read from the store at throw time, not subscribed to:
+  // subscribing re-rendered this whole page — sea included — per keystroke.
+  const store = useStore<RootState>()
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
@@ -124,7 +126,7 @@ export default function HomePage() {
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
-      await sendBottle({ message }).unwrap()
+      await sendBottle({ message: store.getState().bottle.message }).unwrap()
       // Success — clear the draft so the editor isn't pre-filled with the sent
       // message on the next idle screen (debug report bug 8).
       dispatch(setMessage(''))

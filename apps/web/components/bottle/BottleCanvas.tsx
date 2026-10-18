@@ -30,18 +30,16 @@ export default function BottleCanvas({ className, size = 160 }: BottleCanvasProp
       aria-label="Your glass bottle"
     >
       {/* Continuous bob wrapper — separate from enter/exit */}
-      <motion.div
-        animate={{
-          y: [0, -10, 0],
-          rotate: [-1.2, 1.2, -1.2],
+      <div
+        style={{
+          width,
+          height,
+          // CSS loop (globals.css) — compositor-only.
+          ['--gb-bob' as string]: '-10px',
+          ['--gb-rot-a' as string]: '-1.2deg',
+          ['--gb-rot-b' as string]: '1.2deg',
+          animation: 'gb-sway 3.2s ease-in-out infinite',
         }}
-        transition={{
-          duration: 3.2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          times: [0, 0.5, 1],
-        }}
-        style={{ width, height }}
       >
         <svg
           viewBox="0 0 160 240"
@@ -130,7 +128,7 @@ export default function BottleCanvas({ className, size = 160 }: BottleCanvasProp
             />
           )}
         </svg>
-      </motion.div>
+      </div>
 
       {/* Composing pulse ring */}
       {isComposing && (

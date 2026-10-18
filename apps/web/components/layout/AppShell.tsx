@@ -1,24 +1,20 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
+import WaveBackground from '@/components/shared/WaveBackground'
 import BottomNav from './BottomNav'
 
-const WaveBackground = dynamic(
-  () => import('@/components/shared/WaveBackground'),
-  { ssr: false }
-)
-
-// Every app route is pinned to the viewport (100svh, no page scroll) with the
-// nav reserved at the bottom (4rem). Pages own their internal scrolling — a long
-// inbox list scrolls inside its region, the page frame and nav never move.
 export default function AppShell({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const onHome = usePathname() === '/home'
   return (
     <div className="relative h-[100svh] overflow-hidden">
-      <WaveBackground />
+      {/* /home paints its own full-screen sea (SailingSea); a second ocean
+          underneath it was invisible but still animating. */}
+      {!onHome && <WaveBackground />}
       <main className="relative z-10 h-app-main overflow-hidden pt-safe">
         {children}
       </main>

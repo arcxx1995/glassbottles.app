@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
   motion,
   AnimatePresence,
@@ -102,16 +102,23 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
   )
 
   return (
-    <motion.div
+    <div
       className="absolute left-0"
-      style={{ top: band.top, width: '200%', height: band.height, opacity: band.opacity }}
-      animate={reduced ? undefined : { y: [0, -band.bob, 0] }}
-      transition={{ duration: band.dur / 3, repeat: Infinity, ease: 'easeInOut' }}
+      style={{
+        top: band.top,
+        width: '200%',
+        height: band.height,
+        opacity: band.opacity,
+        ['--gb-bob' as string]: `${-band.bob}px`,
+        animation: reduced ? undefined : `gb-bob ${band.dur / 3}s ease-in-out infinite`,
+      }}
     >
-      <motion.div
-        style={{ width: '100%', height: '100%', willChange: 'transform' }}
-        animate={reduced ? undefined : { x: ['0%', '-50%'] }}
-        transition={{ duration: band.dur, repeat: Infinity, ease: 'linear' }}
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          animation: reduced ? undefined : `gb-drift ${band.dur}s linear infinite`,
+        }}
       >
         <svg
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
@@ -123,8 +130,8 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
             <path d={foamD} fill="none" stroke="#4ECDC4" strokeOpacity={0.18} strokeWidth={2} />
           )}
         </svg>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }
 
@@ -155,21 +162,31 @@ function Ship({
   const to = dir === 1 ? '108vw' : '-8vw'
 
   return (
-    <motion.div
+    <div
       className="absolute pointer-events-none"
-      style={{ top: `${topPct}%`, left: 0, opacity }}
-      initial={{ x: from }}
-      animate={reduced ? { x: '50vw' } : { x: [from, to] }}
-      transition={{ duration: dur, repeat: Infinity, ease: 'linear', delay }}
+      style={{
+        top: `${topPct}%`,
+        left: 0,
+        opacity,
+        ['--gb-from' as string]: from,
+        ['--gb-to' as string]: to,
+        // backwards: hold at `from` (off-screen) through the start delay.
+        transform: reduced ? 'translateX(50vw)' : undefined,
+        animation: reduced ? undefined : `gb-sail ${dur}s linear ${delay}s infinite backwards`,
+      }}
     >
       {/* Lift so the hull waterline (y59/72 in the viewBox ≈ 82%) rests on
           `topPct` — i.e. topPct marks the horizon, not the ship's top. */}
       <div style={{ transform: 'translateY(-82%)' }}>
-      <motion.div
-        animate={reduced ? undefined : { y: [0, -2.5, 0], rotate: [-1.8, 1.8, -1.8] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ transform: `scaleX(${dir})` }}
+      <div
+        style={{
+          ['--gb-bob' as string]: '-2.5px',
+          ['--gb-rot-a' as string]: '-1.8deg',
+          ['--gb-rot-b' as string]: '1.8deg',
+          animation: reduced ? undefined : 'gb-sway 7s ease-in-out infinite',
+        }}
       >
+      <div style={{ transform: `scaleX(${dir})` }}>
         <svg
           width={100 * scale}
           height={72 * scale}
@@ -209,9 +226,10 @@ function Ship({
           {/* hull gunwale highlight */}
           <path d="M12 44 Q50 50 88 44 L86 46 Q50 51 14 46 Z" fill="#21516B" fillOpacity="0.5" />
         </svg>
-      </motion.div>
       </div>
-    </motion.div>
+      </div>
+      </div>
+    </div>
   )
 }
 
@@ -267,11 +285,13 @@ function StormClouds({ reduced }: { reduced: boolean }) {
   return (
     <>
       {/* Drifting cloud bank (200% wide → loops by translating -50%) */}
-      <motion.div
+      <div
         className="absolute left-0 top-0 pointer-events-none"
-        style={{ width: '200%', height: '34%', willChange: 'transform' }}
-        animate={reduced ? undefined : { x: ['0%', '-50%'] }}
-        transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
+        style={{
+          width: '200%',
+          height: '34%',
+          animation: reduced ? undefined : 'gb-drift 160s linear infinite',
+        }}
       >
         {CLOUD_BLOBS.flatMap((c, i) => [
           { ...c, left: c.left / 2, key: i },
@@ -296,7 +316,7 @@ function StormClouds({ reduced }: { reduced: boolean }) {
             }}
           />
         ))}
-      </motion.div>
+      </div>
 
       {/* Internal cloud flash — lights up the bank from within, then a soft
           wash spills down over the sea. */}
@@ -369,24 +389,22 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
         transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
       {/* Date pill hovering above */}
-      <span className="font-mono text-[9px] text-seafoam/80 bg-ocean-deep/60 backdrop-blur-sm border border-seafoam/15 px-1.5 py-0.5 rounded-full whitespace-nowrap mb-1">
+      <span className="font-mono text-[9px] text-seafoam/80 bg-ocean-deep/80 border border-seafoam/15 px-1.5 py-0.5 rounded-full whitespace-nowrap mb-1">
         {formatDay(item.day_key)}
       </span>
 
       {/* Bottle + waterline, bobbing as one unit — amplitude bumped so the
           band-matched frequency reads clearly (a bottle on a fast front band
           visibly wiggles faster than one on a slow back band). */}
-      <motion.div
-        style={{ position: 'relative', width: W, height: H }}
-        animate={{
-          y: [0, -12, 0],
-          rotate: [-7 * layout.drift, 7 * layout.drift, -7 * layout.drift],
-        }}
-        transition={{
-          duration: layout.bobDur,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: layout.bobDelay,
+      <div
+        style={{
+          position: 'relative',
+          width: W,
+          height: H,
+          ['--gb-bob' as string]: '-12px',
+          ['--gb-rot-a' as string]: `${-7 * layout.drift}deg`,
+          ['--gb-rot-b' as string]: `${7 * layout.drift}deg`,
+          animation: `gb-sway ${layout.bobDur}s ease-in-out ${layout.bobDelay}s infinite`,
         }}
       >
         <BottleSVG glowing width={W} height={H} />
@@ -420,27 +438,21 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
 
         {/* Expanding ripple rings at the waterline */}
         {[0, 1].map((r) => (
-          <motion.div
+          <div
             key={r}
             className="absolute left-1/2 pointer-events-none"
             style={{
               bottom: H * 0.12,
               width: W * 0.8,
               height: W * 0.32,
-              transform: 'translateX(-50%)',
               border: '1px solid rgba(78,205,196,0.35)',
               borderRadius: '50%',
-            }}
-            animate={{ scale: [0.5, 1.4], opacity: [0.5, 0] }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: 'easeOut',
-              delay: layout.bobDelay + r * 1.5,
+              opacity: 0, // only visible while the ripple plays
+              animation: `gb-ripple 3s ease-out ${layout.bobDelay + r * 1.5}s infinite`,
             }}
           />
         ))}
-      </motion.div>
+      </div>
       </motion.div>
     </div>
   )
@@ -451,7 +463,9 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
 // with the user's undelivered bottles dipped and scattered across the water.
 // When a bottle is matched it drops out of `bottles` and floats away.
 
-export default function SailingSea({
+// memo: the home page re-renders on every status poll; the sea's props
+// (a memoized bottle list) rarely change.
+export default memo(function SailingSea({
   bottles,
   backdropOnly = false,
   thunder = false,
@@ -556,4 +570,4 @@ export default function SailingSea({
       />
     </motion.div>
   )
-}
+})

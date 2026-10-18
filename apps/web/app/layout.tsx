@@ -25,6 +25,9 @@ const dmSans = DM_Sans({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400'],
+  // Small date/label text only — not worth a preload that competes with
+  // the display and UI faces on first paint.
+  preload: false,
   variable: '--font-mono',
 })
 

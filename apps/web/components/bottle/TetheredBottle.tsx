@@ -112,64 +112,82 @@ export default function TetheredBottle({
       >
         {/* Wiggling bottle — with the shimmer halo locked directly behind it so it
             tracks the wiggle and fades out together on throw. */}
-        <motion.div
+        {/* Wiggling bottle — with the shimmer halo locked directly behind it so it
+            tracks the wiggle and fades out together on throw. The idle loops are
+            CSS keyframes (globals.css): compositor-only, no per-frame JS. */}
+        <div
           className="relative"
-          style={{ width: W, height: H, transformOrigin: '50% 80%' }}
-          animate={dropping || reduced ? undefined : { rotate: [-6, 6, -6], y: [0, -3, 0] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            width: W,
+            height: H,
+            transformOrigin: '50% 80%',
+            ['--gb-bob' as string]: '-3px',
+            ['--gb-rot-a' as string]: '-6deg',
+            ['--gb-rot-b' as string]: '6deg',
+            animation: dropping || reduced ? undefined : 'gb-sway 2.2s ease-in-out infinite',
+          }}
         >
-          {/* Shimmer halo — centered exactly on the bottle, behind it. */}
+          {/* Shimmer halo — centered exactly on the bottle, behind it. The
+              motion wrapper only fades it out on throw; the pulse is CSS. */}
           {!reduced && (
             <motion.div
-              className="absolute left-1/2 top-1/2 rounded-full"
-              // Centre via negative margins, NOT transform: this element animates
-              // `scale`, and framer-motion writes `transform` from its animated
-              // values — a `transform: translate(...)` here would be clobbered,
-              // shoving the halo off the bottle. Margins keep it dead-centre while
-              // scale grows about its own centre.
+              className="absolute left-1/2 top-1/2"
               style={{
                 width: W * 1.7,
                 height: W * 1.7,
                 marginLeft: -(W * 1.7) / 2,
                 marginTop: -(W * 1.7) / 2,
-                background:
-                  'radial-gradient(circle, rgba(78,205,196,0.40) 0%, rgba(78,205,196,0.12) 45%, transparent 70%)',
               }}
-              animate={dropping ? { opacity: 0 } : { opacity: [0.35, 0.75, 0.35], scale: [0.85, 1.15, 0.85] }}
-              transition={
-                dropping
-                  ? { duration: 0.2, ease: 'easeOut' }
-                  : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }
-              }
-            />
+              animate={{ opacity: dropping ? 0 : 1 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <div
+                className="h-full w-full rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(78,205,196,0.40) 0%, rgba(78,205,196,0.12) 45%, transparent 70%)',
+                  ['--gb-scale-a' as string]: 0.85,
+                  ['--gb-scale-b' as string]: 1.15,
+                  ['--gb-op-a' as string]: 0.35,
+                  ['--gb-op-b' as string]: 0.75,
+                  animation: 'gb-pulse 2.6s ease-in-out infinite',
+                }}
+              />
+            </motion.div>
           )}
 
           <BottleSVG glowing width={W} height={H} />
 
-          {/* Travelling neon glow that runs clockwise around the bottle's edge.
-              A short bright seafoam dash sweeps along the silhouette path. Stops
-              (animate=undefined) on throw so it fades out with the bottle. */}
-          {!reduced && (
+          {/* Travelling neon glow that runs clockwise around the bottle's edge:
+              a short bright dash sweeping the silhouette, over a wider faint
+              copy of itself for the bloom. That copy replaces a drop-shadow
+              filter, which re-rasterized every frame of the dash animation. */}
+          {!reduced && !dropping && (
             <svg
               viewBox="0 0 80 120"
               fill="none"
               className="absolute inset-0 pointer-events-none"
-              style={{ width: W, height: H, filter: 'drop-shadow(0 0 5px rgba(78,205,196,0.95))' }}
+              style={{ width: W, height: H }}
             >
-              <motion.path
-                d="M28 4 L28 15 L30 16 L27 34 L19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 L53 34 L50 16 L52 15 L52 4 Z"
-                stroke="#7CFFE6"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                pathLength={1}
-                strokeDasharray="0.35 0.65"
-                animate={dropping ? undefined : { strokeDashoffset: [0, -1] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
-              />
+              {[
+                { w: 7, c: 'rgba(78,205,196,0.35)' },
+                { w: 2.5, c: '#7CFFE6' },
+              ].map(({ w, c }) => (
+                <path
+                  key={w}
+                  d="M28 4 L28 15 L30 16 L27 34 L19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 L53 34 L50 16 L52 15 L52 4 Z"
+                  stroke={c}
+                  strokeWidth={w}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  pathLength={1}
+                  strokeDasharray="0.35 0.65"
+                  style={{ animation: 'gb-dash 2.6s linear infinite' }}
+                />
+              ))}
             </svg>
           )}
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   )

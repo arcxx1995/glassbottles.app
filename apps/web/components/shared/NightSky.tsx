@@ -51,7 +51,7 @@ function StarField({ reduced }: { reduced: boolean }) {
   return (
     <>
       {stars.map((star, i) => (
-        <motion.span
+        <span
           key={i}
           className="absolute rounded-full"
           style={{
@@ -61,21 +61,15 @@ function StarField({ reduced }: { reduced: boolean }) {
             height: star.size,
             background: '#F7E7CE',
             boxShadow: `0 0 ${star.size * 2.5}px rgba(247,231,206,0.7)`,
-          }}
-          initial={{ opacity: star.baseOpacity }}
-          animate={
-            reduced
-              ? { opacity: star.baseOpacity }
-              : {
-                  opacity: [star.baseOpacity * 0.35, star.baseOpacity, star.baseOpacity * 0.35],
-                  scale: [0.85, 1.15, 0.85],
-                }
-          }
-          transition={{
-            duration: star.dur,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: star.delay,
+            opacity: star.baseOpacity,
+            // CSS twinkle (globals.css): dozens of stars, zero per-frame JS.
+            ['--gb-scale-a' as string]: 0.85,
+            ['--gb-scale-b' as string]: 1.15,
+            ['--gb-op-a' as string]: star.baseOpacity * 0.35,
+            ['--gb-op-b' as string]: star.baseOpacity,
+            animation: reduced
+              ? undefined
+              : `gb-pulse ${star.dur}s ease-in-out ${star.delay}s infinite`,
           }}
         />
       ))}
@@ -150,7 +144,7 @@ function Galaxy({ reduced }: { reduced: boolean }) {
       />
       {/* Prismatic nebula clouds + star-forming cluster. */}
       {BAND_NEBULAE.map((n, i) => (
-        <motion.div
+        <div
           key={i}
           className="absolute rounded-full"
           style={{
@@ -164,9 +158,12 @@ function Galaxy({ reduced }: { reduced: boolean }) {
             transform: 'translate(-50%, -50%) translateZ(0)',
             background: `radial-gradient(closest-side, ${n.color} 0%, transparent 78%)`,
             filter: 'blur(15px)',
+            ['--gb-op-a' as string]: 0.45,
+            ['--gb-op-b' as string]: 1,
+            animation: reduced
+              ? undefined
+              : `gb-twinkle ${n.dur}s ease-in-out ${n.delay}s infinite`,
           }}
-          animate={reduced ? undefined : { opacity: [0.45, 1, 0.45] }}
-          transition={{ duration: n.dur, repeat: Infinity, ease: 'easeInOut', delay: n.delay }}
         />
       ))}
 

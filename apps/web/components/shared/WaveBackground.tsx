@@ -1,6 +1,5 @@
-'use client'
-
-import { motion } from 'motion/react'
+// Server-renderable: every loop here is a CSS keyframe (globals.css), so the
+// compositor plays it with no JS.
 
 const WAVE_LAYERS = [
   { speed: 8, offset: 0, opacity: 0.14, bottom: 0 },
@@ -18,7 +17,7 @@ export default function WaveBackground() {
       <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep via-[#0C1C2E] to-[#091520]" />
 
       {/* Ambient radial glow */}
-      <motion.div
+      <div
         className="absolute rounded-full"
         style={{
           top: '-10%',
@@ -27,14 +26,13 @@ export default function WaveBackground() {
           height: '60vw',
           background:
             'radial-gradient(circle, rgba(78,205,196,0.05) 0%, transparent 65%)',
+          animation: 'gb-pulse 7s ease-in-out infinite',
         }}
-        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
       />
 
       {/* Animated wave layers */}
       {WAVE_LAYERS.map((layer, i) => (
-        <motion.div
+        <div
           key={i}
           className="absolute left-0"
           style={{
@@ -42,14 +40,7 @@ export default function WaveBackground() {
             width: '200%',
             height: '80px',
             opacity: layer.opacity,
-            willChange: 'transform',
-          }}
-          animate={{ x: ['0%', '-50%'] }}
-          transition={{
-            duration: layer.speed,
-            repeat: Infinity,
-            ease: 'linear',
-            delay: layer.offset,
+            animation: `gb-drift ${layer.speed}s linear ${layer.offset}s infinite`,
           }}
         >
           <svg
@@ -62,7 +53,7 @@ export default function WaveBackground() {
               fill="#4ECDC4"
             />
           </svg>
-        </motion.div>
+        </div>
       ))}
 
       {/* Bottom solid ocean fill */}

@@ -128,3 +128,52 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* ─── Ambient scene loops ─────────────────────────────────────────────────── */
+/* The endless sea/sky motion runs as CSS transform/opacity keyframes, which   */
+/* the compositor plays with no main-thread work. The same loops driven by     */
+/* motion's x/y/rotate cost a JS update per element per frame — ~23% of a      */
+/* throttled mid-tier CPU on an idle /home. Per-element amplitude, duration    */
+/* and delay come in through CSS variables and inline `animation`.             */
+
+@keyframes gb-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes gb-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(var(--gb-bob, -6px)); }
+}
+/* bob + rock, e.g. a floating bottle or a ship on the swell */
+@keyframes gb-sway {
+  0%, 100% { transform: translateY(0) rotate(var(--gb-rot-a, -6deg)); }
+  50%      { transform: translateY(var(--gb-bob, -6px)) rotate(var(--gb-rot-b, 6deg)); }
+}
+@keyframes gb-sail {
+  from { transform: translateX(var(--gb-from)); }
+  to   { transform: translateX(var(--gb-to)); }
+}
+@keyframes gb-ripple {
+  from { transform: translateX(-50%) scale(0.5); opacity: 0.5; }
+  to   { transform: translateX(-50%) scale(1.4); opacity: 0; }
+}
+@keyframes gb-pulse {
+  0%, 100% { transform: scale(var(--gb-scale-a, 1)); opacity: var(--gb-op-a, 0.6); }
+  50%      { transform: scale(var(--gb-scale-b, 1.15)); opacity: var(--gb-op-b, 1); }
+}
+@keyframes gb-twinkle {
+  0%, 100% { opacity: var(--gb-op-a, 0.45); }
+  50%      { opacity: var(--gb-op-b, 1); }
+}
+@keyframes gb-dash {
+  to { stroke-dashoffset: -1; }
+}
+
+/* One switch for every CSS loop in the app, including Tailwind's pulse/spin
+   and the skeleton shimmer (motion's own animations follow MotionConfig). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

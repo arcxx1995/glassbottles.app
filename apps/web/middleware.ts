@@ -2,6 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const hasAuthCookie = (request: NextRequest) =>
+  request.cookies
+    .getAll()
+    .some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'))
+
+// Same-origin path only — same rule as /auth/callback (no open redirect).
+const safeNext = (next: string | null) =>
+  next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\')
+    ? next
+    : '/home'
+
 export async function middleware(request: NextRequest) {
   // API routes: cheap cookie-presence guard only — no Supabase Auth call.
   // Every API route performs its own supabase.auth.getUser() (real
@@ -12,12 +23,15 @@ export async function middleware(request: NextRequest) {
     if (request.nextUrl.pathname === '/api/health') {
       return NextResponse.next({ request })
     }
-    const hasSessionCookie = request.cookies
-      .getAll()
-      .some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'))
-    if (!hasSessionCookie) {
+    if (!hasAuthCookie(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    return NextResponse.next({ request })
+  }
+
+  // Landing page: anonymous visitors (no session cookie) pass straight through
+  // with no Auth work; only returning users pay for getClaims().
+  if (request.nextUrl.pathname === '/' && !hasAuthCookie(request)) {
     return NextResponse.next({ request })
   }
 
@@ -65,19 +79,32 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
     request.nextUrl.pathname === '/sign-up'
 
-  // Redirect unauthenticated users away from protected app routes
-  if (isAppRoute && !user) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/sign-in'
-    return NextResponse.redirect(redirectUrl)
+  const isLanding = request.nextUrl.pathname === '/'
+
+  // A redirect is a fresh response: copy over any cookies getClaims() just
+  // rotated, or the browser keeps the spent refresh token and the next
+  // request signs the user out.
+  const redirectTo = (url: URL) => {
+    const res = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c))
+    return res
   }
 
-  // Redirect authenticated users away from auth routes → home
-  // Prevents a logged-in user from seeing the sign-in page on back-navigation
-  if (isAuthRoute && user) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/home'
-    return NextResponse.redirect(redirectUrl)
+  // Redirect unauthenticated users away from protected app routes, keeping
+  // where they were headed so sign-in can send them back.
+  if (isAppRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/sign-in'
+    url.search = ''
+    url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search)
+    return redirectTo(url)
+  }
+
+  // Redirect authenticated users away from auth routes (and the landing page)
+  // → where they were headed, else home. Prevents a logged-in user seeing the
+  // sign-in page on back-navigation, or a flash of the landing page.
+  if ((isAuthRoute || isLanding) && user) {
+    return redirectTo(new URL(safeNext(request.nextUrl.searchParams.get('next')), request.url))
   }
 
   return supabaseResponse
@@ -85,6 +112,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     /*
      * Match all routes EXCEPT:
      *   - /auth/callback  — must be reachable unauthenticated (PKCE code exchange)

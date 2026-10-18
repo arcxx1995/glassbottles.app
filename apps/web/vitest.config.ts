@@ -6,4 +6,6 @@ export default defineConfig({
     // Mirror tsconfig's "@/*" → "./*" so tests can import app modules.
     alias: { '@': fileURLToPath(new URL('.', import.meta.url)) },
   },
+  // e2e/ is Playwright's (pnpm e2e), not vitest's.
+  test: { exclude: ['e2e/**', 'node_modules/**'] },
 })

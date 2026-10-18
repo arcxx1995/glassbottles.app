@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import type { Route } from 'next'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'motion/react'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
@@ -14,9 +15,7 @@ import {
   FieldError,
   FormError,
   isValidEmail,
-  isValidPassword,
   mapAuthError,
-  PASSWORD_MIN,
   AUTH_BOX_CLASS,
   AUTH_INPUT_CLASS,
   AUTH_PRIMARY_BTN_CLASS,
@@ -44,6 +43,24 @@ function SignInForm() {
   const [needsConfirm, setNeedsConfirm] = useState(false)
   const [resendNote, setResendNote] = useState<string | null>(null)
 
+  // Where middleware was sending them before sign-in (same-origin only; the
+  // callback and middleware re-check).
+  const rawNext = searchParams.get('next')
+  const next =
+    rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+      ? rawNext
+      : '/home'
+
+  // Back from Google via the back/forward cache: the page is restored with
+  // googleLoading still true and the button spinning forever.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setGoogleLoading(false)
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
+
   // Surface callback errors (?error=missing_code | auth_failed).
   useEffect(() => {
     const code = searchParams.get('error')
@@ -51,7 +68,9 @@ function SignInForm() {
   }, [searchParams])
 
   const emailOk = isValidEmail(email)
-  const passwordOk = isValidPassword(password)
+  // Presence only: the length rule is a sign-up rule, and an account made
+  // under an older rule must still be able to sign in. The server decides.
+  const passwordOk = password.length > 0
   const canSubmit = emailOk && passwordOk && !loading && !googleLoading
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -76,7 +95,7 @@ function SignInForm() {
     // middleware with the fresh session. No router.refresh(): it re-requests
     // /sign-in, which middleware redirects to /home — a second route resolution
     // racing this push and doubling the post-login loading frame.
-    router.push('/home')
+    router.push(next as Route)
   }
 
   async function handleGoogle() {
@@ -84,7 +103,9 @@ function SignInForm() {
     setFormError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
     if (error) {
       setFormError(mapAuthError(error, 'sign-in'))
@@ -157,7 +178,7 @@ function SignInForm() {
               className={AUTH_INPUT_CLASS}
             />
             {touched && !passwordOk && (
-              <FieldError>Password must be at least {PASSWORD_MIN} characters.</FieldError>
+              <FieldError>Enter your password.</FieldError>
             )}
 
             <div className="flex justify-end -mt-1">

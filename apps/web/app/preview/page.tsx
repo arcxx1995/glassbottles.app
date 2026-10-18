@@ -22,7 +22,6 @@ import authReducer from '@/store/authSlice'
 import bottleReducer from '@/store/bottleSlice'
 import uiReducer from '@/store/uiSlice'
 import { bottleApi } from '@/store/api/bottleApi'
-import { authApi } from '@/store/api/authApi'
 
 // Components
 import WaveBackground from '@/components/shared/WaveBackground'
@@ -63,17 +62,13 @@ function makeMockStore({
       bottle: bottleReducer,
       ui: uiReducer,
       [bottleApi.reducerPath]: bottleApi.reducer,
-      [authApi.reducerPath]: authApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware()
-        .concat(bottleApi.middleware)
-        .concat(authApi.middleware),
+      getDefaultMiddleware().concat(bottleApi.middleware),
     preloadedState: {
       auth: {
         user: null, // no real user in preview
         isLoading: false,
-        isOnboarded: false,
       },
       bottle: {
         sendStatus,

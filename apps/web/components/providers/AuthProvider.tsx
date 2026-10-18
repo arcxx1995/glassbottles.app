@@ -16,8 +16,7 @@
  *   - auth.User has email + id, but not timezone etc.
  *   - The Redux authSlice uses the Profile type for user, which has those fields.
  *   - Components (settings, bottom nav badge) need Profile shape.
- *   - Profile is fetched via authApi RTK Query; we dispatch the result into authSlice
- *     to keep a single source of truth rather than two separate objects in state.
+ *   - The profile is dispatched into authSlice — one source of truth, not two objects.
  *
  * Security:
  *   - getUser() goes to Supabase server (not just localStorage) — cannot be spoofed.
@@ -26,6 +25,7 @@
  */
 
 import { useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAppDispatch, purgeSessionState } from '@/store'
 import { setUser, clearUser, setLoading } from '@/store/authSlice'
@@ -47,28 +47,39 @@ export default function AuthProvider({
   children: React.ReactNode
 }) {
   const dispatch = useAppDispatch()
+  const router = useRouter()
   // Stable ref — supabase client must not be recreated on re-render (breaks subscription)
   const supabaseRef = useRef(createClient())
 
   useEffect(() => {
     const supabase = supabaseRef.current
 
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
     // Persist the browser's IANA timezone so the daily reset / quota day is
     // measured at the user's local midnight (migration 019). Routed through the
     // PATCH /api/profile endpoint for tz-format validation (an invalid string
     // would make user_local_date() throw at read time). Fire-and-forget, and
     // only when the value actually changed — no request on the steady state.
+    // The saved profile is written back so DailyTimer counts to the new
+    // midnight. A 400 is the server refusing the zone (24h cooldown, 036):
+    // retrying on every token refresh would only repeat the refusal, so stop
+    // for this page session.
+    let tzRefused = false
     const syncTimezone = (profile: Profile) => {
-      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-      if (browserTz && profile.timezone !== browserTz) {
-        void fetch('/api/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timezone: browserTz }),
-        }).catch(() => {
+      if (tzRefused || !browserTz || profile.timezone === browserTz) return
+      void fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: browserTz }),
+      })
+        .then(async (res) => {
+          if (res.ok) dispatch(setUser((await res.json()) as Profile))
+          else if (res.status === 400) tzRefused = true
+        })
+        .catch(() => {
           /* best-effort — next sign-in retries */
         })
-      }
     }
 
     // ── 1. Bootstrap: restore session from cookie (no network round-trip) ────
@@ -85,7 +96,9 @@ export default function AuthProvider({
     // so it never needed the full profile to run.
     const seedUser = (u: { id: string; created_at?: string }) => ({
       id: u.id,
-      timezone: 'UTC',
+      // The browser's zone, not 'UTC': it is what the profile will hold after
+      // syncTimezone, and DailyTimer must not count to UTC midnight meanwhile.
+      timezone: browserTz || 'UTC',
       email_notifications: true,
       created_at: u.created_at ?? new Date().toISOString(),
       last_active: null,
@@ -117,6 +130,13 @@ export default function AuthProvider({
       if (event === 'SIGNED_OUT' || !session) {
         dispatch(clearUser())
         purgeSessionState(dispatch) // no cross-account cache on shared devices
+        // Session ended under an open app screen (refresh token revoked or
+        // expired, account deleted elsewhere): without this the page sits on
+        // its skeleton forever. Explicit sign-outs navigate themselves.
+        const path = window.location.pathname
+        if (/^\/(home|inbox|settings)(\/|$)/.test(path)) {
+          router.replace(`/sign-in?next=${encodeURIComponent(path)}`)
+        }
         return
       }
 
@@ -139,7 +159,7 @@ export default function AuthProvider({
     return () => {
       subscription.unsubscribe()
     }
-  }, [dispatch])
+  }, [dispatch, router])
 
   return <>{children}</>
 }

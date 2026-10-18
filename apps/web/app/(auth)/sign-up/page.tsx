@@ -34,6 +34,15 @@ export default function SignUpPage() {
 
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  // Back from Google via the back/forward cache: restored mid-spin otherwise.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setGoogleLoading(false)
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
   const [formError, setFormError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
 

@@ -101,6 +101,11 @@ export async function GET(request: NextRequest) {
   if (error) {
     // Never surface Supabase error details in the redirect URL.
     console.error('[auth/callback] session exchange failed:', error.message)
+    // A dead recovery link belongs on the reset page, which already shows
+    // "Link expired" with a resend path when there is no session.
+    if (next === '/reset-password') {
+      return NextResponse.redirect(`${origin}/reset-password`)
+    }
     return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`)
   }
 

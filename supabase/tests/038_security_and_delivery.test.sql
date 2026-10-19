@@ -140,6 +140,10 @@ $$;
 -- R is made eligible again so the cron has a real match to make.
 DELETE FROM public.daily_quotas
 WHERE user_id = '00000000-0000-4000-8000-000000000381';
+-- Other adrift bottles in the DB would compete for R; hold them under the
+-- 1-hour rule for this tick (rolled back with everything else).
+UPDATE public.bottles SET sent_at = now()
+WHERE received_at IS NULL AND id <> '00000000-0000-4000-8000-000000003801';
 
 CREATE TEMP TABLE drift_before ON COMMIT DROP AS
 SELECT (SELECT adrift_count FROM public.public_stats)

@@ -31,3 +31,60 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  e2e:
+    name: E2E (Playwright + local Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Only what the suite touches: Postgres, Auth, PostgREST, Realtime, Kong.
+      - name: Start local Supabase (applies every migration)
+        run: supabase start -x studio,imgproxy,vector,logflare,storage-api,edge-runtime,supavisor,postgres-meta
+
+      - name: Export local Supabase env
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "DB_URL=$DB_URL"
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+          } >> "$GITHUB_ENV"
+
+      # The SQL checks expect the notify config prod keeps in Vault.
+      - name: SQL tests
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "select vault.create_secret('http://kong:8000','app.settings.supabase_url'); select vault.create_secret('$SUPABASE_SERVICE_ROLE_KEY','app.settings.service_role_key');"
+          for f in supabase/tests/*.sql; do psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"; done
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium webkit
+
+      - name: Playwright
+        run: pnpm --filter web e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7

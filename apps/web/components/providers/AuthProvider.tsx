@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAppDispatch, purgeSessionState } from '@/store'
 import { setUser, clearUser, setLoading } from '@/store/authSlice'
+import { sameTimeZone } from '@/lib/timezone'
 import type { Profile } from '@/types'
 
 async function fetchProfile(): Promise<Profile | null> {
@@ -67,7 +68,7 @@ export default function AuthProvider({
     // for this page session.
     let tzRefused = false
     const syncTimezone = (profile: Profile) => {
-      if (tzRefused || !browserTz || profile.timezone === browserTz) return
+      if (tzRefused || !browserTz || sameTimeZone(profile.timezone, browserTz)) return
       void fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

@@ -206,20 +206,22 @@ export default function HomePage() {
 
       {/* Header */}
       <div className="relative z-10 mb-4 flex w-full items-center justify-between sm:mb-8">
-        <h1 className="font-display text-2xl text-sand tracking-tight">
-          glassbottles
-        </h1>
-        <div className="flex items-center gap-2">
-        {/* Tides: a quiet run-of-days count. No warnings, no loss copy — a
-            missed day just starts a new tide. */}
-        {(todayStatus?.tides ?? 0) >= 2 && (
-          <span
-            className="font-mono text-xs text-sand/60 bg-white/5 px-3 py-1 rounded-full"
-            title="Days in a row you've thrown a bottle"
-          >
-            {todayStatus!.tides} tides
-          </span>
-        )}
+        <div className="flex items-center gap-2.5">
+          <h1 className="font-display text-2xl text-sand tracking-tight">
+            glassbottles
+          </h1>
+          {/* Tides: a quiet run-of-days count, left by the wordmark — the right
+              corner belongs to the throwable bottle. No warnings, no loss
+              copy: a missed day just starts a new tide. */}
+          {(todayStatus?.tides ?? 0) >= 2 && (
+            <span
+              className="font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
+              title="Days in a row you've thrown a bottle"
+            >
+              {todayStatus!.tides} tides
+            </span>
+          )}
+        </div>
         <AnimatePresence>
           {hasSent && (
             <motion.span
@@ -231,7 +233,6 @@ export default function HomePage() {
             </motion.span>
           )}
         </AnimatePresence>
-        </div>
       </div>
 
       {/* Stage */}

@@ -251,7 +251,8 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
           <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
             Change email
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
+          {/* truncate: a long address ran out of the card on phones */}
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
             {currentEmail ?? 'Update the address tied to your account'}
           </span>
         </div>

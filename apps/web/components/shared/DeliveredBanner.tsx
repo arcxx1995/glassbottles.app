@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X } from 'lucide-react'
 import { useAppSelector } from '@/store'
@@ -10,6 +10,7 @@ import {
   useAckDeliveredBottlesMutation,
 } from '@/store/api/bottleApi'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
+import { feel } from '@/lib/feel'
 
 interface DeliveredBannerProps {
   /** Preview-only: render regardless of server state (/preview page). */
@@ -31,6 +32,14 @@ interface DeliveredBannerProps {
  *
  * Rendered once in (app)/layout.tsx.
  */
+// Coarse on purpose (migration 039): how far, never where.
+const DRIFT_COPY: Record<string, string> = {
+  same: 'It washed up in a stranger’s hands, somewhere in your time zone.',
+  near: 'It drifted a few time zones before a stranger found it.',
+  far: 'It crossed a good stretch of ocean to reach a stranger.',
+  distant: 'It drifted halfway around the world to reach a stranger.',
+}
+
 export default function DeliveredBanner({
   previewVisible,
   onPreviewDismiss,
@@ -69,6 +78,16 @@ export default function DeliveredBanner({
 
   const isVisible =
     previewVisible !== undefined ? previewVisible : pending.length > 0
+
+  // Chime once per newly seen delivery, not on every re-render or reload of
+  // an already-announced one in this session.
+  const newestId = pending[0]?.id
+  const chimedRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!isVisible || !newestId || chimedRef.current === newestId) return
+    chimedRef.current = newestId
+    feel('chime')
+  }, [isVisible, newestId])
 
   function handleDismiss() {
     if (previewVisible !== undefined) {
@@ -110,7 +129,8 @@ export default function DeliveredBanner({
               Your bottle found someone
             </p>
             <p className="font-ui text-xs text-sand/45 mt-0.5">
-              A stranger somewhere now has your message.
+              {DRIFT_COPY[pending[0]?.drift_band ?? ''] ??
+                'A stranger somewhere now has your message.'}
             </p>
           </div>
 

@@ -23,6 +23,7 @@ import SailingSea from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
 import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
+import { feel } from '@/lib/feel'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -158,6 +159,7 @@ export default function HomePage() {
       return
     }
     dispatch(setSendStatus('thrown'))
+    feel('splash')
     // A real throw just landed — arm the optimistic placeholder for the
     // animation→refetch bridge. Cleared by the next status refetch.
     setJustThrew(true)
@@ -207,6 +209,17 @@ export default function HomePage() {
         <h1 className="font-display text-2xl text-sand tracking-tight">
           glassbottles
         </h1>
+        <div className="flex items-center gap-2">
+        {/* Tides: a quiet run-of-days count. No warnings, no loss copy — a
+            missed day just starts a new tide. */}
+        {(todayStatus?.tides ?? 0) >= 2 && (
+          <span
+            className="font-mono text-xs text-sand/60 bg-white/5 px-3 py-1 rounded-full"
+            title="Days in a row you've thrown a bottle"
+          >
+            {todayStatus!.tides} tides
+          </span>
+        )}
         <AnimatePresence>
           {hasSent && (
             <motion.span
@@ -218,6 +231,7 @@ export default function HomePage() {
             </motion.span>
           )}
         </AnimatePresence>
+        </div>
       </div>
 
       {/* Stage */}

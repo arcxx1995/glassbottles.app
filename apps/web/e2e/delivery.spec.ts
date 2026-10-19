@@ -59,6 +59,8 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
   // Sender side: delivered banner (realtime or the status refetch).
   await sender.reload()
   await expect(sender.getByText('Your bottle found someone')).toBeVisible({ timeout: 15_000 })
+  // UTC → Asia/Kolkata is a 5.5h gap: the coarse "far" band, never a place.
+  await expect(sender.getByText('It crossed a good stretch of ocean to reach a stranger.')).toBeVisible()
 
   await senderCtx.close()
   await receiverCtx.close()
@@ -123,4 +125,22 @@ test('account deletion keeps a stranger’s delivered bottle', async ({ page }) 
     .eq('message', keptMessage)
     .single()
   expect(data).toEqual({ sender_id: null, receiver_id: b.id })
+})
+
+test('tides count consecutive days quietly', async ({ page }) => {
+  const u = await makeUser('tides', { timezone: 'UTC' })
+  const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)
+  await admin.from('bottles').insert(
+    [1, 2].map((n) => ({
+      sender_id: u.id,
+      message: `tide ${n}`,
+      sent_at: new Date(Date.now() - n * 86_400_000).toISOString(),
+      day_key: day(n),
+    })),
+  )
+  await signIn(page, u.email)
+  await expect(page.getByText('2 tides')).toBeVisible()
+  await page.getByLabel('Message to place in your bottle').fill('third day in a row')
+  await page.getByRole('button', { name: /Seal & Throw/ }).click()
+  await expect(page.getByText('3 tides')).toBeVisible({ timeout: 10_000 })
 })

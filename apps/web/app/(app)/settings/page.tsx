@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bell, LogOut, Mail, KeyRound, Trash2 } from 'lucide-react'
+import { Bell, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
+import { feel, feelEnabled, setFeelEnabled } from '@/lib/feel'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -342,6 +343,28 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
 // is re-verified first, or an unlocked session could take over the account.
 // Google-only accounts have no current password; they get a reset link, which
 // proves ownership through the inbox instead.
+
+// Opt-in sound + haptics (lib/feel.ts). Per-device, so it lives in this
+// browser rather than the profile.
+function FeelRow() {
+  const [on, setOn] = useState(false)
+  useEffect(() => setOn(feelEnabled()), [])
+  return (
+    <ToggleRow
+      icon={<Waves size={17} strokeWidth={1.5} />}
+      iconBg="bg-seafoam/10"
+      iconColor="text-seafoam"
+      label="Sounds & haptics"
+      meta="Splash, cork pop, a chime on delivery"
+      checked={on}
+      onChange={(next) => {
+        setFeelEnabled(next)
+        setOn(next)
+        if (next) feel('chime') // a taste of it, inside the tap that unlocks audio
+      }}
+    />
+  )
+}
 
 function ChangePasswordRow() {
   const supabase = createClient()
@@ -798,6 +821,7 @@ export default function SettingsPage() {
                 disabled={notifsSaving}
                 onChange={handleToggleNotifs}
               />
+              <FeelRow />
             </motion.section>
           </div>
 

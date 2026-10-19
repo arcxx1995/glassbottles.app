@@ -36,7 +36,9 @@ export async function makeUser(name: string, opts: { timezone?: string; confirme
   if (opts.timezone) {
     const { error: tzErr } = await admin
       .from('profiles')
-      .update({ timezone: opts.timezone })
+      // Stamping the cooldown pins the zone: otherwise the browser's own zone
+      // (AuthProvider sync) would replace it on first sign-in.
+      .update({ timezone: opts.timezone, timezone_changed_at: new Date().toISOString() })
       .eq('id', data.user.id)
     if (tzErr) throw tzErr
   }
@@ -77,6 +79,14 @@ export async function isolateReceiver(receiverId: string) {
 
 /** Skip the 1-hour adrift rule for a sender's bottles and run one cron tick. */
 export async function deliverNow(senderId: string) {
+  // Every other adrift bottle (left by earlier tests) goes back under the
+  // 1-hour rule, so this tick can only match the sender's.
+  const { error: holdErr } = await admin
+    .from('bottles')
+    .update({ sent_at: new Date().toISOString() })
+    .neq('sender_id', senderId)
+    .is('received_at', null)
+  if (holdErr) throw holdErr
   const { error } = await admin
     .from('bottles')
     .update({ sent_at: new Date(Date.now() - 2 * 3_600_000).toISOString() })

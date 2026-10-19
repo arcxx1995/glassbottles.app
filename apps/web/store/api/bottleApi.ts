@@ -19,6 +19,8 @@ export interface UnackedDeliveredBottle {
   sent_at: string
   received_at: string
   day_key: string
+  /** How far it drifted — UTC-offset gap band, never a place (migration 039). */
+  drift_band?: 'same' | 'near' | 'far' | 'distant' | null
 }
 
 export interface TodayBottleStatus {
@@ -27,6 +29,8 @@ export interface TodayBottleStatus {
   receivedBottle: Bottle | null
   sailingBottles: SailingBottle[]
   unackedDelivered: UnackedDeliveredBottle[]
+  /** Consecutive local days with a throw (migration 039). */
+  tides?: number
 }
 
 export interface SendBottleRequest {

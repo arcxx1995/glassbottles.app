@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/rea
 import { Flag, CheckCheck } from 'lucide-react'
 import { useMarkBottleReadMutation, useReportBottleMutation } from '@/store/api/bottleApi'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
+import { feel } from '@/lib/feel'
 import type { Bottle } from '@/types'
 
 interface ReceivedBottleProps {
@@ -34,7 +35,10 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   const [confirmingReport, setConfirmingReport] = useState(false)
 
   useEffect(() => {
-    if (inView && stage === 'sealed') setStage('uncorking')
+    if (inView && stage === 'sealed') {
+      setStage('uncorking')
+      feel('pop')
+    }
   }, [inView, stage])
 
   useEffect(() => {

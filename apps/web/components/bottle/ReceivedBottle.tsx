@@ -137,7 +137,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{
-                            delay: 0.35 + Math.min(i * 0.025, 1.4),
+                            delay: 0.15 + Math.min(i * 0.025, 1.4),
                             duration: 0.28,
                             ease: 'easeOut',
                           }}

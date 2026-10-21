@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { dodo } from '@/lib/dodo'
+import { hasLiveSubscription } from '@/lib/keeper'
 
 // POST /api/account/delete
 // Hard-deletes the AUTHENTICATED user's account. Irreversible.
@@ -30,6 +32,23 @@ export async function POST(_req: NextRequest) {
 
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // A Keeper subscription Dodo can still charge would bill a deleted account, so
+  // it is cancelled first — and if that fails, nothing is deleted.
+  const { data: membership } = await supabase
+    .from('memberships')
+    .select('plan, status, dodo_subscription_id')
+    .maybeSingle()
+  if (hasLiveSubscription(membership) && membership?.dodo_subscription_id) {
+    try {
+      await dodo().subscriptions.update(membership.dodo_subscription_id, {
+        status: 'cancelled',
+      })
+    } catch (err) {
+      console.error('[account/delete] cancel subscription:', err instanceof Error ? err.message : err)
+      return NextResponse.json({ error: 'Failed to cancel membership' }, { status: 502 })
+    }
   }
 
   const { error: delErr } = await createServiceClient().auth.admin.deleteUser(user.id)

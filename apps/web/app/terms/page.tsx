@@ -10,10 +10,12 @@ export const metadata: Metadata = {
 }
 
 const CONTACT = 'hello@glassbottles.app'
+// Keeper copy ships with the membership (NEXT_PUBLIC_KEEPER=on).
+const KEEPER = process.env.NEXT_PUBLIC_KEEPER === 'on'
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms &amp; Conditions" lastUpdated="11 July 2026">
+    <LegalPage title="Terms &amp; Conditions" lastUpdated="20 October 2026">
       <p>
         Welcome to glassbottles. By creating an account or using the service you agree to these
         Terms &amp; Conditions. If you do not agree, please do not use the service.
@@ -23,9 +25,47 @@ export default function TermsPage() {
       <p>
         glassbottles lets you write one anonymous message a day, &ldquo;throw&rdquo; it into a
         shared digital sea, and receive a stranger&rsquo;s message in return. Messages are
-        exchanged anonymously. The service is provided free of charge, and features may change
-        over time.
+        exchanged anonymously.{' '}
+        {KEEPER
+          ? 'Writing, throwing and receiving bottles is free, always. Keeper is an optional paid membership for extras (see below).'
+          : 'The service is provided free of charge.'}{' '}
+        Features may change over time.
       </p>
+
+      {KEEPER && (
+        <>
+          <LegalH2>Keeper membership</LegalH2>
+          <p>
+            Keeper is optional. Payments are processed by Dodo Payments, our merchant of record,
+            which sells the membership to you and handles billing and sales tax; their checkout
+            terms apply to the payment itself.
+          </p>
+          <ul className="flex flex-col gap-1.5 pl-5 list-disc marker:text-seafoam/60">
+            <li>
+              Monthly and yearly memberships renew automatically until you cancel. Cancel any
+              time from Settings &rarr; Manage membership; you keep Keeper until the end of the
+              period you paid for.
+            </li>
+            <li>
+              New members get one 7-day free trial per account. Unless you cancel before it ends,
+              the first charge happens when the trial ends.
+            </li>
+            <li>
+              Founding Keeper is a one-time purchase, limited to the first 100 members, and lasts
+              for as long as glassbottles runs.
+            </li>
+            <li>
+              When a membership ends, what you made stays: bottles you already sent keep their
+              look. Only new Keeper extras stop.
+            </li>
+            <li>Deleting your account cancels any renewing membership.</li>
+            <li>
+              If a charge looks wrong, email us and we&rsquo;ll put it right; refunds are issued
+              through Dodo Payments.
+            </li>
+          </ul>
+        </>
+      )}
 
       <LegalH2>Eligibility</LegalH2>
       <p>
@@ -59,8 +99,11 @@ export default function TermsPage() {
       <p>
         You retain ownership of the messages you write, but you grant us the limited right to
         store and deliver them as part of running the service. Because messages are anonymous and
-        sent to strangers, we cannot review every one in advance. We may remove content and
-        suspend or terminate accounts that violate these terms, at our discretion.
+        sent to strangers, no person reads them in advance; instead an automated safety check
+        reads each bottle before delivery, and a bottle that shares contact details or links, is
+        cruel toward someone, is sexual, or is spam stays ashore and comes back to you to rewrite.
+        The check can make mistakes in both directions, so the report flag remains. We may remove
+        content and suspend or terminate accounts that violate these terms, at our discretion.
       </p>
 
       <LegalH2>Anonymity &amp; safety</LegalH2>

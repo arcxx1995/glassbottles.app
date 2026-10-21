@@ -14,7 +14,7 @@ const CONTACT = 'hello@glassbottles.app'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="18 October 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="20 October 2026">
       <p>
         glassbottles (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;the service&rdquo;) is an
         anonymous message-in-a-bottle app. We keep the amount of personal data we collect to
@@ -68,6 +68,13 @@ export default function PrivacyPolicyPage() {
         bottles, send notifications you have opted into, prevent abuse, and keep the app fast and
         reliable. We do not use your messages to build advertising profiles.
       </p>
+      <p>
+        To keep the sea safe, the text of each bottle — never your name, email or account — is
+        checked by an automated classifier (Anthropic&rsquo;s Claude) before it is delivered, to
+        catch contact details, cruelty, sexual content and spam, and to offer support if a bottle
+        reads like you may be in danger. Anthropic processes it only to return that check and does
+        not use it to train its models.
+      </p>
 
       <LegalH2>Anonymity between users</LegalH2>
       <p>
@@ -80,8 +87,15 @@ export default function PrivacyPolicyPage() {
       <LegalH2>Sharing and disclosure</LegalH2>
       <p>
         We do not sell your personal data. We share it only with the infrastructure providers
-        that run the service on our behalf — such as Supabase (database and authentication) and
-        Vercel (hosting and analytics), and Google (analytics) — and only to the extent needed to operate glassbottles.
+        that run the service on our behalf — such as Supabase (database and authentication),
+        Vercel (hosting and analytics), Resend (email notifications), Anthropic (the automated safety check on each bottle, and Keepers’ writing sparks, which send only the mood you picked), and Google (analytics){process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+          <>
+            {' '}— and, if you become a Keeper, Dodo Payments (our merchant of record, which
+            receives your email and payment details to bill you; we never see your card and
+            keep only your membership status)
+          </>
+        )}{' '}
+        — and only to the extent needed to operate glassbottles.
         We may disclose information if required by law or to protect the safety and rights of our
         users.
       </p>

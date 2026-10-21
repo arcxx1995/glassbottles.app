@@ -12,7 +12,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What if something harmful washes up?',
-    a: 'Every bottle has a report flag. Reported bottles are pulled from the water and repeat senders lose the sea.',
+    a: 'Every bottle passes a safety check before it sails — contact details, cruelty, sexual content and spam stay ashore. And every bottle has a report flag: reported bottles are pulled from the water and repeat senders lose the sea.',
   },
   {
     q: 'Why only one bottle a day?',
@@ -20,6 +20,9 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Does it cost anything?',
-    a: 'No. One message, one stranger, every day — free, always.',
+    a:
+      process.env.NEXT_PUBLIC_KEEPER === 'on'
+        ? 'The bottle is free, always — one message, one stranger, every day. Keeper is an optional membership for beautiful extras, like styled glass and wax seals your stranger receives.'
+        : 'No. One message, one stranger, every day — free, always.',
   },
 ] as const

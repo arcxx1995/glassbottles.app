@@ -19,8 +19,12 @@ export async function middleware(request: NextRequest) {
   // verification). Doing getUser() here too meant TWO Auth round-trips per
   // API request, billed as Fluid provisioned-memory wall-clock time.
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    // Health check must stay reachable by unauthenticated uptime monitors.
-    if (request.nextUrl.pathname === '/api/health') {
+    // Health check must stay reachable by unauthenticated uptime monitors;
+    // webhooks carry no cookie — each verifies its own signature.
+    if (
+      request.nextUrl.pathname === '/api/health' ||
+      request.nextUrl.pathname.startsWith('/api/webhooks/')
+    ) {
       return NextResponse.next({ request })
     }
     if (!hasAuthCookie(request)) {
@@ -74,7 +78,8 @@ export async function middleware(request: NextRequest) {
 
   const isAppRoute = request.nextUrl.pathname.startsWith('/home') ||
     request.nextUrl.pathname.startsWith('/inbox') ||
-    request.nextUrl.pathname.startsWith('/settings')
+    request.nextUrl.pathname.startsWith('/settings') ||
+    request.nextUrl.pathname.startsWith('/logbook')
 
   const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
     request.nextUrl.pathname === '/sign-up'
@@ -125,6 +130,7 @@ export const config = {
     '/home/:path*',
     '/inbox/:path*',
     '/settings/:path*',
+    '/logbook',
     '/api/:path*',
     '/sign-in',
     '/sign-up',

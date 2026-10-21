@@ -12,8 +12,9 @@ UPDATE public.profiles SET timezone = 'UTC'          WHERE id = '00000000-0000-4
 UPDATE public.profiles SET timezone = 'Europe/Athens' WHERE id = '00000000-0000-4000-8000-000000000391';
 UPDATE public.profiles SET timezone = 'Asia/Tokyo'   WHERE id = '00000000-0000-4000-8000-000000000392';
 
--- Thrown yesterday, the day before, and the day before that; a gap; then two
--- older days. Nothing today yet → anchor is yesterday → 3 tides.
+-- Thrown yesterday, the day before, and the day before that; a two-day gap;
+-- then two older days. Nothing today yet → anchor is yesterday → 3 tides.
+-- (Two days, since 045 forgives a single missed day a month.)
 INSERT INTO public.bottles (sender_id, receiver_id, message, sent_at, received_at, day_key)
 SELECT '00000000-0000-4000-8000-000000000390',
        CASE g WHEN 1 THEN '00000000-0000-4000-8000-000000000391'::uuid
@@ -22,7 +23,7 @@ SELECT '00000000-0000-4000-8000-000000000390',
        now() - make_interval(days => g),
        CASE WHEN g IN (1, 2) THEN now() - make_interval(days => g) + interval '2 hours' END,
        (now() AT TIME ZONE 'UTC')::date - g
-FROM unnest(ARRAY[1, 2, 3, 5, 6]) g;
+FROM unnest(ARRAY[1, 2, 3, 6, 7]) g;
 
 SET LOCAL role authenticated;
 SELECT set_config('request.jwt.claims',

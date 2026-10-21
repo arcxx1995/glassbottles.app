@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { BottleSVG } from './ThrowAnimation'
 import { computeSeaSpot } from './SailingSea'
+import type { BottleLook } from '@/lib/dressing'
 
 // ─── ScreenBottle ────────────────────────────────────────────────────────────
 // A small bottle pinned to the TOP-RIGHT of the screen (outside the chatbox). It
@@ -27,7 +28,10 @@ export default function TetheredBottle({
   dropping,
   landingDayKey,
   onDropComplete,
+  look,
 }: {
+  /** The draft's Atelier dressing — you throw the bottle you dressed. */
+  look?: BottleLook
   dropping: boolean
   // day_key of the bottle being thrown — seeds the landing spot.
   landingDayKey?: string
@@ -156,7 +160,7 @@ export default function TetheredBottle({
             </motion.div>
           )}
 
-          <BottleSVG glowing width={W} height={H} />
+          <BottleSVG glowing width={W} height={H} look={look} />
 
           {/* Travelling neon glow that runs clockwise around the bottle's edge:
               a short bright dash sweeping the silhouette, over a wider faint

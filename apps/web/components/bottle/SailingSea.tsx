@@ -8,10 +8,14 @@ import {
   useReducedMotion,
 } from 'motion/react'
 import { BottleSVG } from './ThrowAnimation'
+import { useGetAtelierQuery } from '@/store/api/bottleApi'
+import { resolveLook, type BottleStyle, type SeaTheme } from '@/lib/dressing'
 
 export interface SailingBottleItem {
   id: string
   day_key: string
+  /** Your own Atelier dressing (042). */
+  style?: BottleStyle | null
 }
 
 // ─── Deterministic pseudo-random helpers ─────────────────────────────────────
@@ -91,7 +95,17 @@ const WAVE_BANDS = [
   { top: '82%', height: 200, fill: '#07141F', opacity: 1, dur: 12, amp: 26, period: 240, baseY: 52, bob: 8, foam: true },
 ] as const
 
-function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduced: boolean }) {
+function WaveBand({
+  band,
+  reduced,
+  fill,
+  foam,
+}: {
+  band: (typeof WAVE_BANDS)[number]
+  reduced: boolean
+  fill?: string
+  foam?: string
+}) {
   const d = useMemo(
     () => wavePath(VIEW_W, band.baseY, band.amp, band.period, VIEW_H),
     [band]
@@ -125,9 +139,9 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
           preserveAspectRatio="none"
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
-          <path d={d} fill={band.fill} />
+          <path d={d} style={{ fill: fill ?? band.fill, transition: 'fill 1.2s ease' }} />
           {'foam' in band && band.foam && (
-            <path d={foamD} fill="none" stroke="#4ECDC4" strokeOpacity={0.18} strokeWidth={2} />
+            <path d={foamD} fill="none" stroke={foam ?? '#4ECDC4'} strokeOpacity={0.18} strokeWidth={2} />
           )}
         </svg>
       </div>
@@ -136,6 +150,39 @@ function WaveBand({ band, reduced }: { band: (typeof WAVE_BANDS)[number]; reduce
 }
 
 // ─── Distant ship ────────────────────────────────────────────────────────────
+
+// ─── Keeper lighthouse ──────────────────────────────────────────────────────
+// Only on a Keeper's own sea, never shown to anyone else. The lamp grows with
+// each month of membership; after a lapse it stays, dimmed, beam off.
+
+function Lighthouse({ glow, lit, reduced }: { glow: number; lit: boolean; reduced: boolean }) {
+  return (
+    <div
+      className="absolute"
+      data-lighthouse={lit ? 'lit' : 'dim'}
+      style={{ left: '5%', top: '45.5%', transform: 'translateY(-100%)' }}
+    >
+      {lit && (
+        <div
+          className="absolute left-[13px] top-[6px] h-[3px] w-[140px] origin-left"
+          style={{
+            background: `linear-gradient(90deg, rgba(255,236,170,${0.55 * glow}), transparent)`,
+            animation: reduced ? undefined : 'gb-beam 9s ease-in-out infinite',
+            filter: 'blur(1px)',
+          }}
+        />
+      )}
+      <svg width="26" height="46" viewBox="0 0 26 46" fill="none">
+        <circle cx="13" cy="7" r={lit ? 7 : 4} fill={`rgba(255,236,170,${lit ? 0.35 * glow : 0.08})`} />
+        <rect x="9" y="3" width="8" height="7" rx="1.5" fill={lit ? `rgba(255,236,170,${0.5 + 0.5 * glow})` : '#3A4A57'} />
+        <path d="M8 3 L13 0 L18 3 Z" fill="#0E2433" />
+        <path d="M9 10 L17 10 L19 40 L7 40 Z" fill="#163447" />
+        <path d="M8.6 18 H17.4 M8 27 H18" stroke="#21516B" strokeWidth="2" />
+        <path d="M2 46 Q6 38 13 39 Q20 38 24 46 Z" fill="#0B1E2D" />
+      </svg>
+    </div>
+  )
+}
 
 function Ship({
   topPct,
@@ -338,6 +385,8 @@ function StormClouds({ reduced }: { reduced: boolean }) {
 // cap clipping its base, and expanding ripple rings.
 
 function FloatingBottle({ item }: { item: SailingBottleItem }) {
+  const { data: pieces } = useGetAtelierQuery()
+  const look = item.style ? resolveLook(item.style, pieces) : undefined
   // Stable hash-seeded scatter. Seeded by day_key (one bottle per day) so an
   // optimistic just-thrown placeholder and the real refetched bottle — same
   // day_key — land on the SAME spot (no jump on swap).
@@ -407,7 +456,7 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
           animation: `gb-sway ${layout.bobDur}s ease-in-out ${layout.bobDelay}s infinite`,
         }}
       >
-        <BottleSVG glowing width={W} height={H} />
+        <BottleSVG glowing width={W} height={H} look={look} />
 
         {/* Water cap — clips the bottle's submerged base */}
         <div
@@ -469,8 +518,14 @@ export default memo(function SailingSea({
   bottles,
   backdropOnly = false,
   thunder = false,
+  theme,
+  lighthouse,
 }: {
   bottles: SailingBottleItem[]
+  /** Keeper lighthouse (Step 10): `glow` 0–1 from months as a Keeper. */
+  lighthouse?: { glow: number; lit: boolean }
+  /** A current's sea (Keeper + joined current). Omitted = the classic ocean. */
+  theme?: SeaTheme
   // Renders only the sky + sea waves (no ships, storm clouds, or bottles).
   backdropOnly?: boolean
   // Freezes a single lightning flash washing the sea (the "thunder instant"):
@@ -498,6 +553,7 @@ export default memo(function SailingSea({
         className="absolute inset-0"
         style={{
           background:
+            theme?.sky ??
             'linear-gradient(to bottom, #0A1628 0%, #0C2030 30%, #123A52 40%, #0E2B43 52%, #081826 100%)',
         }}
       />
@@ -508,7 +564,7 @@ export default memo(function SailingSea({
           top: '34%',
           height: 80,
           background:
-            'radial-gradient(80% 100% at 50% 100%, rgba(78,205,196,0.18) 0%, transparent 70%)',
+            `radial-gradient(80% 100% at 50% 100%, ${theme?.glow ?? 'rgba(78,205,196,0.18)'} 0%, transparent 70%)`,
         }}
       />
 
@@ -527,9 +583,13 @@ export default memo(function SailingSea({
         </>
       )}
 
+      {!backdropOnly && lighthouse && (
+        <Lighthouse glow={lighthouse.glow} lit={lighthouse.lit} reduced={reduced} />
+      )}
+
       {/* Turbulent sea bands */}
       {WAVE_BANDS.map((band, i) => (
-        <WaveBand key={i} band={band} reduced={reduced} />
+        <WaveBand key={i} band={band} reduced={reduced} fill={theme?.bands[i]} foam={theme?.foam} />
       ))}
 
       {/* Storm clouds throbbing with flash over the scene */}

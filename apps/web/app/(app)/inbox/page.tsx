@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Mail } from 'lucide-react'
+import Link from 'next/link'
+import { BookOpen, Mail } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
-import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
+import { useGetFutureBottlesQuery, useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
 import ReceivedBottle from '@/components/bottle/ReceivedBottle'
+import FutureBottleCard from '@/components/bottle/FutureBottleCard'
 
 export default function InboxPage() {
   const user = useAppSelector(selectUser)
@@ -39,6 +41,22 @@ export default function InboxPage() {
 
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
 
+  // Letters to yourself (047): arrived ones lead the inbox; waiting ones are
+  // only counted — their words stay sealed until they arrive.
+  const { data: future } = useGetFutureBottlesQuery(undefined, {
+    skip: !user?.id || process.env.NEXT_PUBLIC_KEEPER !== 'on',
+  })
+  const arrived = future?.arrived ?? []
+  const waiting = future?.waiting.length ?? 0
+
+  // Keepsakes (045): the same list, narrowed to the bottles kept.
+  const [onlyKept, setOnlyKept] = useState(false)
+  const keptCount = bottles?.filter((b) => b.kept_at).length ?? 0
+  const shown = onlyKept ? bottles?.filter((b) => b.kept_at) : bottles
+  useEffect(() => {
+    if (keptCount === 0) setOnlyKept(false)
+  }, [keptCount])
+
   // While AuthProvider seeds the user the query is skipped, and a skipped
   // query is not "loading" — the inbox flashed "No bottles yet" on reload.
   const isLoading = isQueryLoading || (!user?.id && !data)
@@ -67,8 +85,42 @@ export default function InboxPage() {
               {unreadCount}
             </motion.span>
           )}
+          {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+            <Link
+              href="/logbook"
+              className="ml-auto flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-ui text-xs text-sand/45 hover:text-sand/80 transition-colors"
+            >
+              <BookOpen size={14} strokeWidth={1.5} />
+              Logbook
+            </Link>
+          )}
         </div>
         <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
+        {waiting > 0 && (
+          <p className="font-ui text-xs text-seafoam/60 mt-1">
+            {waiting} letter{waiting === 1 ? '' : 's'} to yourself drifting back
+          </p>
+        )}
+        {keptCount > 0 && (
+          <div className="mt-4 flex gap-2" role="group" aria-label="Show">
+            {[
+              { on: !onlyKept, label: 'All', set: false },
+              { on: onlyKept, label: `Kept · ${keptCount}`, set: true },
+            ].map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                aria-pressed={t.on}
+                onClick={() => setOnlyKept(t.set)}
+                className={`h-8 rounded-full border px-3 font-ui text-xs transition-colors ${
+                  t.on ? 'border-seafoam/50 bg-seafoam/10 text-sand/90' : 'border-white/10 text-sand/45 hover:text-sand/70'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Scroll region — page frame + nav stay put, content scrolls inside */}
@@ -101,8 +153,17 @@ export default function InboxPage() {
         </div>
       )}
 
+      {/* Letters to yourself, newest first, above the strangers' bottles */}
+      {!isLoading && !onlyKept && arrived.length > 0 && (
+        <div className="flex flex-col gap-4 mb-4">
+          {arrived.map((b) => (
+            <FutureBottleCard key={b.id} bottle={b} />
+          ))}
+        </div>
+      )}
+
       {/* Empty state */}
-      {!isLoading && !failed && (!bottles || bottles.length === 0) && (
+      {!isLoading && !failed && (!bottles || bottles.length === 0) && arrived.length === 0 && (
         <motion.div
           className="flex flex-col items-center justify-center flex-1 gap-5 text-center px-8 pt-16"
           initial={{ opacity: 0, y: 12 }}
@@ -122,9 +183,9 @@ export default function InboxPage() {
       )}
 
       {/* Bottle list */}
-      {!isLoading && bottles && bottles.length > 0 && (
+      {!isLoading && shown && shown.length > 0 && (
         <div className="flex flex-col gap-4">
-          {bottles.map((bottle, i) => (
+          {shown.map((bottle, i) => (
             <motion.div
               key={bottle.id}
               initial={{ opacity: 0, y: 16 }}

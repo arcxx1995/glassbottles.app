@@ -75,6 +75,9 @@ function makeMockStore({
         receiveStatus: 'idle' as const,
         isAnimating: sendStatus === 'throwing',
         message,
+        style: {},
+        weather: null,
+        vibe: null,
       },
       ui: {
         isReportModalOpen: false,

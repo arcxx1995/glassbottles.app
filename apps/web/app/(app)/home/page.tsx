@@ -8,12 +8,19 @@ import {
   setSendStatus,
   setThrowAnimating,
   setMessage,
+  setWeather,
+  setVibe,
   selectSendStatus,
+  selectDraftStyle,
 } from '@/store/bottleSlice'
 import { selectUser } from '@/store/authSlice'
 import {
+  bottleApi,
   useSendBottleMutation,
   useGetTodayBottleStatusQuery,
+  useGetAtelierQuery,
+  useGetKeeperQuery,
+  useGetCoinsQuery,
 } from '@/store/api/bottleApi'
 import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
@@ -21,9 +28,15 @@ import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
+import HeldNotice from '@/components/shared/HeldNotice'
+import CareCard from '@/components/shared/CareCard'
+import PushNudge from '@/components/shared/PushNudge'
+import Whale from '@/components/bottle/Whale'
+import { looksLikeCrisis } from '@/lib/care'
 import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
 import { feel } from '@/lib/feel'
+import { CURRENT_INFO, allowedStyle, resolveLook } from '@/lib/dressing'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -35,6 +48,52 @@ export default function HomePage() {
 
   const [sendBottle] = useSendBottleMutation()
   const [sendError, setSendError] = useState(false)
+
+  // Dressing (042): you throw — and watch drift — the bottle you dressed.
+  // Keepers who joined a current also get that current's sea.
+  const { data: pieces } = useGetAtelierQuery()
+  const { data: keeper, isError: keeperFailed } = useGetKeeperQuery(undefined, {
+    skip: process.env.NEXT_PUBLIC_KEEPER !== 'on',
+  })
+  const isKeeper = !!keeper?.isKeeper
+  // Until the membership has loaded, don't strip Keeper pieces: send the
+  // dressing as chosen and let send_bottle judge (a keeper_only refusal
+  // refetches the membership). Stripping on "not loaded yet" silently threw a
+  // Keeper's bottle undressed.
+  const keeperKnown =
+    process.env.NEXT_PUBLIC_KEEPER !== 'on' || keeper !== undefined || keeperFailed
+  const { data: coins } = useGetCoinsQuery(undefined, { skip: !user?.id })
+  const draftStyle = useAppSelector(selectDraftStyle)
+  const throwStyle = useMemo(
+    () => allowedStyle(draftStyle, pieces, isKeeper || !keeperKnown, coins?.unlocked),
+    [draftStyle, pieces, isKeeper, keeperKnown, coins?.unlocked],
+  )
+  const throwLook = useMemo(() => resolveLook(throwStyle, pieces), [throwStyle, pieces])
+  const seaTheme = isKeeper && user?.current ? CURRENT_INFO[user.current].sea : undefined
+  // Keeper lighthouse (Step 10): brighter with every month kept; dimmed, not
+  // removed, after a lapse. Anyone who has never been a Keeper sees none.
+  const membership = keeper?.membership
+  const lighthouse = membership
+    ? {
+        lit: isKeeper,
+        glow: membership.plan === 'lifetime'
+          ? 1
+          : Math.min(1, 0.35 + 0.1 * Math.floor((Date.now() - new Date(membership.keeper_since).getTime()) / (30.44 * 864e5))),
+      }
+    : undefined
+
+  // Crisis care (043): the server's screen decides; a crisis-sounding draft
+  // shows help the moment it's thrown, before the screen has read it. Closing
+  // it is remembered for the day.
+  const [careNow, setCareNow] = useState(false)
+  const [careClosedDay, setCareClosedDay] = useState<string | null>(null)
+  useEffect(() => {
+    try {
+      setCareClosedDay(localStorage.getItem('gb:care-closed'))
+    } catch {
+      /* storage blocked: the card can be closed per visit */
+    }
+  }, [])
 
   // Restore send state after page refresh — a user who already sent today
   // should land on the sailing sea, not the "Your bottle awaits" idle screen.
@@ -89,8 +148,8 @@ export default function HomePage() {
   // its place (same spot, same look) once the refetch lands. Gated by justThrew
   // so it only bridges an actual throw, not a reload of an already-delivered one.
   const seaBottles = useMemo(
-    () => buildSeaBottles(sailingBottles, sendStatus, todayKey, justThrew),
-    [sailingBottles, sendStatus, todayKey, justThrew],
+    () => buildSeaBottles(sailingBottles, sendStatus, todayKey, justThrew, throwStyle),
+    [sailingBottles, sendStatus, todayKey, justThrew, throwStyle],
   )
 
   // Idle (throw entry) shows only when the user hasn't sent today AND the sea
@@ -127,10 +186,15 @@ export default function HomePage() {
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
-      await sendBottle({ message: store.getState().bottle.message }).unwrap()
+      const { message, weather, vibe } = store.getState().bottle
+      await sendBottle({ message, style: throwStyle, weather, vibe }).unwrap()
+      if (looksLikeCrisis(message)) setCareNow(true)
       // Success — clear the draft so the editor isn't pre-filled with the sent
-      // message on the next idle screen (debug report bug 8).
+      // message on the next idle screen (debug report bug 8). The dressing
+      // stays; weather and vibe belonged to this bottle.
       dispatch(setMessage(''))
+      dispatch(setWeather(null))
+      dispatch(setVibe(null))
     } catch (err) {
       sendFailedRef.current = true
       // 23505 = already sent today (second tab / device). Not a failure — the
@@ -138,6 +202,9 @@ export default function HomePage() {
       // generic "check your connection" copy here was a lie.
       const code = (err as { data?: { code?: string } })?.data?.code
       if (code !== '23505') setSendError(true)
+      // 42501 keeper_only: the membership ended since it last loaded. Refetch
+      // it so the next try throws the free look instead.
+      if (code === '42501') dispatch(bottleApi.util.invalidateTags(['Membership']))
       // If the drop already finished (it set 'thrown'), correct back to idle.
       dispatch(setThrowAnimating(false))
       dispatch(setSendStatus('idle'))
@@ -181,6 +248,20 @@ export default function HomePage() {
   // server state there is nothing honest to show but a retry.
   const statusFailed = !isInitializing && isStatusError && !todayStatus
   const isThrown = sendStatus === 'thrown'
+  const heldBottle = todayStatus?.heldBottle ?? null
+  const showCare =
+    isThrown &&
+    (careNow || todayStatus?.sentBottle?.screen === 'crisis') &&
+    careClosedDay !== todayKey
+  function closeCare() {
+    setCareNow(false)
+    setCareClosedDay(todayKey ?? null)
+    try {
+      if (todayKey) localStorage.setItem('gb:care-closed', todayKey)
+    } catch {
+      /* storage blocked */
+    }
+  }
 
   return (
     <div className="relative flex h-full flex-col items-center overflow-hidden px-5 pt-10 sm:pt-14">
@@ -190,8 +271,9 @@ export default function HomePage() {
           Mounted here (not inside the animated stage) so its `fixed` positioning
           stays relative to the viewport rather than a transformed ancestor. */}
       {!isInitializing && !statusFailed && (
-        <SailingSea bottles={seaBottles} />
+        <SailingSea bottles={seaBottles} theme={seaTheme} lighthouse={lighthouse} />
       )}
+      {!isInitializing && !statusFailed && <Whale whale={todayStatus?.whale} />}
 
       {/* The throwable bottle — pinned to the screen top-right, wiggling with a
           shimmer. Shown only while a throw is available; on throw it vanishes and
@@ -201,6 +283,7 @@ export default function HomePage() {
           dropping={sendStatus === 'throwing'}
           landingDayKey={todayKey}
           onDropComplete={handleDropComplete}
+          look={throwLook}
         />
       )}
 
@@ -219,6 +302,15 @@ export default function HomePage() {
               title="Days in a row you've thrown a bottle"
             >
               {todayStatus!.tides} tides
+            </span>
+          )}
+          {/* Earn-only coins (049) — spent in the Atelier. */}
+          {(coins?.balance ?? 0) > 0 && (
+            <span
+              className="font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
+              title="Coins you've earned — spend them on pieces in Dress"
+            >
+              {coins!.balance} ✦
             </span>
           )}
         </div>
@@ -278,7 +370,11 @@ export default function HomePage() {
               {(sendStatus === 'idle' || sendStatus === 'throwing') && (
                 <motion.div
                   key="compose"
-                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center -translate-y-8 sm:-translate-y-10"
+                  className={cn(
+                    'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center',
+                    // The lift clears the footer; a held notice needs the room instead.
+                    !heldBottle && '-translate-y-8 sm:-translate-y-10',
+                  )}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   // No exit fade: the landed throw bottle must NOT fade out. The
@@ -293,20 +389,28 @@ export default function HomePage() {
                     animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                   >
-                    <div className="text-center">
-                      <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                      <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
-                        Write something for a stranger. They won&apos;t know it&apos;s you.
-                      </p>
-                      {sendError && (
-                        <p
-                          className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
-                          role="alert"
-                        >
-                          Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                    {/* A held bottle's notice takes the heading's place — on a
+                        phone both don't fit above the compose box. */}
+                    {heldBottle ? (
+                      <div className="flex w-[94%] justify-center">
+                        <HeldNotice held={heldBottle} canRethrow />
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <p className="font-display text-xl text-sand">Your bottle awaits</p>
+                        <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
+                          Write something for a stranger. They won&apos;t know it&apos;s you.
                         </p>
-                      )}
-                    </div>
+                        {sendError && (
+                          <p
+                            className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                            role="alert"
+                          >
+                            Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
 
                   {/* Compose box with the bottle inside its top-right corner.
@@ -336,6 +440,12 @@ export default function HomePage() {
                   : 'relative mt-auto gap-4 pb-8 pt-4 sm:gap-6 sm:pt-6 sm:pb-10'
               )}
             >
+              {/* A second hold today: the day isn't restored again. */}
+              {isThrown && heldBottle && <HeldNotice held={heldBottle} canRethrow={false} />}
+              {showCare && <CareCard timezone={user?.timezone} onClose={closeCare} />}
+              {/* Right after a throw, once: "want to know when it's found?" */}
+              {isThrown && hasSent && !showCare && !heldBottle && <PushNudge />}
+
               {sailingBottles.length > 0 && (
                 <div className="flex flex-col gap-1.5">
                   {atCeiling && !hasSent ? (

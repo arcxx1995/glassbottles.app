@@ -165,6 +165,11 @@ body {
   0%, 100% { opacity: var(--gb-op-a, 0.45); }
   50%      { opacity: var(--gb-op-b, 1); }
 }
+/* Keeper lighthouse beam (Step 10): a slow sweep, compositor-only. */
+@keyframes gb-beam {
+  0%, 100% { transform: rotate(-38deg); opacity: 0.15; }
+  50%      { transform: rotate(38deg);  opacity: 1; }
+}
 @keyframes gb-dash {
   to { stroke-dashoffset: -1; }
 }
@@ -176,4 +181,10 @@ body {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* The Logbook prints as a plain keepsake (048): white page, dark ink. */
+@media print {
+  @page { margin: 18mm; }
+  html, body { background: #fff !important; }
 }

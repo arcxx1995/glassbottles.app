@@ -1,3 +1,5 @@
+import type { BottleLook } from '@/lib/dressing'
+
 // The shared bottle artwork. The old default-export <ThrowAnimation> screen was
 // dead code (the live throw is TetheredBottle's arc into SailingSea) and was
 // removed; every consumer imports { BottleSVG } from here.
@@ -10,6 +12,8 @@ interface BottleSVGProps {
   height?: number
   /** false draws the bottle open — the inbox animates its own cork off. */
   corked?: boolean
+  /** Atelier dressing (glass tint/edge, wax seal). Omitted = the classic bottle. */
+  look?: Pick<BottleLook, 'tint' | 'edge' | 'wax'>
 }
 
 export function BottleSVG({
@@ -17,7 +21,9 @@ export function BottleSVG({
   width = 80,
   height = 120,
   corked = true,
+  look,
 }: BottleSVGProps) {
+  const edge = look?.edge ?? 'rgba(255,255,255,0.18)'
   return (
     <svg
       viewBox="0 0 80 120"
@@ -36,6 +42,13 @@ export function BottleSVG({
           {/* Cork */}
           <rect x="27" y="3" width="26" height="13" rx="4" fill="#C4A882" />
           <rect x="32" y="6" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.18)" />
+          {look?.wax && (
+            <>
+              {/* Wax seal poured over the cork, a drip down the neck */}
+              <path d="M25 4 Q40 -1 55 4 L55 15 Q47 18 44 15 Q42 21 38 15 Q31 18 25 15 Z" fill={look.wax} />
+              <circle cx="40" cy="9.5" r="3.6" fill="rgba(255,255,255,0.16)" />
+            </>
+          )}
         </>
       )}
 
@@ -43,7 +56,7 @@ export function BottleSVG({
       <path
         d="M30 16 L27 34 L53 34 L50 16 Z"
         fill="rgba(255,255,255,0.10)"
-        stroke="rgba(255,255,255,0.18)"
+        stroke={edge}
         strokeWidth="1"
       />
 
@@ -51,7 +64,7 @@ export function BottleSVG({
       <path
         d="M19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 Z"
         fill="rgba(255,255,255,0.07)"
-        stroke="rgba(255,255,255,0.18)"
+        stroke={edge}
         strokeWidth="1.5"
       />
 
@@ -75,10 +88,10 @@ export function BottleSVG({
       <line x1="33" y1="68" x2="47" y2="68" stroke="rgba(247,231,206,0.22)" strokeWidth="1.5" strokeLinecap="round" />
       <line x1="33" y1="74" x2="42" y2="74" stroke="rgba(247,231,206,0.22)" strokeWidth="1.5" strokeLinecap="round" />
 
-      {/* Seafoam tint */}
+      {/* Glass tint — seafoam by default */}
       <path
         d="M19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 Z"
-        fill="rgba(78,205,196,0.04)"
+        fill={look?.tint ?? 'rgba(78,205,196,0.04)'}
       />
     </svg>
   )

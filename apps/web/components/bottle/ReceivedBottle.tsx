@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
-import { Flag, CheckCheck } from 'lucide-react'
-import { useMarkBottleReadMutation, useReportBottleMutation } from '@/store/api/bottleApi'
+import { Bookmark, Flag, CheckCheck, Sparkles } from 'lucide-react'
+import {
+  useGetAtelierQuery,
+  useMarkBottleReadMutation,
+  useReportBottleMutation,
+  useRippleBottleMutation,
+  useKeepBottleMutation,
+} from '@/store/api/bottleApi'
+import { CURRENT_INFO, VIBE_LABEL, WEATHER_LABEL, resolveLook } from '@/lib/dressing'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
 import { feel } from '@/lib/feel'
 import type { Bottle } from '@/types'
@@ -24,6 +31,18 @@ type Stage = 'sealed' | 'uncorking' | 'open'
 export default function ReceivedBottle({ bottle, onReported }: ReceivedBottleProps) {
   const [markRead] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
+  const [ripple] = useRippleBottleMutation()
+  const [keep] = useKeepBottleMutation()
+  const kept = !!bottle.kept_at
+  // How the stranger dressed it (042) — glass and seal while sealed, then
+  // their paper and ink once it opens.
+  const { data: pieces } = useGetAtelierQuery()
+  const look = resolveLook(bottle.style, pieces)
+  const tags = [
+    bottle.weather && `${WEATHER_LABEL[bottle.weather]} sky`,
+    bottle.vibe && VIBE_LABEL[bottle.vibe],
+    bottle.current && CURRENT_INFO[bottle.current].name,
+  ].filter(Boolean) as string[]
   const reduced = useReducedMotion() ?? false
   const ref = useRef<HTMLElement>(null)
   const inView = useInView(ref, { once: true, amount: 0.6 })
@@ -80,8 +99,24 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   return (
     <article
       ref={ref}
-      className="relative bg-ocean-mid rounded-card border border-border-subtle p-6 mx-4 shadow-card"
+      className="relative rounded-card border border-border-subtle p-6 mx-4 shadow-card"
+      style={{ background: look.paper }}
     >
+      {/* Keepsake (045): free, unlimited, the receiver's alone. */}
+      {stage === 'open' && (
+        <button
+          type="button"
+          onClick={() => void keep({ id: bottle.id, keep: !kept })}
+          aria-pressed={kept}
+          aria-label={kept ? 'Kept — tap to let go' : 'Keep this bottle'}
+          title={kept ? 'Kept' : 'Keep'}
+          className={`absolute right-3 top-3 z-10 p-2 rounded-xl transition-colors ${
+            kept ? 'text-seafoam' : 'text-sand/25 hover:text-sand/60'
+          }`}
+        >
+          <Bookmark size={16} strokeWidth={1.5} fill={kept ? 'currentColor' : 'none'} />
+        </button>
+      )}
       <AnimatePresence mode="wait" initial={false}>
         {stage !== 'open' ? (
           <motion.div
@@ -98,12 +133,13 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                   : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
               }
             >
-              <BottleSVG width={48} height={72} corked={false} glowing />
+              <BottleSVG width={48} height={72} corked={false} glowing look={look} />
               {/* Cork, positioned over the neck of the 48×72 bottle (0.6× its
                   80×120 viewBox), so it can pop free. */}
               <motion.span
                 aria-hidden
-                className="absolute left-1/2 top-[1.8px] block h-[7.8px] w-[15.6px] -translate-x-1/2 rounded-[2.4px] bg-[#C4A882]"
+                className="absolute left-1/2 top-[1.8px] block h-[7.8px] w-[15.6px] -translate-x-1/2 rounded-[2.4px]"
+                style={{ background: look.wax ?? '#C4A882' }}
                 animate={
                   stage === 'uncorking'
                     ? { y: -28, x: 12, rotate: 55, opacity: 0 }
@@ -122,8 +158,17 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
             animate={{ clipPath: 'inset(0 0 0% 0)', opacity: 1 }}
             transition={{ duration: 0.55, ease: EASE }}
           >
-            <div className="mb-5 pr-4">
-              <p className="font-display text-sand text-lg leading-relaxed" aria-label="Message content">
+            <div className="mb-5 pr-8">
+              {tags.length > 0 && (
+                <p className="mb-3 font-ui text-[11px] uppercase tracking-widest text-sand/35">
+                  {tags.join(' · ')}
+                </p>
+              )}
+              <p
+                className="font-display text-lg leading-relaxed"
+                style={{ color: look.ink }}
+                aria-label="Message content"
+              >
                 {lines.length === 0 && (
                   <span className="whitespace-pre-line">{bottle.message}</span>
                 )}
@@ -193,6 +238,28 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                   Read
                 </span>
               )}
+              {/* The one thing a receiver can send back (044): no words, no
+                  name — just that it landed. Once per bottle. */}
+              {stage === 'open' &&
+                (bottle.rippled_at ? (
+                  <span className="font-ui text-xs text-seafoam/70 flex items-center gap-1">
+                    <Sparkles size={13} strokeWidth={1.5} />
+                    They&rsquo;ll know
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      feel('chime')
+                      void ripple(bottle.id)
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-seafoam/25 text-seafoam/85 font-ui text-xs hover:bg-seafoam/10 transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles size={13} strokeWidth={1.5} />
+                    This reached me
+                  </button>
+                ))}
+
               <button
                 type="button"
                 onClick={() => setConfirmingReport(true)}

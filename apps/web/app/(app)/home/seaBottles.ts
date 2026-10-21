@@ -1,6 +1,9 @@
+import type { BottleStyle } from '@/lib/dressing'
+
 export interface SeaItem {
   id: string
   day_key: string
+  style?: BottleStyle | null
 }
 
 /**
@@ -18,6 +21,8 @@ export function buildSeaBottles<T extends SeaItem>(
   sendStatus: string,
   todayKey: string | undefined,
   justThrew: boolean,
+  /** The just-thrown bottle's dressing, so the placeholder matches it. */
+  pendingStyle?: BottleStyle,
 ): (T | SeaItem)[] {
   if (
     justThrew &&
@@ -25,7 +30,7 @@ export function buildSeaBottles<T extends SeaItem>(
     todayKey &&
     !sailing.some((b) => b.day_key === todayKey)
   ) {
-    return [...sailing, { id: '__pending_today__', day_key: todayKey }]
+    return [...sailing, { id: '__pending_today__', day_key: todayKey, style: pendingStyle }]
   }
   return sailing
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { CURRENTS } from '@/lib/dressing'
 
 // GET /api/profile
 // Returns the authenticated user's profile.
@@ -17,7 +18,7 @@ export async function GET(_req: NextRequest) {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, timezone, email_notifications, created_at, last_active')
+    .select('id, timezone, email_notifications, created_at, last_active, current')
     .eq('id', user.id)
     .single()
 
@@ -29,7 +30,8 @@ export async function GET(_req: NextRequest) {
 }
 
 // PATCH /api/profile
-// Updates timezone for the authenticated user.
+// Updates timezone, email notifications or joined current for the
+// authenticated user.
 export async function PATCH(req: NextRequest) {
   const supabase = createClient()
 
@@ -53,9 +55,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { timezone, email_notifications } = body as {
+  const { timezone, email_notifications, current } = body as {
     timezone?: string
     email_notifications?: boolean
+    current?: string | null
   }
 
   const update: Record<string, unknown> = {
@@ -87,11 +90,20 @@ export async function PATCH(req: NextRequest) {
     update.email_notifications = email_notifications
   }
 
+  // Joined current (042): one of the four, or null to leave. The column
+  // CHECK has the same list; this just answers with a clean 400.
+  if (current !== undefined) {
+    if (current !== null && !(CURRENTS as readonly string[]).includes(current)) {
+      return NextResponse.json({ error: 'Unknown current' }, { status: 400 })
+    }
+    update.current = current
+  }
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .update(update)
     .eq('id', user.id)
-    .select('id, timezone, email_notifications, created_at, last_active')
+    .select('id, timezone, email_notifications, created_at, last_active, current')
     .single()
 
   if (error) {

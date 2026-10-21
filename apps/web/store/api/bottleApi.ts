@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { createClient } from '@/lib/supabase/client'
 import type { Bottle, DailyQuota } from '@/types'
+import type { AtelierPiece, BottleStyle, Vibe, Weather } from '@/lib/dressing'
+import { hasAccess } from '@/lib/keeper'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
  *  No message/receiver fields leak; just id (key) and day_key (date label). */
@@ -9,6 +11,8 @@ export interface SailingBottle {
   message: string
   sent_at: string
   day_key: string
+  /** Your own dressing — your sea shows the bottle you threw (042). */
+  style?: BottleStyle | null
 }
 
 /** A sent bottle that was matched but whose "delivered" toast the sender has
@@ -31,10 +35,33 @@ export interface TodayBottleStatus {
   unackedDelivered: UnackedDeliveredBottle[]
   /** Consecutive local days with a throw (migration 039). */
   tides?: number
+  /** The latest bottle the safety screen kept ashore, unseen (043). */
+  heldBottle?: HeldBottle | null
+  /** Own bottles a stranger said reached them, not yet seen (044). */
+  ripples?: { id: string; rippled_at: string }[]
+  /** Today's whale window and whether you've spotted it (049). */
+  whale?: { start: string; end: string; spotted: boolean }
+}
+
+/** Earn-only coins (049): balance, and owned coin pieces as 'kind:id'. */
+export interface Coins {
+  balance: number
+  unlocked: string[]
+}
+
+/** A bottle the safety screen kept ashore — its words come back to rewrite. */
+export interface HeldBottle {
+  id: string
+  message: string
+  screen_reason: 'contact' | 'harm' | 'sexual' | 'spam' | null
+  day_key: string
 }
 
 export interface SendBottleRequest {
   message: string
+  style?: BottleStyle
+  weather?: Weather | null
+  vibe?: Vibe | null
 }
 
 export interface BottleCountResponse {
@@ -48,10 +75,40 @@ export interface PublicStats {
   totalCount: number
 }
 
+/** Keeper membership (migration 041). access_until decides access; the
+ *  server re-checks with is_keeper() on every paid action. */
+export interface Membership {
+  plan: 'monthly' | 'yearly' | 'lifetime'
+  status: string
+  access_until: string
+  keeper_since: string
+}
+
+/** Letters to yourself (migration 047): arrived ones whole, waiting ones sealed. */
+export interface FutureBottles {
+  arrived: {
+    id: string
+    message: string
+    style: BottleStyle | null
+    weather: Weather | null
+    created_at: string
+    delivered_at: string
+    read_at: string | null
+  }[]
+  waiting: { id: string; deliver_on: string }[]
+  can_send_after: string | null
+}
+
+export interface KeeperState {
+  membership: Membership | null
+  isKeeper: boolean
+  foundingSpotsLeft: number
+}
+
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount'],
+  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Coins'],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -70,10 +127,13 @@ export const bottleApi = createApi({
     sendBottle: builder.mutation<Bottle, SendBottleRequest>({
       // Single atomic Supabase RPC (migration 024) — replaces the
       // /api/bottles/send Vercel route. One round trip, no Function cold start.
-      queryFn: async ({ message }) => {
+      queryFn: async ({ message, style, weather, vibe }) => {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('send_bottle', {
           p_message: message,
+          p_style: style && Object.keys(style).length ? style : null,
+          p_weather: weather ?? null,
+          p_vibe: vibe ?? null,
         })
         if (error) {
           // Surface the SQLSTATE so the UI can distinguish "already sent" (23505)
@@ -111,7 +171,8 @@ export const bottleApi = createApi({
       },
       // Invalidate both status (quota + sent bottle) and the ambient counter so the
       // "X bottles in the ocean" display refreshes immediately after a successful throw.
-      invalidatesTags: ['BottleStatus', 'BottleCount'],
+      // A throw can complete a seventh tide (+5 coins, 049).
+      invalidatesTags: ['BottleStatus', 'BottleCount', 'Coins'],
     }),
     getReceivedBottles: builder.query<Bottle[], void>({
       queryFn: async () => {
@@ -140,6 +201,88 @@ export const bottleApi = createApi({
     // Read and report are Supabase RPCs (migration 038), off Vercel like
     // send_bottle — opening a bottle marks it read, so this is a hot path.
     // Each returns false when the bottle is not the caller's received bottle.
+    // The sender has seen (or picked up to rewrite) a held bottle (043).
+    ackHeldBottle: builder.mutation<void, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ack_held_bottle', { p_bottle_id: bottleId })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      // Hide it at once; the refetch confirms.
+      async onQueryStarted(_id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getTodayBottleStatus', undefined, (draft) => {
+            draft.heldBottle = null
+          }),
+        )
+        queryFulfilled.catch(patch.undo)
+      },
+      invalidatesTags: ['BottleStatus'],
+    }),
+    // "This reached me" — the receiver's one quiet answer (044). Optimistic:
+    // the button settles at once; a failure rolls it back.
+    rippleBottle: builder.mutation<void, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ripple_bottle', { p_bottle_id: bottleId })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      async onQueryStarted(bottleId, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) => {
+            const b = draft.find((x) => x.id === bottleId)
+            if (b) b.rippled_at = new Date().toISOString()
+          }),
+        )
+        queryFulfilled.catch(patch.undo)
+      },
+    }),
+    // Keep (or let go of) a received bottle as a keepsake (045). Optimistic.
+    keepBottle: builder.mutation<void, { id: string; keep: boolean }>({
+      queryFn: async ({ id, keep }) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('keep_bottle', { p_bottle_id: id, p_keep: keep })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      async onQueryStarted({ id, keep }, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) => {
+            const b = draft.find((x) => x.id === id)
+            if (b) b.kept_at = keep ? new Date().toISOString() : null
+          }),
+        )
+        queryFulfilled.catch(patch.undo)
+      },
+    }),
+    // The sender has seen their ripples (044).
+    ackRipples: builder.mutation<void, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ack_ripples')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          bottleApi.util.updateQueryData('getTodayBottleStatus', undefined, (draft) => {
+            draft.ripples = []
+          }),
+        )
+        queryFulfilled.catch(patch.undo)
+      },
+      invalidatesTags: ['BottleStatus'],
+    }),
     markBottleRead: builder.mutation<void, string>({
       queryFn: async (bottleId) => {
         const supabase = createClient()
@@ -237,6 +380,130 @@ export const bottleApi = createApi({
         }
       },
     }),
+
+    // Coins (049): read, spend on a coin piece, earn by spotting the whale.
+    getCoins: builder.query<Coins, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_coins')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as Coins }
+      },
+      providesTags: ['Coins'],
+    }),
+    unlockPiece: builder.mutation<number, { kind: string; id: string }>({
+      queryFn: async ({ kind, id }) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('unlock_piece', { p_kind: kind, p_id: id })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as number }
+      },
+      invalidatesTags: ['Coins'],
+    }),
+    spotWhale: builder.mutation<boolean, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('spot_whale')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as boolean }
+      },
+      invalidatesTags: ['Coins', 'BottleStatus'],
+    }),
+
+    // Letters to yourself (047).
+    getFutureBottles: builder.query<FutureBottles, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_future_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as FutureBottles }
+      },
+      providesTags: ['Future'],
+    }),
+    sendFutureBottle: builder.mutation<
+      { id: string; deliver_on: string },
+      { message: string; months: 1 | 6 | 12; style?: BottleStyle; weather?: Weather | null }
+    >({
+      queryFn: async ({ message, months, style, weather }) => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('send_future_bottle', {
+          p_message: message,
+          p_months: months,
+          p_style: style && Object.keys(style).length ? style : null,
+          p_weather: weather ?? null,
+        })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message, data: { code: error.code } } }
+        }
+        return { data: data as { id: string; deliver_on: string } }
+      },
+      invalidatesTags: ['Future'],
+    }),
+    markFutureRead: builder.mutation<void, string>({
+      queryFn: async (id) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('mark_future_read', { p_id: id })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+    }),
+
+    // The Atelier catalog (042): readable by everyone signed in, changes only
+    // by migration — fetched once per session, never refetched.
+    getAtelier: builder.query<AtelierPiece[], void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('atelier_pieces')
+          .select('kind, id, name, tier, look, sort, coin_cost')
+          .order('kind')
+          .order('sort')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as AtelierPiece[] }
+      },
+      keepUnusedDataFor: 24 * 60 * 60,
+    }),
+
+    // Own membership row (RLS) + founding spots, straight from Supabase.
+    // Refreshed by the 'membership' realtime broadcast, never polled.
+    getKeeper: builder.query<KeeperState, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const [m, spots] = await Promise.all([
+          supabase
+            .from('memberships')
+            .select('plan, status, access_until, keeper_since')
+            .maybeSingle(),
+          supabase.rpc('founding_spots_left'),
+        ])
+        const error = m.error ?? spots.error
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        const membership = m.data as Membership | null
+        return {
+          data: {
+            membership,
+            isKeeper:
+              hasAccess(membership?.access_until),
+            foundingSpotsLeft: (spots.data as number | null) ?? 0,
+          },
+        }
+      },
+      providesTags: ['Membership'],
+    }),
   }),
 })
 
@@ -249,4 +516,16 @@ export const {
   useGetBottleCountQuery,
   useGetPublicStatsQuery,
   useAckDeliveredBottlesMutation,
+  useGetKeeperQuery,
+  useGetAtelierQuery,
+  useAckHeldBottleMutation,
+  useRippleBottleMutation,
+  useAckRipplesMutation,
+  useKeepBottleMutation,
+  useGetFutureBottlesQuery,
+  useSendFutureBottleMutation,
+  useMarkFutureReadMutation,
+  useGetCoinsQuery,
+  useUnlockPieceMutation,
+  useSpotWhaleMutation,
 } = bottleApi

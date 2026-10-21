@@ -57,6 +57,28 @@ export default function RealtimeBottleListener() {
           // sailingBottles (it animates out of the sea).
           dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
+        .on('broadcast', { event: 'bottle_held' }, () => {
+          // The safety screen kept today's bottle ashore (043): the refetch
+          // brings its words back and restores the day's throw.
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+        })
+        .on('broadcast', { event: 'bottle_care' }, () => {
+          // The screen read today's bottle as a crisis; status shows help.
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+        })
+        .on('broadcast', { event: 'bottle_rippled' }, () => {
+          // A stranger said one of your bottles reached them (044) — and it
+          // paid 3 coins (049).
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus', 'Coins']))
+        })
+        .on('broadcast', { event: 'future_arrived' }, () => {
+          // A letter to yourself washed back (047).
+          dispatch(bottleApi.util.invalidateTags(['Future']))
+        })
+        .on('broadcast', { event: 'membership' }, () => {
+          // The Dodo webhook changed this user's Keeper membership (041).
+          dispatch(bottleApi.util.invalidateTags(['Membership']))
+        })
         .subscribe()
     }
 

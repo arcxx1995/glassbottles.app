@@ -28,10 +28,13 @@ export default function OceanCounter() {
 
   if (!data || data.count === 0) return null
 
+  // After dark the same count reads as the night sea (045).
+  const hour = new Date().getHours()
+  const where = hour >= 18 || hour < 5 ? 'adrift tonight' : 'in the ocean today'
   const label =
     data.count === 1
-      ? '1 bottle in the ocean today'
-      : `${data.count.toLocaleString()} bottles in the ocean today`
+      ? `1 bottle ${where}`
+      : `${data.count.toLocaleString()} bottles ${where}`
 
   return (
     <AnimatePresence>

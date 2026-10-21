@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bell, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
+import { Bell, BellRing, Compass, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
 import { feel, feelEnabled, setFeelEnabled } from '@/lib/feel'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -18,6 +18,9 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser, setUser } from '@/store/authSlice'
 import type { Profile } from '@/types'
+import KeeperCard from '@/components/keeper/KeeperCard'
+import { CURRENTS, CURRENT_INFO, type CurrentId } from '@/lib/dressing'
+import { disablePush, enablePush, getPushState, type PushState } from '@/lib/push'
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
 const EASE_OUT = [0.25, 0.46, 0.45, 0.94] as const
@@ -367,6 +370,40 @@ function FeelRow() {
   )
 }
 
+// Web Push on this device (migration 044). Per-device by nature, so the
+// toggle reads the browser, not the profile.
+const PUSH_META: Record<PushState, string> = {
+  off: 'When your bottle is found, or one finds you',
+  on: 'When your bottle is found, or one finds you',
+  blocked: 'Blocked in this browser’s site settings',
+  install: 'Add glassbottles to your Home Screen first',
+  unsupported: '',
+}
+
+function PushRow() {
+  const [state, setState] = useState<PushState>('unsupported')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    void getPushState().then(setState)
+  }, [])
+  if (state === 'unsupported') return null
+  return (
+    <ToggleRow
+      icon={<BellRing size={17} strokeWidth={1.5} />}
+      iconBg="bg-seafoam/10"
+      iconColor="text-seafoam"
+      label="Notifications on this device"
+      meta={PUSH_META[state]}
+      checked={state === 'on'}
+      disabled={busy || state === 'blocked' || state === 'install'}
+      onChange={(next) => {
+        setBusy(true)
+        void (next ? enablePush() : disablePush()).then(setState).finally(() => setBusy(false))
+      }}
+    />
+  )
+}
+
 function ChangePasswordRow() {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
@@ -581,6 +618,121 @@ function ChangePasswordRow() {
   )
 }
 
+// ─── Current row ─────────────────────────────────────────────────────────────
+// Joining a current is free and cosmetic (migration 042): your bottles carry
+// its name. Keepers also sail that current's sea on the home screen.
+
+function CurrentRow() {
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const current = user?.current ?? null
+
+  async function choose(next: CurrentId | null) {
+    if (next === current) return
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current: next }),
+      })
+      if (!res.ok) throw new Error('save failed')
+      dispatch(setUser((await res.json()) as Profile))
+    } catch {
+      setError('Couldn’t change your current. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const option = (on: boolean) =>
+    cn(
+      'flex flex-col items-start rounded-2xl border px-3 py-2.5 text-left transition-colors disabled:opacity-50',
+      on ? 'border-seafoam/50 bg-seafoam/10' : 'border-white/10 hover:border-white/20',
+    )
+
+  return (
+    <div className="bg-ocean-mid rounded-3xl border border-white/5 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex items-center gap-4 p-5 w-full text-left group cursor-pointer"
+      >
+        <div className="w-9 h-9 rounded-xl bg-seafoam/10 flex items-center justify-center shrink-0">
+          <Compass size={17} strokeWidth={1.5} className="text-seafoam" />
+        </div>
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
+            Your current
+          </span>
+          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+            {current ? `${CURRENT_INFO[current].name} · ${CURRENT_INFO[current].blurb}` : 'Open sea · no current'}
+          </span>
+        </div>
+        <span
+          className={cn(
+            'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+            open && 'rotate-90',
+          )}
+        >
+          ›
+        </span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
+              <p className="font-ui text-xs text-sand/45 leading-relaxed">
+                Your bottles carry your current&rsquo;s name to whoever finds them.
+                {process.env.NEXT_PUBLIC_KEEPER === 'on' && ' Keepers also sail its sea.'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {CURRENTS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    disabled={saving}
+                    aria-pressed={current === c}
+                    onClick={() => void choose(c)}
+                    className={option(current === c)}
+                  >
+                    <span className="font-ui text-sm text-sand/85">{CURRENT_INFO[c].name}</span>
+                    <span className="font-ui text-[11px] text-sand/40">{CURRENT_INFO[c].blurb}</span>
+                  </button>
+                ))}
+              </div>
+              {current && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void choose(null)}
+                  className="font-ui text-xs text-sand/40 hover:text-sand/70 transition-colors self-start px-1"
+                >
+                  Leave {CURRENT_INFO[current].name} for the open sea
+                </button>
+              )}
+              {error && <p className="font-ui text-xs text-coral">{error}</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ─── Delete-account row ──────────────────────────────────────────────────────
 // Irreversible hard delete. The actual deletion runs server-side
 // (POST /api/account/delete, service role) because Supabase has no client-side
@@ -769,6 +921,8 @@ export default function SettingsPage() {
     // server-side first, so the await blocked navigation for the whole network
     // call (the slow sign-out). Local is instant; the token expires server-side
     // on its own, and onAuthStateChange(SIGNED_OUT) still clears Redux.
+    // A shared device shouldn't keep getting this account's pushes.
+    await disablePush().catch(() => 'off')
     await supabase.auth.signOut({ scope: 'local' })
     router.replace('/sign-in')
   }
@@ -822,12 +976,25 @@ export default function SettingsPage() {
                 disabled={notifsSaving}
                 onChange={handleToggleNotifs}
               />
+              <PushRow />
               <FeelRow />
             </motion.section>
           </div>
 
-          {/* ── Column 2: Danger zone · Session ─────────────────────── */}
+          {/* ── Column 2: Membership · Danger zone · Session ───────── */}
           <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
+            {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+              <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
+                <SectionLabel>Membership</SectionLabel>
+                <KeeperCard />
+              </motion.section>
+            )}
+
+            <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
+              <SectionLabel>Sea</SectionLabel>
+              <CurrentRow />
+            </motion.section>
+
             <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
               <SectionLabel>Danger zone</SectionLabel>
               <DeleteAccountRow />

@@ -1,9 +1,13 @@
+import type { BottleStyle, CurrentId, Vibe, Weather } from '@/lib/dressing'
+
 export interface Profile {
   id: string
   timezone: string
   email_notifications: boolean
   created_at: string
   last_active: string | null
+  /** Joined current (migration 042) — cosmetic, free. */
+  current?: CurrentId | null
 }
 
 export interface Bottle {
@@ -24,6 +28,17 @@ export interface Bottle {
   is_reported: boolean
   is_stale: boolean
   day_key: string
+  // How it was dressed (migration 042). Absent on pre-042 shapes.
+  style?: BottleStyle | null
+  weather?: Weather | null
+  vibe?: Vibe | null
+  current?: CurrentId | null
+  /** Safety screen verdict (migration 043) — sender's own shapes only. */
+  screen?: 'ok' | 'crisis' | 'held' | null
+  /** When the receiver tapped "this reached me" (migration 044). */
+  rippled_at?: string | null
+  /** Kept by the receiver as a keepsake (migration 045). */
+  kept_at?: string | null
 }
 
 export interface DailyQuota {

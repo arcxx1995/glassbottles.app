@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Anthropic from 'npm:@anthropic-ai/sdk@0.131.0'
+import { chatJSON } from '../_shared/openrouter.ts'
 import { SCREEN_PROMPT, VERDICT_SCHEMA, findContact, parseVerdict, type Verdict } from './screen.ts'
 
 // screen-bottle — the safety screen (migration 043).
@@ -13,33 +13,28 @@ import { SCREEN_PROMPT, VERDICT_SCHEMA, findContact, parseVerdict, type Verdict 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 // Optional: without it only the deterministic contact check runs.
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
+const OPENROUTER_MODEL = Deno.env.get('OPENROUTER_MODEL') // default: _shared/openrouter.ts
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 async function classify(message: string): Promise<Verdict | null> {
-  if (!anthropic) return null
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-5-5',
-    max_tokens: 2048,
+  if (!OPENROUTER_API_KEY) return null
+  const answer = await chatJSON({
+    apiKey: OPENROUTER_API_KEY,
+    model: OPENROUTER_MODEL,
     system: SCREEN_PROMPT,
-    output_config: { effort: 'low', format: { type: 'json_schema', schema: VERDICT_SCHEMA } },
-    messages: [{ role: 'user', content: `<bottle>\n${message}\n</bottle>` }],
+    user: `<bottle>\n${message}\n</bottle>`,
+    name: 'verdict',
+    schema: VERDICT_SCHEMA as unknown as Record<string, unknown>,
+    maxTokens: 60,
   })
-  // A declined request gives no verdict; the bottle sails unscreened and the
+  // No usable answer → no verdict; the bottle sails unscreened and the
   // report flag stays the backstop.
-  if (response.stop_reason === 'refusal') return null
-  const text = response.content.find((b) => b.type === 'text')
-  if (!text || text.type !== 'text') return null
-  try {
-    return parseVerdict(JSON.parse(text.text))
-  } catch {
-    return null
-  }
+  return parseVerdict(answer)
 }
 
 Deno.serve(async (req) => {
@@ -66,10 +61,7 @@ Deno.serve(async (req) => {
       ? { verdict: 'held', reason: 'contact' }
       : await classify(bottle.message)
   } catch (err) {
-    console.error(
-      '[screen-bottle] classifier',
-      err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err,
-    )
+    console.error('[screen-bottle] classifier', err instanceof Error ? err.message : err)
     return json({ result: 'unscreened' }, 502)
   }
   if (!verdict) return json({ result: 'unscreened' })

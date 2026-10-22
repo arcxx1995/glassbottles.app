@@ -1,5 +1,5 @@
 // The free spark deck (migration 046): questions to write from. Keepers get
-// questions from Claude tuned to their sky and current; everyone gets these.
+// questions from a small AI model tuned to their sky and current; everyone gets these.
 // A spark is shown, never written into the bottle.
 
 export const SPARK_DECK = [

@@ -326,9 +326,9 @@ function DressingRow() {
 }
 
 // ─── Spark ────────────────────────────────────────────────────────────────────
-// Keepers ask the spark function (Claude, five a day, tuned to the chosen sky
-// and current); everyone else — and any failure or used-up day — draws from
-// the static deck.
+// Keepers ask the spark function (a small model via OpenRouter, five a day,
+// tuned to the chosen sky and current); everyone else — and any failure or
+// used-up day — draws from the static deck.
 
 function useSpark() {
   const store = useStore<RootState>()

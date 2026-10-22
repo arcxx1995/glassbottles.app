@@ -70,10 +70,10 @@ export default function PrivacyPolicyPage() {
       </p>
       <p>
         To keep the sea safe, the text of each bottle — never your name, email or account — is
-        checked by an automated classifier (Anthropic&rsquo;s Claude) before it is delivered, to
-        catch contact details, cruelty, sexual content and spam, and to offer support if a bottle
-        reads like you may be in danger. Anthropic processes it only to return that check and does
-        not use it to train its models.
+        checked by an automated AI classifier before it is delivered, to catch contact details,
+        cruelty, sexual content and spam, and to offer support if a bottle reads like you may be in
+        danger. The check runs through OpenRouter, which we instruct to use only AI providers that
+        neither store the text nor train on it; it is processed only to return that check.
       </p>
 
       <LegalH2>Anonymity between users</LegalH2>
@@ -88,7 +88,7 @@ export default function PrivacyPolicyPage() {
       <p>
         We do not sell your personal data. We share it only with the infrastructure providers
         that run the service on our behalf — such as Supabase (database and authentication),
-        Vercel (hosting and analytics), Resend (email notifications), Anthropic (the automated safety check on each bottle, and Keepers’ writing sparks, which send only the mood you picked), and Google (analytics){process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+        Vercel (hosting and analytics), Resend (email notifications), OpenRouter and the AI provider it routes to (the automated safety check on each bottle, and Keepers’ writing sparks, which send only the mood you picked), and Google (analytics){process.env.NEXT_PUBLIC_KEEPER === 'on' && (
           <>
             {' '}— and, if you become a Keeper, Dodo Payments (our merchant of record, which
             receives your email and payment details to bill you; we never see your card and

@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-10 (18–22 Oct)
+
+### Security & reliability (released 19 Oct, migrations 038–040)
+- Revoked anon EXECUTE on `retry_unmatched_bottles`; `profiles` UPDATE limited to timezone / email_notifications / last_active (clamped); timezone must be an IANA name
+- Matcher skips unconfirmed sign-ups; bounded claim loop; one adrift_count delta per cron run; 21-bottle sailing ceiling in `send_bottle`
+- Account deletion is one atomic cascade; read/report are RPCs
+- Auth: middleware keeps rotated cookies on redirects; `?next=` deep links; password change requires current password; `/reset-password` needs a fresh recovery session; browser timezone aliases compared by UTC offset
+- Google Analytics behind a cookie consent banner
+- Migration 040: explicit grants (Supabase CLI drops legacy default grants on 2026-10-30)
+
+### Delight & performance (released 19 Oct, migration 039)
+- Bottles uncork, unroll and mark themselves read; honest loading/error states
+- Tides streak pill, drift band on delivered bottles, opt-in sound and haptics
+- Ambient animation moved to CSS keyframes (main-thread ms/s on Pixel 5 at 4x throttle: landing 442→208, inbox 93→36)
+- CI runs SQL tests and Playwright (desktop Chrome, iPhone 14 WebKit, Pixel 5) on every PR
+
+### v2 — Keeper (22 Oct, migrations 041–049; web app on branch `feat/keeper-billing`, not yet on `main`)
+- Keeper membership on Dodo Payments (checkout, portal, signed webhook); UI behind `NEXT_PUBLIC_KEEPER=on`
+- Bottle Atelier, weather, vibe, currents; safety screen (held / crisis help card); Web Push; ripple; keepsakes; tides grace
+- Sparks, letters to future you, Logbook, earn-only coins, the whale, Keeper lighthouse
+- Edge Functions `screen-bottle`, `spark`, `push-notify`; LLM calls go through OpenRouter (`_shared/openrouter.ts`)
+
+### Removed
+- `.github/workflows/deploy.yml` — always failed without `VERCEL_TOKEN`; Vercel's git integration deploys
+
+---
+
 ## [Unreleased] — 2026-06-07
 
 > Sprint 0–4 initial build. All changes sourced from agent logs (Bella × 3, Felix × 4, Shiv × 1, Nagoya × 1 sprint review). No formal version tag yet.

@@ -44,7 +44,7 @@ export default function OceanCounter() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="font-ui text-[11px] text-sand/25 text-center tabular-nums"
+        className="font-ui text-[11px] text-sand/40 text-center tabular-nums"
         aria-live="polite"
         aria-atomic="true"
       >

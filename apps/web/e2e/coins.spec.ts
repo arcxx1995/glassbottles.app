@@ -7,6 +7,7 @@ test('earned coins unlock a coin piece in the Atelier', async ({ page }) => {
   const u = await makeUser('coins')
   await admin.from('coin_ledger').insert({ user_id: u.id, delta: 20, reason: 'whale', ref: 'seed' })
   await signIn(page, u.email)
+  await page.goto('/sea')
   await expect(page.getByText('20 ✦')).toBeVisible()
 
   await page.getByRole('button', { name: 'Dress', exact: true }).click()
@@ -39,6 +40,7 @@ test('the whale shows only while surfaced and unspotted', async ({ page }) => {
     await route.fulfill({ response: res, json: body })
   })
   await signIn(page, u.email)
+  await page.goto('/sea')
   const whale = page.getByRole('button', { name: /A whale surfaced/ })
   await expect(whale).toBeVisible()
   spotted = true

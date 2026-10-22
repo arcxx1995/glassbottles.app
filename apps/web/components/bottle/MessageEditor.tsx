@@ -18,6 +18,7 @@ import {
 } from '@/store/bottleSlice'
 import { useGetAtelierQuery, useGetCoinsQuery, useGetKeeperQuery } from '@/store/api/bottleApi'
 import { cn } from '@/lib/utils'
+import { spring, springPress } from '@/components/ui/springs'
 import {
   VIBES,
   VIBE_LABEL,
@@ -45,7 +46,7 @@ const WEATHER_ICON: Record<Weather, typeof Sun> = {
   sunny: Sun,
 }
 
-const MAX_CHARS = 1000
+export const MAX_CHARS = 1000
 const MAX_TEXTAREA_HEIGHT = 168
 
 interface MessageEditorProps {
@@ -89,10 +90,10 @@ export default function MessageEditor({
       className={cn('flex flex-col gap-3 w-full', className)}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={spring}
     >
       {/* Editor surface */}
-      <div className="relative rounded-2xl bg-glass border border-white/10 p-4 focus-within:border-white/20 transition-colors duration-200">
+      <div className="glass relative rounded-3xl p-4 transition-[border-color,box-shadow] duration-200 focus-within:border-seafoam/35 focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_32px_rgba(0,0,0,0.28),0_0_0_4px_rgba(78,205,196,0.10)]">
         <textarea
           ref={textareaRef}
           value={message}
@@ -104,7 +105,7 @@ export default function MessageEditor({
           placeholder={spark.question ?? 'Write something for a stranger to find…'}
           rows={6}
           className="w-full bg-transparent font-display text-sand text-lg leading-relaxed
-                     placeholder:text-sand/25 resize-none outline-none focus-visible:outline-none
+                     placeholder:text-sand/40 resize-none outline-none focus-visible:outline-none
                      min-h-[104px] sm:min-h-[132px] max-h-[168px] overflow-y-hidden"
           aria-label="Message to place in your bottle"
         />
@@ -117,7 +118,7 @@ export default function MessageEditor({
             disabled={spark.loading}
             aria-label={spark.question ? 'Another spark' : 'Need a spark?'}
             title={spark.note ?? (spark.question ? 'Another spark' : 'Need a spark?')}
-            className="absolute bottom-2 right-2 flex items-center gap-1 rounded-xl px-2 py-1.5 font-ui text-[11px] text-sand/35 hover:text-seafoam transition-colors disabled:opacity-40"
+            className="press absolute bottom-2 right-2 flex items-center gap-1 rounded-xl px-2 py-1.5 font-ui text-[11px] text-sand/40 hover:text-seafoam transition-[color,transform] disabled:opacity-40"
           >
             <Sparkles size={13} strokeWidth={1.5} className={spark.loading ? 'animate-pulse' : undefined} />
             {spark.question ? 'Another' : 'Need a spark?'}
@@ -129,7 +130,7 @@ export default function MessageEditor({
 
       {/* Footer row */}
       <div className="flex items-center justify-between px-1">
-        <span className="font-ui text-xs text-sand/30">
+        <span className="font-ui text-xs text-sand/45">
           Anonymous. Be kind. Be honest.
         </span>
         <span
@@ -139,7 +140,7 @@ export default function MessageEditor({
               ? 'text-coral'
               : isNearLimit
               ? 'text-sand/50'
-              : 'text-sand/25'
+              : 'text-sand/40'
           )}
         >
           {remaining}
@@ -155,18 +156,25 @@ export default function MessageEditor({
             initial={{ opacity: 0, y: 6, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, y: 6, height: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="overflow-hidden"
+            transition={spring}
+            // The clip animates height; the padding gives the button's glow
+            // room inside it so it isn't cut into a hard-edged box.
+            className="-mx-4 -mb-4 overflow-hidden px-4 pb-4"
           >
             <motion.button
               onClick={onReady}
               whileTap={{ scale: 0.97 }}
-              className="w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
-                         text-base tracking-wide transition-all duration-150
+              transition={springPress}
+              className="w-full py-4 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold
+                         text-base tracking-wide transition-[filter] duration-150
                          hover:brightness-110"
             >
               Seal &amp; Throw
             </motion.button>
+            {/* The hand path: the bottle top-right is throwable once there's a note. */}
+            <p className="pt-2 text-center font-ui text-caption text-sand/35">
+              or flick the bottle into the sea
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -215,8 +223,8 @@ function DressingRow() {
 
   const chip = (on: boolean) =>
     cn(
-      'shrink-0 h-8 rounded-full border px-3 font-ui text-xs transition-colors whitespace-nowrap',
-      on ? 'border-seafoam/50 bg-seafoam/10 text-sand/90' : 'border-white/10 text-sand/45 hover:text-sand/70',
+      'press shrink-0 h-8 rounded-full border px-3 font-ui text-xs transition-[color,background-color,border-color,transform] whitespace-nowrap',
+      on ? 'border-seafoam/50 bg-seafoam/15 text-sand/90' : 'border-white/10 bg-ocean-deep/40 text-sand/60 hover:text-sand/80',
     )
 
   return (

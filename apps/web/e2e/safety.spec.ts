@@ -25,7 +25,9 @@ async function latestBottle(senderId: string) {
 test('a held bottle comes back to rewrite, and the rewrite sails', async ({ page }) => {
   const u = await makeUser('held', { timezone: 'UTC' })
   await signIn(page, u.email)
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
+  await page.goto('/sea')
+  await expectPath(page, '/sea')
 
   const words = 'come find me, my number is in my bio'
   await page.getByLabel('Message to place in your bottle').fill(words)
@@ -60,6 +62,7 @@ test('a held bottle comes back to rewrite, and the rewrite sails', async ({ page
 test('a bottle in crisis still sails, and its sender is offered help', async ({ page }) => {
   const u = await makeUser('care', { timezone: 'Asia/Kolkata' })
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByLabel('Message to place in your bottle').fill('some nights I just want to die')
   await page.getByRole('button', { name: /Seal & Throw/ }).click()
 

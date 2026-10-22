@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAppRoute as isAppPath } from '@/lib/routes'
 
 const hasAuthCookie = (request: NextRequest) =>
   request.cookies
@@ -11,7 +12,7 @@ const hasAuthCookie = (request: NextRequest) =>
 const safeNext = (next: string | null) =>
   next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\')
     ? next
-    : '/home'
+    : '/feed'
 
 export async function middleware(request: NextRequest) {
   // API routes: cheap cookie-presence guard only — no Supabase Auth call.
@@ -76,10 +77,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getClaims()
   const user = claimsData?.claims ?? null
 
-  const isAppRoute = request.nextUrl.pathname.startsWith('/home') ||
-    request.nextUrl.pathname.startsWith('/inbox') ||
-    request.nextUrl.pathname.startsWith('/settings') ||
-    request.nextUrl.pathname.startsWith('/logbook')
+  const isAppRoute = isAppPath(request.nextUrl.pathname)
 
   const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
     request.nextUrl.pathname === '/sign-up'
@@ -124,10 +122,16 @@ export const config = {
      *   - /_next/          — Next.js internals
      *   - /favicon.ico
      */
-    '/home',
+    '/feed',
+    '/sea',
+    '/u/:path*',
+    '/c/:path*',
+    '/friends',
+    '/communities',
     '/inbox',
     '/settings',
-    '/home/:path*',
+    '/feed/:path*',
+    '/sea/:path*',
     '/inbox/:path*',
     '/settings/:path*',
     '/logbook',

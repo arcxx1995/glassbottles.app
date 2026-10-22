@@ -1,11 +1,11 @@
-// Opt-in sound + haptics for the three moments that deserve them: the throw
-// landing in the water, a received bottle uncorking, and "your bottle found
-// someone". Off by default; the setting lives in this browser only.
+// Opt-in sound + haptics for the moments that deserve them: the throw
+// landing in the water, a received bottle uncorking, "your bottle found
+// someone", and a light tick when a flick or sheet commits. Off by default; the setting lives in this browser only.
 //
 // Sounds are synthesized with WebAudio — no audio files to ship or cache.
 // navigator.vibrate is Android-only; iOS Safari ignores it silently.
 
-export type Feel = 'splash' | 'pop' | 'chime'
+export type Feel = 'splash' | 'pop' | 'chime' | 'tick'
 
 const KEY = 'gb-feel'
 
@@ -37,6 +37,7 @@ const VIBRATE: Record<Feel, number[]> = {
   splash: [18, 40, 12],
   pop: [10],
   chime: [8, 60, 8],
+  tick: [6],
 }
 
 export function feel(kind: Feel) {
@@ -68,10 +69,15 @@ export function feel(kind: Feel) {
     return
   }
 
-  // pop: one quick falling sine. chime: two soft bell partials.
-  const notes = kind === 'pop' ? [[520, 180, 0.09]] : [[880, 880, 0.9], [1320, 1320, 0.7]]
-  out.gain.setValueAtTime(kind === 'pop' ? 0.25 : 0.08, t)
-  out.gain.exponentialRampToValueAtTime(0.001, t + (kind === 'pop' ? 0.12 : 1.1))
+  // tick: a tiny high click. pop: one quick falling sine. chime: two soft bell partials.
+  const [notes, gain, tail]: [number[][], number, number] =
+    kind === 'tick'
+      ? [[[1600, 900, 0.025]], 0.06, 0.04]
+      : kind === 'pop'
+        ? [[[520, 180, 0.09]], 0.25, 0.12]
+        : [[[880, 880, 0.9], [1320, 1320, 0.7]], 0.08, 1.1]
+  out.gain.setValueAtTime(gain, t)
+  out.gain.exponentialRampToValueAtTime(0.001, t + tail)
   notes.forEach(([from, to, dur], i) => {
     const osc = ac.createOscillator()
     osc.type = 'sine'

@@ -19,10 +19,12 @@ test('a ripple reaches the sender live, once, and says nothing else', async ({ b
 
   const sender = await (await browser.newContext()).newPage()
   await signIn(sender, a.email)
+  await sender.goto('/sea')
   await expect(sender.getByText('Your bottle reached someone')).toHaveCount(0)
 
   const receiver = await (await browser.newContext()).newPage()
   await signIn(receiver, b.email)
+  await receiver.goto('/sea')
   await receiver.goto('/inbox')
   await receiver.getByRole('button', { name: 'This reached me' }).click()
   await expect(receiver.getByText('They’ll know')).toBeVisible()
@@ -51,6 +53,7 @@ test('after a throw, push is offered once', async ({ page, browserName }) => {
   })
   const u = await makeUser('nudge')
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByLabel('Message to place in your bottle').fill('tell me when it lands')
   await page.getByRole('button', { name: /Seal & Throw/ }).click()
   await expect(page.getByText('Want to know when it’s found?')).toBeVisible()

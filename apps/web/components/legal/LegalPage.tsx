@@ -13,7 +13,7 @@ export default function LegalPage({
   children: React.ReactNode
 }) {
   return (
-    <main className="relative z-10 min-h-screen px-6 py-16">
+    <main className="relative z-10 min-h-[100svh] px-6 py-16">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/"

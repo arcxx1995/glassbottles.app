@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'motion/react'
-import { Lock, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Lock } from 'lucide-react'
+import Sheet from '@/components/ui/Sheet'
 import { cn } from '@/lib/utils'
 import { BottleSVG } from './ThrowAnimation'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
@@ -64,46 +64,8 @@ export default function AtelierSheet({
   const keeperLocked = tried.filter((p) => p.tier === 'keeper')
   const coinLocked = tried.filter((p) => p.tier === 'coin')
 
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <motion.div
-        className="absolute inset-0 bg-ocean-deep/70 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      />
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Dress your bottle"
-        className="relative w-full max-w-md max-h-[88dvh] overflow-y-auto no-scrollbar rounded-t-3xl sm:rounded-3xl bg-ocean-mid border border-white/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl"
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl text-sand">Dress your bottle</h2>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="p-2 -mr-2 rounded-xl text-sand/40 hover:text-sand/80 transition-colors"
-          >
-            <X size={18} strokeWidth={1.5} />
-          </button>
-        </div>
-
+    <Sheet title="Dress your bottle" onClose={onClose}>
         {/* Preview: the bottle, and the note as the stranger will read it */}
         <div className="flex items-center gap-4 mb-5">
           <div className="shrink-0">
@@ -121,7 +83,7 @@ export default function AtelierSheet({
 
         {PIECE_KINDS.map((kind) => (
           <section key={kind} className="mb-4">
-            <p className="font-ui text-[10px] text-sand/30 uppercase tracking-widest mb-2">
+            <p className="font-ui text-[10px] text-sand/45 uppercase tracking-widest mb-2">
               {KIND_LABEL[kind]}
               <span className="normal-case tracking-normal text-sand/50">
                 {' · '}
@@ -143,7 +105,7 @@ export default function AtelierSheet({
                       aria-label={`${p.name}${usable ? '' : p.tier === 'keeper' ? ' (Keeper)' : ` (${p.coin_cost} coins)`}`}
                       title={p.name}
                       className={cn(
-                        'relative h-10 w-10 rounded-full border-2 transition-all active:scale-95',
+                        'press press-sm relative h-10 w-10 rounded-full border-2 transition-[border-color,transform]',
                         selected ? 'border-seafoam' : 'border-white/10 hover:border-white/30',
                       )}
                     >
@@ -183,7 +145,7 @@ export default function AtelierSheet({
                       .unwrap()
                       .catch(() => setUnlockError('Couldn’t unlock it. Please try again.'))
                   }}
-                  className="px-4 py-2 rounded-xl bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-colors disabled:opacity-40"
+                  className="press px-4 py-2 rounded-full bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-[background-color,transform] disabled:opacity-40"
                 >
                   Unlock {p.name} · {p.coin_cost} ✦
                 </button>
@@ -218,13 +180,12 @@ export default function AtelierSheet({
               onSave(allowedStyle(draft, pieces, isKeeper, unlocked))
               onClose()
             }}
-            className="mt-2 w-full py-3.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.98] hover:brightness-110"
+            className="press mt-2 w-full py-3.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110"
           >
             Done
           </button>
         )}
-      </motion.div>
-    </div>
+    </Sheet>
   )
 }
 

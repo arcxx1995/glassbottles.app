@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAppDispatch, purgeSessionState } from '@/store'
 import { setUser, clearUser, setLoading } from '@/store/authSlice'
 import { sameTimeZone } from '@/lib/timezone'
+import { isAppRoute } from '@/lib/routes'
 import type { Profile } from '@/types'
 
 async function fetchProfile(): Promise<Profile | null> {
@@ -135,14 +136,14 @@ export default function AuthProvider({
         // expired, account deleted elsewhere): without this the page sits on
         // its skeleton forever. Explicit sign-outs navigate themselves.
         const path = window.location.pathname
-        if (/^\/(home|inbox|settings)(\/|$)/.test(path)) {
+        if (isAppRoute(path)) {
           router.replace(`/sign-in?next=${encodeURIComponent(path)}`)
         }
         return
       }
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Fresh sign-in: seed user.id instantly so /home unblocks its status
+        // Fresh sign-in: seed user.id instantly so /sea unblocks its status
         // query and shows the skeleton (not a flash of the idle screen) while
         // the profile loads. Skip on TOKEN_REFRESHED — the full profile is
         // already in Redux and re-seeding would briefly reset its timezone.

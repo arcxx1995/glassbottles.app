@@ -32,12 +32,12 @@ const WASHED_ASHORE: Payload = {
 const FOUND: Payload = {
   title: 'Your bottle was found',
   body: 'Somewhere, a stranger is reading your words.',
-  url: '/home',
+  url: '/sea',
 }
 const RIPPLE: Payload = {
   title: 'Your bottle reached someone',
   body: 'A stranger let you know your words landed.',
-  url: '/home',
+  url: '/sea',
 }
 
 const FROM_THE_PAST: Payload = {

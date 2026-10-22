@@ -26,6 +26,7 @@ for (const [label, membership, expected] of [
       )
     }
     await signIn(page, u.email)
+    await page.goto('/sea')
     await expect(page.getByLabel('Message to place in your bottle')).toBeVisible()
     const light = page.locator('[data-lighthouse]')
     if (expected) await expect(light).toHaveAttribute('data-lighthouse', expected)

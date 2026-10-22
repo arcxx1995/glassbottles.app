@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import Link from 'next/link'
+import { TransitionLink } from '@/components/ui/TransitionLink'
+import { spring, springFlick } from '@/components/ui/springs'
 import { BookOpen, Mail } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -62,6 +63,7 @@ export default function InboxPage() {
   const isLoading = isQueryLoading || (!user?.id && !data)
   const failed = isError && !data
 
+  const firstUnreadId = shown?.find((b) => !b.is_read)?.id
   const [notice, setNotice] = useState<string | null>(null)
   useEffect(() => {
     if (!notice) return
@@ -74,11 +76,12 @@ export default function InboxPage() {
       {/* Header — fixed; only the list region below scrolls */}
       <div className="px-5 mb-6">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-2xl text-sand">Inbox</h1>
+          <h1 className="font-display text-title text-sand">Inbox</h1>
           {unreadCount > 0 && (
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
+              transition={springFlick}
               className="w-5 h-5 rounded-full bg-coral text-ocean-deep font-ui
                          font-semibold text-[10px] flex items-center justify-center"
             >
@@ -86,13 +89,13 @@ export default function InboxPage() {
             </motion.span>
           )}
           {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
-            <Link
+            <TransitionLink
               href="/logbook"
-              className="ml-auto flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-ui text-xs text-sand/45 hover:text-sand/80 transition-colors"
+              className="press ml-auto flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-ui text-xs text-sand/50 hover:text-sand/85 transition-[color,transform]"
             >
               <BookOpen size={14} strokeWidth={1.5} />
               Logbook
-            </Link>
+            </TransitionLink>
           )}
         </div>
         <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
@@ -112,7 +115,7 @@ export default function InboxPage() {
                 type="button"
                 aria-pressed={t.on}
                 onClick={() => setOnlyKept(t.set)}
-                className={`h-8 rounded-full border px-3 font-ui text-xs transition-colors ${
+                className={`press h-8 rounded-full border px-3 font-ui text-xs transition-[color,background-color,border-color,transform] ${
                   t.on ? 'border-seafoam/50 bg-seafoam/10 text-sand/90' : 'border-white/10 text-sand/45 hover:text-sand/70'
                 }`}
               >
@@ -124,14 +127,14 @@ export default function InboxPage() {
       </div>
 
       {/* Scroll region — page frame + nav stay put, content scrolls inside */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-4">
+      <div className="edge-fade-b flex min-h-0 flex-1 flex-col overflow-y-auto pb-12">
       {/* Loading skeletons */}
       {isLoading && (
         <div className="flex flex-col gap-4 px-0">
           {[1, 0.7, 0.4].map((opacity, i) => (
             <div
               key={i}
-              className="mx-4 h-40 rounded-3xl bg-ocean-mid animate-pulse"
+              className="mx-4 h-40 rounded-3xl skeleton"
               style={{ opacity }}
             />
           ))}
@@ -146,7 +149,7 @@ export default function InboxPage() {
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="px-5 py-2 rounded-2xl bg-seafoam/10 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/20 transition-colors disabled:opacity-50"
+            className="press px-5 py-2 rounded-full bg-seafoam/10 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/20 transition-[background-color,transform] disabled:opacity-50"
           >
             {isFetching ? 'Trying…' : 'Try again'}
           </button>
@@ -168,14 +171,14 @@ export default function InboxPage() {
           className="flex flex-col items-center justify-center flex-1 gap-5 text-center px-8 pt-16"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={spring}
         >
-          <div className="w-16 h-16 rounded-full bg-ocean-mid flex items-center justify-center">
-            <Mail size={26} className="text-sand/20" strokeWidth={1.5} />
+          <div className="w-16 h-16 rounded-full glass-fill flex items-center justify-center">
+            <Mail size={26} className="text-sand/35" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col gap-1">
             <p className="font-ui text-sand/40 text-sm">No bottles yet</p>
-            <p className="font-ui text-xs text-sand/25 leading-relaxed">
+            <p className="font-ui text-xs text-sand/40 leading-relaxed">
               Throw one first — the ocean returns the favour.
             </p>
           </div>
@@ -190,15 +193,12 @@ export default function InboxPage() {
               key={bottle.id}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{
-                // Cap the stagger so deep lists don't leave late cards waiting.
-                delay: Math.min(i, 8) * 0.06,
-                duration: 0.35,
-                ease: [0.25, 0.46, 0.45, 0.94],
-              }}
+              // Cap the stagger so deep lists don't leave late cards waiting.
+              transition={{ ...spring, delay: Math.min(i, 6) * 0.04 }}
             >
               <ReceivedBottle
                 bottle={bottle}
+                arriving={bottle.id === firstUnreadId}
                 onReported={(ok) =>
                   setNotice(ok ? 'Reported. That bottle is gone from your inbox.' : 'Couldn’t report that bottle. Try again.')
                 }
@@ -215,9 +215,10 @@ export default function InboxPage() {
           {notice && (
             <motion.p
               key={notice}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.96 }}
+              transition={spring}
               className="rounded-2xl bg-ocean-deep/95 border border-white/10 px-4 py-2.5 font-ui text-xs text-sand/80 shadow-card"
             >
               {notice}

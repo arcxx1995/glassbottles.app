@@ -12,6 +12,7 @@ import {
   setVibe,
   selectSendStatus,
   selectDraftStyle,
+  selectMessage,
 } from '@/store/bottleSlice'
 import { selectUser } from '@/store/authSlice'
 import {
@@ -23,7 +24,7 @@ import {
   useGetCoinsQuery,
 } from '@/store/api/bottleApi'
 import DailyTimer from '@/components/shared/DailyTimer'
-import MessageEditor from '@/components/bottle/MessageEditor'
+import MessageEditor, { MAX_CHARS } from '@/components/bottle/MessageEditor'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
@@ -36,11 +37,14 @@ import { looksLikeCrisis } from '@/lib/care'
 import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
 import { feel } from '@/lib/feel'
+import { spring, springFlick } from '@/components/ui/springs'
 import { CURRENT_INFO, allowedStyle, resolveLook } from '@/lib/dressing'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
   const sendStatus = useAppSelector(selectSendStatus)
+  const draftMessage = useAppSelector(selectMessage)
+  const canThrow = draftMessage.trim().length > 0 && draftMessage.length <= MAX_CHARS
   // The draft is read from the store at throw time, not subscribed to:
   // subscribing re-rendered this whole page — sea included — per keystroke.
   const store = useStore<RootState>()
@@ -235,13 +239,13 @@ export default function HomePage() {
   // Show skeleton while we wait for server state so we don't flash
   // "Your bottle awaits" to a user who already sent today.
   //
-  // /home is middleware-protected (redirects unauthenticated → /sign-in), so a
+  // /sea is middleware-protected (redirects unauthenticated → /sign-in), so a
   // null user here never means "guest" — it means auth hasn't seeded client-side
   // yet (AuthProvider dispatches setUser a frame or two after first paint). Both
   // the pre-seed frame AND the post-seed status fetch must hold the skeleton, or
   // the idle "Your bottle awaits" compose flashes for a user who already sent —
   // the post-login phantom. authLoading alone doesn't cover this: the guest
-  // bootstrap on /sign-in already flipped it false before we reach /home.
+  // bootstrap on /sign-in already flipped it false before we reach /sea.
   const isInitializing = !user?.id || (isStatusLoading && !todayStatus)
   // A failed first load used to fall through to the idle compose screen —
   // "Your bottle awaits" for someone who may have thrown already. Without
@@ -283,6 +287,7 @@ export default function HomePage() {
           dropping={sendStatus === 'throwing'}
           landingDayKey={todayKey}
           onDropComplete={handleDropComplete}
+          onFlick={canThrow && sendStatus === 'idle' ? () => void handleThrow() : undefined}
           look={throwLook}
         />
       )}
@@ -319,6 +324,7 @@ export default function HomePage() {
             <motion.span
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
+              transition={springFlick}
               className="font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full"
             >
               Sent today ✓
@@ -352,7 +358,7 @@ export default function HomePage() {
               type="button"
               onClick={() => void refetchStatus()}
               disabled={isStatusFetching}
-              className="px-6 py-2.5 rounded-2xl bg-seafoam/10 text-seafoam font-ui text-sm font-medium hover:bg-seafoam/20 transition-colors disabled:opacity-50"
+              className="press px-6 py-2.5 rounded-full bg-seafoam/10 text-seafoam font-ui text-sm font-medium hover:bg-seafoam/20 transition-[background-color,transform] disabled:opacity-50"
             >
               {isStatusFetching ? 'Trying…' : 'Try again'}
             </button>
@@ -381,13 +387,13 @@ export default function HomePage() {
                   // compose layer unmounts INSTANTLY, revealing the identical
                   // drift bottle sitting on the exact same pixel beneath it.
                   exit={{ opacity: 1, transition: { duration: 0 } }}
-                  transition={{ duration: 0.45, ease: 'easeInOut' }}
+                  transition={spring}
                 >
                   {/* Heading — fades out the instant the throw begins. */}
                   <motion.div
                     className="w-full flex flex-col items-center"
-                    animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    animate={{ opacity: sendStatus === 'throwing' ? 0 : 1, y: sendStatus === 'throwing' ? -8 : 0 }}
+                    transition={spring}
                   >
                     {/* A held bottle's notice takes the heading's place — on a
                         phone both don't fit above the compose box. */}
@@ -417,9 +423,10 @@ export default function HomePage() {
                       On throw the box fades out and the bottle vanishes; the
                       thrown bottle re-appears at a random spot on the sea. */}
                   <div className="relative mt-5 w-[94%] max-w-[420px] sm:mt-6">
+                    {/* Sinks a little as it fades: the note goes down into the sea. */}
                     <motion.div
-                      animate={{ opacity: sendStatus === 'throwing' ? 0 : 1 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      animate={{ opacity: sendStatus === 'throwing' ? 0 : 1, y: sendStatus === 'throwing' ? 12 : 0 }}
+                      transition={spring}
                     >
                       <MessageEditor onReady={handleThrow} />
                     </motion.div>

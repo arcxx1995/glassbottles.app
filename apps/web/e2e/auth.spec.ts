@@ -14,17 +14,17 @@ test('deep link survives sign-in', async ({ page }) => {
 test('signed-in visitor skips landing and auth pages', async ({ page }) => {
   const u = await makeUser('skiplanding')
   await signIn(page, u.email)
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
   await page.goto('/')
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
   await page.goto('/sign-in')
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
 })
 
 test('open redirect via next is refused', async ({ page }) => {
   const u = await makeUser('openredirect')
   await signIn(page, u.email, '/sign-in?next=//evil.example.com')
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
 })
 
 test('wrong password shows an error, short legacy-length password is still submittable', async ({ page }) => {
@@ -49,13 +49,13 @@ test('dead recovery link lands on the reset page, not sign-in', async ({ page })
 })
 
 // A session that dies under an open screen (refresh token revoked elsewhere,
-// account deleted on another device) must land on sign-in, not leave /home on
+// account deleted on another device) must land on sign-in, not leave /feed on
 // its skeleton forever. Revoke every session, make the browser's copy look
 // expired, and let the client's own refresh attempt fail.
 test('a session revoked mid-use sends the user to sign-in', async ({ page, context }) => {
   const u = await makeUser('revoked')
   await signIn(page, u.email)
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
 
   // @supabase/ssr stores the session as "base64-<json>", possibly split
   // across sb-…-auth-token.0, .1, … cookies.
@@ -83,5 +83,5 @@ test('a session revoked mid-use sends the user to sign-in', async ({ page, conte
   // supabase-js re-checks the session when the tab becomes visible; its 30s
   // ticker would get there too, just slower.
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
-  await expect(page).toHaveURL(/\/sign-in\?next=%2Fhome$/, { timeout: 40_000 })
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Ffeed$/, { timeout: 40_000 })
 })

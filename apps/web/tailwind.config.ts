@@ -2,9 +2,13 @@ import type { Config } from 'tailwindcss'
 
 // ─── glassbottles design tokens (canonical) ──────────────────────────────────
 //
-// Motion tokens — Framer Motion spring (use directly in transition prop):
-//   reveal-bottle:  { type: 'spring', stiffness: 80, damping: 12 }
-//   receive-spring: { type: 'spring', stiffness: 320, damping: 28 }
+// Motion tokens — springs live in components/ui/springs.ts (spring, springMove,
+//   springSheet, springFlick, springPress, easeOut, project, rubberband).
+//   Never hand-tune a spring or copy a bezier in a component.
+//
+// Type scale — size-specific tracking and leading (text-display … text-eyebrow):
+//   large text tightens, small text opens up. Sizes in rem so Dynamic Type /
+//   browser zoom scales layout with it.
 //
 // CSS keyframe tokens (use via animation utilities below):
 //   throw-arc:      TetheredBottle wind-up + arc + splash, 1.15s (motion keyframes)
@@ -23,6 +27,8 @@ import type { Config } from 'tailwindcss'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const config: Config = {
+  // hover: styles only on devices that can hover — no sticky hover after a tap on iOS.
+  future: { hoverOnlyWhenSupported: true },
   darkMode: ['class'],
   content: [
     './app/**/*.{ts,tsx}',
@@ -56,6 +62,14 @@ const config: Config = {
         ui:      ['var(--font-ui)', 'DM Sans', 'system-ui', 'sans-serif'],
         // mono: timestamps, character counts, metadata, reference codes
         mono:    ['var(--font-mono)', 'JetBrains Mono', 'monospace'],
+      },
+      fontSize: {
+        display:  ['clamp(2.25rem, 6vw, 3.5rem)', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
+        title:    ['1.75rem',   { lineHeight: '1.15', letterSpacing: '-0.015em' }],
+        headline: ['1.25rem',   { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+        body:     ['0.9375rem', { lineHeight: '1.55', letterSpacing: '0' }],
+        caption:  ['0.75rem',   { lineHeight: '1.4',  letterSpacing: '0.01em' }],
+        eyebrow:  ['0.625rem',  { lineHeight: '1.2',  letterSpacing: '0.14em' }],
       },
       borderRadius: {
         // Consistent radius vocabulary

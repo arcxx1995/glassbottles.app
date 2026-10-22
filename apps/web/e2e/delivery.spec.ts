@@ -16,7 +16,9 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
 
   // Sender throws.
   await signIn(sender, a.email)
-  await expectPath(sender, '/home')
+  await expectPath(sender, '/feed')
+  await sender.goto('/sea')
+  await expectPath(sender, '/sea')
   await sender.getByLabel('Message to place in your bottle').fill(message)
   await sender.getByRole('button', { name: /Seal & Throw/ }).click()
   await expect(sender.getByText('Sent today ✓')).toBeVisible()
@@ -31,7 +33,9 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
 
   // Receiver is on the app (realtime socket open) when the cron runs.
   await signIn(receiver, b.email)
-  await expectPath(receiver, '/home')
+  await expectPath(receiver, '/feed')
+  await receiver.goto('/sea')
+  await expectPath(receiver, '/sea')
   await isolateReceiver(b.id)
   expect(await deliverNow(a.id)).toBeGreaterThanOrEqual(1)
 
@@ -53,7 +57,7 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
     })
     .toBe(true)
   // Banner gone once read.
-  await receiver.goto('/home')
+  await receiver.goto('/sea')
   await expect(receiver.getByText('A bottle found you')).toHaveCount(0)
 
   // Sender side: delivered banner (realtime or the status refetch).
@@ -81,7 +85,7 @@ test('reporting asks first, then removes the bottle for good', async ({ page }) 
   })
 
   await signIn(page, b.email)
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
   await page.goto('/inbox')
   await expect(page.getByText(unkind)).toBeVisible()
 
@@ -112,7 +116,7 @@ test('account deletion keeps a stranger’s delivered bottle', async ({ page }) 
   })
 
   await signIn(page, a.email)
-  await expectPath(page, '/home')
+  await expectPath(page, '/feed')
   await page.goto('/settings')
   await page.getByRole('button', { name: /Delete account/ }).click()
   await page.getByPlaceholder('DELETE').fill('DELETE')
@@ -139,6 +143,7 @@ test('tides count consecutive days quietly', async ({ page }) => {
     })),
   )
   await signIn(page, u.email)
+  await page.goto('/sea')
   await expect(page.getByText('2 tides')).toBeVisible()
   await page.getByLabel('Message to place in your bottle').fill('third day in a row')
   await page.getByRole('button', { name: /Seal & Throw/ }).click()

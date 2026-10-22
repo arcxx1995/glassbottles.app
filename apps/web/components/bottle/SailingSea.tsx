@@ -10,6 +10,7 @@ import {
 import { BottleSVG } from './ThrowAnimation'
 import { useGetAtelierQuery } from '@/store/api/bottleApi'
 import { resolveLook, type BottleStyle, type SeaTheme } from '@/lib/dressing'
+import { easeOut } from '@/components/ui/springs'
 
 export interface SailingBottleItem {
   id: string
@@ -28,10 +29,12 @@ function hashId(id: string): number {
   return Math.abs(h)
 }
 
-/** Deterministic 0..1 from an integer seed. */
+/** Deterministic 0..1 from an integer seed. Rounded so server and browser
+ *  agree to the digit (Math.sin's tail differs between engines → hydration
+ *  mismatches on inline positions). */
 function rand(seed: number): number {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
-  return x - Math.floor(x)
+  return Math.round((x - Math.floor(x)) * 1e4) / 1e4
 }
 
 /**
@@ -435,7 +438,7 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
           scale: layout.scale * 0.4,
           transition: { duration: 0.7, ease: 'easeIn' },
         }}
-        transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ duration: 0.55, ease: easeOut }}
       >
       {/* Date pill hovering above */}
       <span className="font-mono text-[9px] text-seafoam/80 bg-ocean-deep/80 border border-seafoam/15 px-1.5 py-0.5 rounded-full whitespace-nowrap mb-1">

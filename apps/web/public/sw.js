@@ -15,14 +15,14 @@ self.addEventListener('push', (event) => {
       icon: '/icon/192',
       badge: '/icon/192',
       tag: data.url || 'glassbottles', // repeats collapse into one
-      data: { url: data.url || '/home' },
+      data: { url: data.url || '/feed' },
     }),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const target = (event.notification.data && event.notification.data.url) || '/home'
+  const target = (event.notification.data && event.notification.data.url) || '/feed'
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((tabs) => {
       for (const tab of tabs) {

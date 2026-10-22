@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'motion/react'
+import { spring } from '@/components/ui/springs'
 import { useAppDispatch } from '@/store'
 import { setMessage } from '@/store/bottleSlice'
 import { useAckHeldBottleMutation, type HeldBottle } from '@/store/api/bottleApi'
@@ -29,9 +30,10 @@ export default function HeldNotice({
   return (
     <motion.div
       role="status"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-[420px] rounded-2xl border border-white/10 bg-ocean-mid/90 backdrop-blur-sm px-4 py-3 text-left"
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={spring}
+      className="w-full max-w-[420px] rounded-3xl glass-strong px-4 py-3 text-left"
     >
       <p className="font-display text-sm text-sand">Your bottle stayed ashore</p>
       <p className="font-ui text-[11px] text-sand/55 leading-snug mt-0.5">
@@ -46,7 +48,7 @@ export default function HeldNotice({
               dispatch(setMessage(held.message))
               void ack(held.id)
             }}
-            className="px-3 py-1.5 rounded-xl bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-colors"
+            className="press px-3 py-1.5 rounded-full bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-[color,background-color,transform]"
           >
             Rewrite it
           </button>
@@ -54,7 +56,7 @@ export default function HeldNotice({
         <button
           type="button"
           onClick={() => void ack(held.id)}
-          className="px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-colors"
+          className="press px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-[color,background-color,transform]"
         >
           {canRethrow ? 'Let it go' : 'Okay'}
         </button>

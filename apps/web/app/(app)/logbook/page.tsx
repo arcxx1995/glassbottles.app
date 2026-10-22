@@ -60,7 +60,7 @@ export default function LogbookPage() {
       <div className="mx-auto w-full max-w-xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <h1 className="font-display text-2xl text-sand print:text-black">Logbook</h1>
+            <h1 className="font-display text-title text-sand print:text-black">Logbook</h1>
             <p className="font-ui text-sm text-sand/40 mt-1 print:text-black/60">
               Every bottle you threw, and every one that found you.
             </p>
@@ -69,7 +69,7 @@ export default function LogbookPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="print:hidden shrink-0 flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 font-ui text-xs text-sand/70 hover:text-sand hover:border-white/20 transition-colors"
+              className="press print:hidden shrink-0 flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 font-ui text-xs text-sand/70 hover:text-sand hover:border-white/20 transition-[color,border-color,transform]"
             >
               <Printer size={14} strokeWidth={1.5} />
               Save as PDF
@@ -77,7 +77,7 @@ export default function LogbookPage() {
           )}
         </div>
 
-        {isLoading && <div className="h-40 rounded-3xl bg-ocean-mid animate-pulse" />}
+        {isLoading && <div className="h-40 rounded-3xl skeleton" />}
 
         {error === 'failed' && (
           <p className="font-ui text-sm text-sand/50" role="alert">
@@ -86,7 +86,7 @@ export default function LogbookPage() {
         )}
 
         {locked && (
-          <div className="rounded-3xl border border-seafoam/20 bg-ocean-mid p-5 flex flex-col gap-3">
+          <div className="rounded-3xl glass-tint p-5 flex flex-col gap-3">
             <p className="font-display text-lg text-sand">A keepsake of your sea</p>
             <p className="font-ui text-sm text-sand/55 leading-relaxed">
               The Logbook gathers every bottle you&rsquo;ve thrown and every one that found you,

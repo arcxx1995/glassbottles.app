@@ -19,6 +19,7 @@ import {
 } from '@/components/auth/authShared'
 import WaveBackground from '@/components/shared/WaveBackground'
 import NightSky from '@/components/shared/NightSky'
+import { spring } from '@/components/ui/springs'
 
 type Phase = 'checking' | 'ready' | 'no-session' | 'done'
 
@@ -75,13 +76,13 @@ export default function ResetPasswordPage() {
     <>
       <WaveBackground />
       <NightSky />
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[100svh] px-6">
       <div className={AUTH_BOX_CLASS}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={spring}
         >
           <h1 className="font-display text-2xl text-sand mb-2">Set a new password</h1>
           <p className="font-ui text-sm text-sand/45 max-w-[260px] mx-auto leading-relaxed">
@@ -110,7 +111,7 @@ export default function ResetPasswordPage() {
               key="no-session"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={spring}
               className={`${AUTH_CARD_CLASS} text-center`}
             >
               <p className="font-display text-xl text-sand mb-2">Link expired</p>
@@ -131,7 +132,7 @@ export default function ResetPasswordPage() {
               key="done"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={spring}
               className={`${AUTH_CARD_CLASS} flex flex-col items-center gap-4 text-center`}
             >
               <div className="w-14 h-14 rounded-full bg-seafoam/10 flex items-center justify-center">
@@ -145,7 +146,7 @@ export default function ResetPasswordPage() {
                 type="button"
                 onClick={() => {
                   router.refresh()
-                  router.push('/home')
+                  router.push('/feed')
                 }}
                 className={`${AUTH_PRIMARY_BTN_CLASS} w-full`}
               >
@@ -161,7 +162,7 @@ export default function ResetPasswordPage() {
               onSubmit={handleSubmit}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={spring}
               className="flex flex-col gap-3"
               noValidate
             >
@@ -211,7 +212,7 @@ export default function ResetPasswordPage() {
         </AnimatePresence>
 
         {phase !== 'done' && (
-          <p className="font-ui text-xs text-sand/25 text-center">
+          <p className="font-ui text-xs text-sand/40 text-center">
             <Link href="/sign-in" className="text-seafoam hover:underline">
               Back to sign in
             </Link>

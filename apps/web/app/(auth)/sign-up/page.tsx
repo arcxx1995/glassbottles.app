@@ -21,6 +21,7 @@ import {
   AUTH_PRIMARY_BTN_CLASS,
   AUTH_CARD_CLASS,
 } from '@/components/auth/authShared'
+import { spring } from '@/components/ui/springs'
 
 const RESEND_COOLDOWN = 60 // seconds — mirrors server-side throttle
 
@@ -85,13 +86,13 @@ export default function SignUpPage() {
 
     // emailRedirectTo routes the confirmation link's {{ .ConfirmationURL }}
     // through /auth/callback (where the PKCE code is exchanged for a session)
-    // and on to /home — the idle "Your bottle awaits" screen. Without it the
+    // and on to /feed — the idle "Your bottle awaits" screen. Without it the
     // link fell back to the project Site URL (root), so confirming dropped the
     // user on the landing page with no session, never on the app.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/home` },
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/feed` },
     })
 
     if (error) {
@@ -153,7 +154,7 @@ export default function SignUpPage() {
     <>
       <WaveBackground />
       <NightSky />
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[100svh] px-6">
       <Link
         href="/"
         className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] left-6 inline-flex items-center gap-1.5 font-ui text-sm
@@ -170,7 +171,7 @@ export default function SignUpPage() {
           className="text-center"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={spring}
         >
           <h1 className="font-display text-2xl text-sand">glassbottles</h1>
         </motion.div>
@@ -181,7 +182,7 @@ export default function SignUpPage() {
               key="sent"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={spring}
               className={`${AUTH_CARD_CLASS} flex flex-col items-center gap-4 text-center`}
             >
               <div className="w-14 h-14 rounded-full bg-seafoam/10 flex items-center justify-center">
@@ -200,7 +201,7 @@ export default function SignUpPage() {
                 type="button"
                 onClick={() => void handleResend()}
                 disabled={cooldown > 0}
-                className="font-ui text-sm text-seafoam hover:underline disabled:text-sand/25 disabled:no-underline"
+                className="font-ui text-sm text-seafoam hover:underline disabled:text-sand/40 disabled:no-underline"
               >
                 {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
               </button>
@@ -211,7 +212,7 @@ export default function SignUpPage() {
               key="form"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={spring}
               className="flex flex-col gap-4"
             >
               <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
@@ -301,7 +302,7 @@ export default function SignUpPage() {
           )}
         </AnimatePresence>
 
-        <p className="font-ui text-xs text-sand/25 text-center">
+        <p className="font-ui text-xs text-sand/40 text-center">
           Already have an account?{' '}
           <Link href="/sign-in" className="text-seafoam hover:underline">
             Sign in

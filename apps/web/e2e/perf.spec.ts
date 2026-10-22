@@ -46,6 +46,7 @@ test('scene cost', async ({ page }) => {
 
   const u = await makeUser('perf')
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByLabel('Message to place in your bottle').waitFor()
   await sample(page, 'home idle')
   await sample(page, 'home typing', async () => {

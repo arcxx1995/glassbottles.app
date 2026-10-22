@@ -19,7 +19,8 @@ const BottleCanvas = dynamic(
 )
 
 // ── Constants ─────────────────────────────────────────────────────────────
-const EASE_OUT_QUART = [0.25, 1, 0.5, 1] as const
+// Marketing entrances: critically damped, a touch slower than in-app UI.
+const enter = { type: 'spring', bounce: 0, visualDuration: 0.6 } as const
 
 // Public Spotify playlist for the landing-page soundtrack. Paste only the ID
 // from the share link: https://open.spotify.com/playlist/<THIS_PART>?si=...
@@ -186,7 +187,7 @@ function Beat({
         visible: {
           opacity: 1,
           x: 0,
-          transition: { duration: 0.65, ease: EASE_OUT_QUART, delay: 0.05 },
+          transition: { ...enter, delay: 0.05 },
         },
       }
 
@@ -197,7 +198,7 @@ function Beat({
         visible: {
           opacity: 1,
           x: 0,
-          transition: { duration: 0.65, ease: EASE_OUT_QUART, delay: 0.18 },
+          transition: { ...enter, delay: 0.18 },
         },
       }
 
@@ -225,7 +226,7 @@ function Beat({
         variants={textVariants}
       >
         <h3
-          className="font-display text-2xl md:text-3xl text-sand mb-3"
+          className="font-display text-2xl md:text-3xl tracking-[-0.015em] leading-[1.15] text-sand mb-3"
           style={{ textWrap: 'balance' } as React.CSSProperties}
         >
           {heading}
@@ -259,7 +260,7 @@ function Reveal({
       className={className}
       initial={{ opacity: 0, y: 18 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, ease: EASE_OUT_QUART, delay }}
+      transition={{ ...enter, delay }}
     >
       {children}
     </motion.div>
@@ -287,7 +288,7 @@ function QuoteWall() {
       <div className="max-w-lg mx-auto flex flex-col gap-8">
         <Reveal>
           <h2
-            className="font-display text-2xl md:text-3xl text-sand text-center"
+            className="font-display text-2xl md:text-3xl tracking-[-0.015em] leading-[1.15] text-sand text-center"
             style={{ textWrap: 'balance' } as React.CSSProperties}
           >
             What washes ashore
@@ -310,7 +311,7 @@ function QuoteWall() {
                 <p className="font-display text-lg text-sand/70 leading-[1.65] mb-6">
                   &ldquo;{quote.text}&rdquo;
                 </p>
-                <footer className="font-ui text-xs text-sand/30">{quote.footer}</footer>
+                <footer className="font-ui text-xs text-sand/45">{quote.footer}</footer>
               </blockquote>
             </div>
           </Reveal>
@@ -319,7 +320,7 @@ function QuoteWall() {
         {/* Honesty note: these are illustrations. Real bottles are private —
             only the sender and the finder ever see them. */}
         <Reveal delay={0.24}>
-          <p className="font-ui text-[13px] text-sand/30 text-center leading-relaxed">
+          <p className="font-ui text-[13px] text-sand/45 text-center leading-relaxed">
             The kind of thing that washes ashore. Real bottles stay between
             you and the stranger who finds them.
           </p>
@@ -351,7 +352,7 @@ function WhyAnonymous() {
       <div className="max-w-lg mx-auto flex flex-col gap-10">
         <Reveal>
           <h2
-            className="font-display text-2xl md:text-3xl text-sand text-center"
+            className="font-display text-2xl md:text-3xl tracking-[-0.015em] leading-[1.15] text-sand text-center"
             style={{ textWrap: 'balance' } as React.CSSProperties}
           >
             Anonymous, on purpose
@@ -378,7 +379,7 @@ function FAQ() {
     <section className="relative z-10 px-6 py-16" aria-label="Frequently asked questions">
       <div className="max-w-lg mx-auto">
         <Reveal>
-          <h2 className="font-display text-2xl md:text-3xl text-sand text-center mb-8">
+          <h2 className="font-display text-2xl md:text-3xl tracking-[-0.015em] leading-[1.15] text-sand text-center mb-8">
             Questions from the shore
           </h2>
         </Reveal>
@@ -427,10 +428,10 @@ function Soundtrack({ reduced }: { reduced: boolean }) {
         <motion.div
           ref={ref}
           className="overflow-hidden rounded-[1.75rem] border border-seafoam/20
-                     bg-ocean-mid/55 backdrop-blur-md shadow-[0_12px_48px_-16px_rgba(0,0,0,0.55)]"
+                     glass shadow-[0_12px_48px_-16px_rgba(0,0,0,0.55)]"
           initial={reduced ? {} : { opacity: 0, y: 18 }}
           animate={inView || reduced ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, ease: EASE_OUT_QUART }}
+          transition={{ ...enter }}
         >
           {/* Site chrome wrapped around Spotify's player — the bottle, the
               display font and the seafoam accent make it read as our own. */}
@@ -478,7 +479,7 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         className="max-w-md mx-auto flex flex-col items-center gap-6 mb-14"
         initial={reduced ? {} : { opacity: 0, y: 16 }}
         animate={inView || reduced ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.65, ease: EASE_OUT_QUART }}
+        transition={{ ...enter }}
       >
         <h2
           className="font-display text-[clamp(1.75rem,5vw,2.75rem)] text-sand leading-[1.1]"
@@ -491,8 +492,8 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         </p>
         <Link
           href="/sign-up"
-          className="px-10 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-base
-                     tracking-wide transition-all duration-150 active:scale-[0.97] hover:brightness-110
+          className="px-10 py-4 rounded-full shadow-seafoam press bg-seafoam text-ocean-deep font-ui font-semibold text-base
+                     tracking-wide transition-[filter,transform] duration-150  hover:brightness-110
                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seafoam
                      focus-visible:ring-offset-2 focus-visible:ring-offset-ocean-deep"
         >
@@ -526,7 +527,7 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
           aria-label="Star glassbottles on GitHub"
           className="inline-flex items-center gap-1.5 rounded-full border border-sand/15
                      bg-sand/[0.04] px-3 py-1.5 font-ui text-xs text-sand/45
-                     hover:border-seafoam/35 hover:text-seafoam transition-all duration-200"
+                     hover:border-seafoam/35 hover:text-seafoam transition-[color,border-color,transform] duration-200"
         >
           <Github size={13} strokeWidth={1.6} aria-hidden="true" />
           <Star size={11} strokeWidth={1.8} aria-hidden="true" className="fill-current opacity-80" />
@@ -547,7 +548,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
   // Redirect authenticated users to the app
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace('/home')
+      router.replace('/feed')
     }
   }, [user, isLoading, router])
 
@@ -563,7 +564,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
   const totalCount = useCountUp(displayStats.totalCount, counterInView, reduced)
 
   return (
-    <div className="relative min-h-screen bg-ocean-deep text-sand overflow-x-hidden">
+    <div className="relative min-h-[100svh] bg-ocean-deep text-sand overflow-x-hidden">
       <WaveBackground />
       {/* Night sky over the hero — galaxy, crescent moon, twinkling stars,
           occasional shooting stars. Sits above the ocean gradient, behind
@@ -599,9 +600,10 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
             fontSize: 'clamp(2.25rem, 9vw, 4.5rem)',
             textWrap: 'balance',
           } as React.CSSProperties}
-          initial={reduced ? { opacity: 1 } : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE_OUT_QUART, delay: reduced ? 0 : 0.2 }}
+          // Materializes: blur resolves as it rises, rather than a flat fade.
+          initial={reduced ? { opacity: 1 } : { opacity: 0, y: 20, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ ...enter, delay: reduced ? 0 : 0.2 }}
         >
           {/* The "o" in "bottle" is the wiggling bottle itself. */}
           One b
@@ -623,7 +625,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
           style={{ textWrap: 'pretty' } as React.CSSProperties}
           initial={reduced ? { opacity: 1 } : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: EASE_OUT_QUART, delay: reduced ? 0 : 0.42 }}
+          transition={{ ...enter, delay: reduced ? 0 : 0.42 }}
         >
           Write an anonymous message. Send it to a stranger you&apos;ll never
           meet. See what washes up.
@@ -632,13 +634,13 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
         <motion.div
           initial={reduced ? { opacity: 1 } : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE_OUT_QUART, delay: reduced ? 0 : 0.6 }}
+          transition={{ ...enter, delay: reduced ? 0 : 0.6 }}
         >
           <Link
             href="/sign-up"
-            className="inline-block px-10 py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui
-                       font-semibold text-base tracking-wide transition-all duration-150
-                       active:scale-[0.97] hover:brightness-110 focus-visible:outline-none
+            className="inline-block px-10 py-4 rounded-full shadow-seafoam press bg-seafoam text-ocean-deep font-ui
+                       font-semibold text-base tracking-wide transition-[filter,transform] duration-150
+                        hover:brightness-110 focus-visible:outline-none
                        focus-visible:ring-2 focus-visible:ring-seafoam focus-visible:ring-offset-2
                        focus-visible:ring-offset-ocean-deep"
           >
@@ -654,7 +656,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
       >
         <Reveal>
           <h2
-            className="font-display text-2xl md:text-3xl text-sand text-center"
+            className="font-display text-2xl md:text-3xl tracking-[-0.015em] leading-[1.15] text-sand text-center"
             style={{ textWrap: 'balance' } as React.CSSProperties}
           >
             A message in a bottle, online

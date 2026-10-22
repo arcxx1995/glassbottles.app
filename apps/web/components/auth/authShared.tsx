@@ -1,6 +1,9 @@
 'use client'
 
 import type { AuthError } from '@supabase/supabase-js'
+import { motion } from 'motion/react'
+import { INPUT_CLASS } from '@/components/ui/Input'
+import { spring } from '@/components/ui/springs'
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -60,19 +63,15 @@ export function mapAuthError(
 
 export const AUTH_BOX_CLASS = 'w-full max-w-[20rem] flex flex-col gap-6'
 
-export const AUTH_INPUT_CLASS =
-  'w-full bg-ocean-mid rounded-2xl border border-white/5 px-4 py-3 font-ui ' +
-  'text-sand placeholder:text-sand/25 outline-none text-sm ' +
-  'focus:border-seafoam/30 transition-colors'
+export const AUTH_INPUT_CLASS = INPUT_CLASS
 
 export const AUTH_PRIMARY_BTN_CLASS =
-  'flex items-center justify-center gap-2 py-3 rounded-2xl bg-seafoam ' +
+  'flex items-center justify-center gap-2 py-3 rounded-full bg-seafoam shadow-seafoam ' +
   'text-ocean-deep font-ui font-semibold text-sm tracking-wide ' +
-  'transition-all duration-150 active:scale-[0.97] hover:brightness-110 ' +
+  'press transition-[filter,transform] hover:brightness-110 ' +
   'disabled:opacity-50 disabled:pointer-events-none'
 
-export const AUTH_CARD_CLASS =
-  'bg-ocean-mid rounded-3xl border border-white/5 p-6'
+export const AUTH_CARD_CLASS = 'glass rounded-3xl p-6'
 
 // ─── Shared UI bits ────────────────────────────────────────────────────────────
 
@@ -80,18 +79,41 @@ export function OrDivider() {
   return (
     <div className="flex items-center gap-4 py-1">
       <span className="h-px flex-1 bg-white/10" />
-      <span className="font-ui text-xs text-sand/30 uppercase tracking-wider">or</span>
+      <span className="font-ui text-xs text-sand/45 uppercase tracking-wider">or</span>
       <span className="h-px flex-1 bg-white/10" />
     </div>
   )
 }
 
+// Inline validation slides in under its field; it doesn't wait for submit.
 export function FieldError({ children }: { children: React.ReactNode }) {
   if (!children) return null
-  return <p className="font-ui text-xs text-coral px-1 -mt-1">{children}</p>
+  return (
+    <motion.p
+      className="font-ui text-xs text-coral px-1 -mt-1"
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={spring}
+    >
+      {children}
+    </motion.p>
+  )
 }
 
+// A submit that failed shakes once — "no", the way a login field does. Keyed
+// on the message so a new error shakes again. Reduced motion: fade only.
 export function FormError({ children }: { children: React.ReactNode }) {
   if (!children) return null
-  return <p className="font-ui text-sm text-coral px-1">{children}</p>
+  return (
+    <motion.p
+      key={String(children)}
+      role="alert"
+      className="font-ui text-sm text-coral px-1"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, x: [0, -6, 6, -3, 0] }}
+      transition={{ opacity: spring, x: { duration: 0.35, ease: 'easeOut' } }}
+    >
+      {children}
+    </motion.p>
+  )
 }

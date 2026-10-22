@@ -11,9 +11,11 @@ import { motion, useAnimationControls, useReducedMotion } from 'motion/react'
 
 // Deterministic 0..1 from an integer seed (matches SailingSea's helper) so star
 // positions are stable across re-renders and SSR/client hydration.
+// Rounded: Math.sin's last digits can differ between Node and the browser,
+// which made the inline styles mismatch on hydration.
 function rand(seed: number): number {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
-  return x - Math.floor(x)
+  return Math.round((x - Math.floor(x)) * 1e4) / 1e4
 }
 
 const STAR_COUNT = 46

@@ -23,7 +23,9 @@ test('a Keeper dresses a bottle and the stranger receives it dressed', async ({ 
 
   const sender = await (await browser.newContext()).newPage()
   await signIn(sender, a.email)
-  await expectPath(sender, '/home')
+  await expectPath(sender, '/feed')
+  await sender.goto('/sea')
+  await expectPath(sender, '/sea')
 
   await sender.getByLabel('Message to place in your bottle').fill('dressed for you')
   await sender.getByRole('button', { name: 'Stormy sky' }).click()
@@ -57,6 +59,7 @@ test('a free user can try a Keeper piece on, but not throw it', async ({ page })
   test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')
   const u = await makeUser('tryon')
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByRole('button', { name: 'Dress', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Dress your bottle' })
 

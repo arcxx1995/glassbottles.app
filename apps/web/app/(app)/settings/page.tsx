@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
+import { spring } from '@/components/ui/springs'
+import Switch from '@/components/ui/Switch'
 import { Bell, BellRing, Compass, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
 import { feel, feelEnabled, setFeelEnabled } from '@/lib/feel'
 import type { AuthError } from '@supabase/supabase-js'
@@ -19,17 +21,16 @@ import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser, setUser } from '@/store/authSlice'
 import type { Profile } from '@/types'
 import KeeperCard from '@/components/keeper/KeeperCard'
+import BioCard from '@/components/social/BioCard'
 import { CURRENTS, CURRENT_INFO, type CurrentId } from '@/lib/dressing'
 import { disablePush, enablePush, getPushState, type PushState } from '@/lib/push'
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94] as const
-
 function staggerItem(i: number) {
   return {
     initial: { opacity: 0, y: 10 } as const,
     animate: { opacity: 1, y: 0 } as const,
-    transition: { duration: 0.35, ease: EASE_OUT, delay: i * 0.06 },
+    transition: { ...spring, delay: Math.min(i, 6) * 0.04 },
   }
 }
 
@@ -66,12 +67,12 @@ function SettingsRow({
         }
       }}
       className={`
-        flex items-center gap-4 bg-ocean-mid rounded-3xl border border-white/5 p-5
-        transition-colors duration-200 group w-full text-left
+        flex items-center gap-4 glass rounded-3xl p-5
+        transition-[border-color,transform] duration-200 group w-full text-left
         ${onClick
           ? destructive
-            ? 'cursor-pointer hover:border-coral/20'
-            : 'cursor-pointer hover:border-seafoam/20'
+            ? 'press cursor-pointer hover:border-coral/20'
+            : 'press cursor-pointer hover:border-seafoam/20'
           : ''
         }
       `}
@@ -94,7 +95,7 @@ function SettingsRow({
           {label}
         </span>
         {meta && (
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
             {meta}
           </span>
         )}
@@ -127,7 +128,7 @@ function ToggleRow({
   onChange,
 }: ToggleRowProps) {
   return (
-    <div className="flex items-center gap-4 bg-ocean-mid rounded-3xl border border-white/5 p-5">
+    <div className="flex items-center gap-4 glass rounded-3xl p-5">
       <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
         <span className={iconColor}>{icon}</span>
       </div>
@@ -135,30 +136,11 @@ function ToggleRow({
       <div className="flex flex-col flex-1 min-w-0">
         <span className="font-ui text-sm font-medium text-sand/60 whitespace-nowrap">{label}</span>
         {meta && (
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">{meta}</span>
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">{meta}</span>
         )}
       </div>
 
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          'relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200',
-          checked ? 'bg-seafoam/80' : 'bg-white/10',
-          disabled && 'opacity-50 pointer-events-none'
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-sand shadow-sm transition-transform duration-200',
-            checked && 'translate-x-5'
-          )}
-        />
-      </button>
+      <Switch checked={checked} onChange={onChange} disabled={disabled} label={label} />
     </div>
   )
 }
@@ -167,7 +149,7 @@ function ToggleRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-ui text-[10px] text-sand/30 uppercase tracking-widest px-1 mb-2 mt-2">
+    <p className="font-ui text-[10px] text-sand/45 uppercase tracking-widest px-1 mb-2 mt-2">
       {children}
     </p>
   )
@@ -239,7 +221,7 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
   }
 
   return (
-    <div className="bg-ocean-mid rounded-3xl border border-white/5 overflow-hidden">
+    <div className="glass rounded-3xl overflow-hidden">
       {/* Trigger */}
       <button
         type="button"
@@ -255,13 +237,13 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
             Change email
           </span>
           {/* truncate: a long address ran out of the card on phones */}
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug truncate">
             {currentEmail ?? 'Update the address tied to your account'}
           </span>
         </div>
         <span
           className={cn(
-            'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
             open && 'rotate-90',
           )}
         >
@@ -277,7 +259,7 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
+            transition={spring}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
@@ -326,7 +308,7 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
                       type="button"
                       onClick={() => void handleSave()}
                       disabled={loading || !valid}
-                      className="flex-1 py-2.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
+                      className="press flex-1 py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
                     >
                       {loading ? 'Sending…' : 'Save'}
                     </button>
@@ -477,7 +459,7 @@ function ChangePasswordRow() {
   }
 
   return (
-    <div className="bg-ocean-mid rounded-3xl border border-white/5 overflow-hidden">
+    <div className="glass rounded-3xl overflow-hidden">
       <button
         type="button"
         onClick={() => (open ? close() : setOpen(true))}
@@ -491,13 +473,13 @@ function ChangePasswordRow() {
           <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
             Change password
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
             Update the password you sign in with
           </span>
         </div>
         <span
           className={cn(
-            'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
             open && 'rotate-90',
           )}
         >
@@ -512,7 +494,7 @@ function ChangePasswordRow() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
+            transition={spring}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
@@ -535,7 +517,7 @@ function ChangePasswordRow() {
                     type="button"
                     onClick={() => void sendResetLink()}
                     disabled={loading}
-                    className="py-2.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.97] hover:brightness-110 disabled:opacity-50"
+                    className="press py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50"
                   >
                     {loading ? 'Sending…' : 'Email me a link'}
                   </button>
@@ -603,7 +585,7 @@ function ChangePasswordRow() {
                       type="button"
                       onClick={() => void handleSave()}
                       disabled={loading || !canSave}
-                      className="flex-1 py-2.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
+                      className="press flex-1 py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
                     >
                       {loading ? 'Saving…' : 'Update'}
                     </button>
@@ -656,7 +638,7 @@ function CurrentRow() {
     )
 
   return (
-    <div className="bg-ocean-mid rounded-3xl border border-white/5 overflow-hidden">
+    <div className="glass rounded-3xl overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -670,13 +652,13 @@ function CurrentRow() {
           <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
             Your current
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug truncate">
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug truncate">
             {current ? `${CURRENT_INFO[current].name} · ${CURRENT_INFO[current].blurb}` : 'Open sea · no current'}
           </span>
         </div>
         <span
           className={cn(
-            'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
             open && 'rotate-90',
           )}
         >
@@ -691,7 +673,7 @@ function CurrentRow() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
+            transition={spring}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
@@ -773,7 +755,7 @@ function DeleteAccountRow() {
   }
 
   return (
-    <div className="bg-ocean-mid rounded-3xl border border-white/5 overflow-hidden">
+    <div className="glass rounded-3xl overflow-hidden">
       <button
         type="button"
         onClick={() => (open ? close() : setOpen(true))}
@@ -787,13 +769,13 @@ function DeleteAccountRow() {
           <span className="font-ui text-sm font-medium text-coral/70 group-hover:text-coral transition-colors duration-200 whitespace-nowrap">
             Delete account
           </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug whitespace-nowrap">
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
             Permanently erase your account and your inbox
           </span>
         </div>
         <span
           className={cn(
-            'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
             open && 'rotate-90',
           )}
         >
@@ -808,7 +790,7 @@ function DeleteAccountRow() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
+            transition={spring}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
@@ -852,7 +834,7 @@ function DeleteAccountRow() {
                   type="button"
                   onClick={() => void handleDelete()}
                   disabled={loading || !confirmed}
-                  className="flex-1 py-2.5 rounded-2xl bg-coral text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
+                  className="press flex-1 py-2.5 rounded-full shadow-coral bg-coral text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {loading ? 'Deleting…' : 'Delete forever'}
                 </button>
@@ -932,15 +914,15 @@ export default function SettingsPage() {
       {/* Mobile: single column, page scrolls. sm+: two columns fit the viewport
           with no scroll (overflow-hidden frame). */}
       <motion.div className="mb-6 shrink-0" {...staggerItem(0)}>
-        <h1 className="font-display text-2xl text-sand">Settings</h1>
+        <h1 className="font-display text-title text-sand">Settings</h1>
         {email && (
-          <p className="font-mono text-xs text-sand/30 mt-1 truncate max-w-[240px]">
+          <p className="font-mono text-xs text-sand/45 mt-1 truncate max-w-[240px]">
             {email}
           </p>
         )}
         {/* Member since — profile has created_at */}
         {user?.created_at && (
-          <p className="font-mono text-[10px] text-sand/20 mt-0.5">
+          <p className="font-mono text-[10px] text-sand/35 mt-0.5">
             member since{' '}
             {new Date(user.created_at).toLocaleDateString('en-US', {
               month: 'long',
@@ -960,24 +942,33 @@ export default function SettingsPage() {
           <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
             <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
               <SectionLabel>Account</SectionLabel>
-              <ChangeEmailRow currentEmail={email} />
-              <ChangePasswordRow />
+              <div className="glass inset-group">
+                <ChangeEmailRow currentEmail={email} />
+                <ChangePasswordRow />
+              </div>
+            </motion.section>
+
+            <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
+              <SectionLabel>Profile</SectionLabel>
+              <BioCard />
             </motion.section>
 
             <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
               <SectionLabel>Notifications</SectionLabel>
-              <ToggleRow
-                icon={<Bell size={17} strokeWidth={1.5} />}
-                iconBg="bg-coral/10"
-                iconColor="text-coral"
-                label="Email on bottle arrival"
-                meta="When a stranger's bottle reaches you"
-                checked={emailNotifs}
-                disabled={notifsSaving}
-                onChange={handleToggleNotifs}
-              />
-              <PushRow />
-              <FeelRow />
+              <div className="glass inset-group">
+                <ToggleRow
+                  icon={<Bell size={17} strokeWidth={1.5} />}
+                  iconBg="bg-coral/10"
+                  iconColor="text-coral"
+                  label="Email on bottle arrival"
+                  meta="When a stranger's bottle reaches you"
+                  checked={emailNotifs}
+                  disabled={notifsSaving}
+                  onChange={handleToggleNotifs}
+                />
+                <PushRow />
+                <FeelRow />
+              </div>
             </motion.section>
           </div>
 
@@ -1025,7 +1016,7 @@ export default function SettingsPage() {
             You&rsquo;re anonymous by design — the strangers who find your bottles
             never learn who you are.
           </p>
-          <p className="font-mono text-[10px] text-sand/15 mt-2">
+          <p className="font-mono text-[10px] text-sand/35 mt-2">
             glassbottles · one bottle, one stranger
           </p>
         </motion.div>

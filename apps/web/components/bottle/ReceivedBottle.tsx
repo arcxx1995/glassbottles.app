@@ -13,22 +13,25 @@ import {
 import { CURRENT_INFO, VIBE_LABEL, WEATHER_LABEL, resolveLook } from '@/lib/dressing'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
 import { feel } from '@/lib/feel'
+import { easeOut, springFlick } from '@/components/ui/springs'
 import type { Bottle } from '@/types'
 
 interface ReceivedBottleProps {
   bottle: Bottle
   /** Called once a report settles: true = removed for good, false = failed. */
   onReported?: (ok: boolean) => void
+  /** The newest unread bottle: the banner's bottle flies into this one. */
+  arriving?: boolean
 }
-
-const EASE = [0.25, 0.46, 0.45, 0.94] as const
 
 // sealed → uncorking → open. A bottle that arrives unread starts sealed and
 // opens itself the first time it is properly on screen — opening IS reading,
 // so there is no "Mark read" step. Reduced motion skips straight to open.
+// Nothing here makes you wait: tap the sealed bottle to open it now, tap the
+// note mid-reveal to show all of it.
 type Stage = 'sealed' | 'uncorking' | 'open'
 
-export default function ReceivedBottle({ bottle, onReported }: ReceivedBottleProps) {
+export default function ReceivedBottle({ bottle, onReported, arriving }: ReceivedBottleProps) {
   const [markRead] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
   const [ripple] = useRippleBottleMutation()
@@ -52,6 +55,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   const [reveal] = useState(!bottle.is_read)
   const [stage, setStage] = useState<Stage>(reveal && !reduced ? 'sealed' : 'open')
   const [confirmingReport, setConfirmingReport] = useState(false)
+  const [skipReveal, setSkipReveal] = useState(false)
 
   useEffect(() => {
     if (inView && stage === 'sealed') {
@@ -86,7 +90,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   // The staggered word reveal is the moment a message is FIRST read — it costs
   // one motion node per word (~180 for a full-length bottle). History renders
   // as plain text; only the bottle being opened animates.
-  const lines = reveal && !reduced
+  const lines = reveal && !reduced && !skipReveal
     ? bottle.message.split('\n').map((line) => line.split(' '))
     : []
   const lineOffsets: number[] = []
@@ -110,8 +114,8 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
           aria-pressed={kept}
           aria-label={kept ? 'Kept — tap to let go' : 'Keep this bottle'}
           title={kept ? 'Kept' : 'Keep'}
-          className={`absolute right-3 top-3 z-10 p-2 rounded-xl transition-colors ${
-            kept ? 'text-seafoam' : 'text-sand/25 hover:text-sand/60'
+          className={`press absolute right-3 top-3 z-10 p-2 rounded-xl transition-[color,transform] ${
+            kept ? 'text-seafoam' : 'text-sand/40 hover:text-sand/60'
           }`}
         >
           <Bookmark size={16} strokeWidth={1.5} fill={kept ? 'currentColor' : 'none'} />
@@ -119,13 +123,21 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
       )}
       <AnimatePresence mode="wait" initial={false}>
         {stage !== 'open' ? (
-          <motion.div
+          <motion.button
             key="sealed"
-            className="flex flex-col items-center gap-3 py-6"
-            exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
+            type="button"
+            aria-label="Open the bottle"
+            onClick={() => {
+              if (stage === 'sealed') feel('pop')
+              setStage('open')
+            }}
+            className="flex w-full flex-col items-center gap-3 py-6"
+            whileTap={{ scale: 0.97 }}
+            exit={{ opacity: 0, scale: 0.92, filter: 'blur(4px)', transition: { duration: 0.2 } }}
           >
             <motion.div
               className="relative"
+              style={arriving ? { viewTransitionName: 'arriving-bottle' } : undefined}
               animate={stage === 'uncorking' ? { rotate: [0, -9, 7, -3, 0] } : { y: [0, -3, 0] }}
               transition={
                 stage === 'uncorking'
@@ -145,18 +157,19 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                     ? { y: -28, x: 12, rotate: 55, opacity: 0 }
                     : { y: 0, x: 0, rotate: 0, opacity: 1 }
                 }
-                transition={{ duration: 0.45, ease: [0.2, 0.8, 0.3, 1] }}
+                // The cork is the one thing here with momentum: it gets the bounce.
+                transition={{ ...springFlick, opacity: { duration: 0.3, delay: 0.12 } }}
               />
             </motion.div>
             <p className="font-ui text-xs text-sand/45">A bottle washed ashore</p>
-          </motion.div>
+          </motion.button>
         ) : (
           <motion.div
             key="open"
             // The note unrolls downward out of the bottle.
             initial={reveal && !reduced ? { clipPath: 'inset(0 0 100% 0)', opacity: 0.4 } : false}
             animate={{ clipPath: 'inset(0 0 0% 0)', opacity: 1 }}
-            transition={{ duration: 0.55, ease: EASE }}
+            transition={{ duration: 0.55, ease: easeOut }}
           >
             <div className="mb-5 pr-8">
               {tags.length > 0 && (
@@ -168,6 +181,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                 className="font-display text-lg leading-relaxed"
                 style={{ color: look.ink }}
                 aria-label="Message content"
+                onClick={lines.length > 0 ? () => setSkipReveal(true) : undefined}
               >
                 {lines.length === 0 && (
                   <span className="whitespace-pre-line">{bottle.message}</span>
@@ -209,14 +223,14 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
               <button
                 type="button"
                 onClick={() => setConfirmingReport(false)}
-                className="px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-colors"
+                className="press px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-[color,transform]"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmReport}
-                className="px-3 py-1.5 rounded-xl bg-coral/15 text-coral font-ui text-xs font-medium hover:bg-coral/25 transition-colors"
+                className="press px-3 py-1.5 rounded-full bg-coral/15 text-coral font-ui text-xs font-medium hover:bg-coral/25 transition-[background-color,transform]"
               >
                 Report
               </button>
@@ -224,7 +238,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
           </>
         ) : (
           <>
-            <time dateTime={bottle.sent_at} className="font-mono text-xs text-sand/30">
+            <time dateTime={bottle.sent_at} className="font-mono text-xs text-sand/45">
               {new Date(bottle.sent_at).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -233,7 +247,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
 
             <div className="flex items-center gap-2">
               {stage === 'open' && (
-                <span className="font-ui text-xs text-sand/25 flex items-center gap-1">
+                <span className="font-ui text-xs text-sand/40 flex items-center gap-1">
                   <CheckCheck size={13} strokeWidth={1.5} />
                   Read
                 </span>
@@ -253,7 +267,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                       feel('chime')
                       void ripple(bottle.id)
                     }}
-                    className="px-3 py-1.5 rounded-xl border border-seafoam/25 text-seafoam/85 font-ui text-xs hover:bg-seafoam/10 transition-colors flex items-center gap-1"
+                    className="press px-3 py-1.5 rounded-full border border-seafoam/25 text-seafoam/85 font-ui text-xs hover:bg-seafoam/10 transition-[background-color,transform] flex items-center gap-1"
                   >
                     <Sparkles size={13} strokeWidth={1.5} />
                     This reached me
@@ -264,7 +278,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                 type="button"
                 onClick={() => setConfirmingReport(true)}
                 disabled={isReporting}
-                className="p-2 rounded-xl text-sand/25 hover:text-coral/80 transition-colors
+                className="press p-2 rounded-xl text-sand/40 hover:text-coral/80 transition-[color,transform]
                            disabled:opacity-30 disabled:pointer-events-none"
                 aria-label="Report this bottle"
                 title="Report"

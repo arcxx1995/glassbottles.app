@@ -12,6 +12,7 @@ test('a Keeper seals a letter to themselves; it washes back into the inbox', asy
     access_until: new Date(Date.now() + 30 * 864e5).toISOString(),
   })
   await signIn(page, u.email)
+  await page.goto('/sea')
 
   const words = 'dear me, I hope the move went fine'
   await page.getByLabel('Message to place in your bottle').fill(words)
@@ -41,6 +42,7 @@ test('a Keeper seals a letter to themselves; it washes back into the inbox', asy
 test('a free user is offered Keeper instead', async ({ page }) => {
   const u = await makeUser('future-free')
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByRole('button', { name: 'Future me' }).click()
   const sheet = page.getByRole('dialog', { name: 'Send to future me' })
   await expect(sheet.getByText('Letters to yourself are for Keepers.')).toBeVisible()

@@ -3,6 +3,7 @@
 import { motion } from 'motion/react'
 import { useAppSelector } from '@/store'
 import { selectSendStatus } from '@/store/bottleSlice'
+import { easeOut } from '@/components/ui/springs'
 
 interface BottleCanvasProps {
   className?: string
@@ -25,7 +26,7 @@ export default function BottleCanvas({ className, size = 160 }: BottleCanvasProp
       initial={{ opacity: 0, y: 24, scale: 0.92 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -16, scale: 0.88 }}
-      transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.45, ease: easeOut }}
       style={{ width, height, position: 'relative' }}
       aria-label="Your glass bottle"
     >

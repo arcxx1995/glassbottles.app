@@ -1,8 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { chatJSON } from '../_shared/openrouter.ts'
-import { SCREEN_PROMPT, VERDICT_SCHEMA, findContact, parseVerdict, type Verdict } from './screen.ts'
+import {
+  SCREEN_PROMPT, SOCIAL_SCREEN_PROMPT, VERDICT_SCHEMA, findContact, findPersonalContact, parseVerdict, type Verdict,
+} from './screen.ts'
 
-// screen-bottle — the safety screen (migration 043).
+// screen-bottle — the safety screen (migration 043), plus social mode (050):
+// a body of {table, id} screens a post / comment / scrap and hands the
+// verdict to apply_social_screen() instead.
 //
 // Called by the on_bottle_screen trigger through pg_net for every new bottle.
 // Reads the message, decides one verdict, and hands it to apply_screen(),
@@ -21,13 +25,13 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
-async function classify(message: string): Promise<Verdict | null> {
+async function classify(message: string, social = false): Promise<Verdict | null> {
   if (!OPENROUTER_API_KEY) return null
   const answer = await chatJSON({
     apiKey: OPENROUTER_API_KEY,
     model: OPENROUTER_MODEL,
-    system: SCREEN_PROMPT,
-    user: `<bottle>\n${message}\n</bottle>`,
+    system: social ? SOCIAL_SCREEN_PROMPT : SCREEN_PROMPT,
+    user: social ? `<post>\n${message}\n</post>` : `<bottle>\n${message}\n</bottle>`,
     name: 'verdict',
     schema: VERDICT_SCHEMA as unknown as Record<string, unknown>,
     maxTokens: 60,
@@ -37,6 +41,38 @@ async function classify(message: string): Promise<Verdict | null> {
   return parseVerdict(answer)
 }
 
+const SOCIAL_TABLES = new Set(['posts', 'comments', 'scraps'])
+
+async function screenSocial(table: string, id: string): Promise<Response> {
+  if (!SOCIAL_TABLES.has(table)) return json({ error: 'bad table' }, 400)
+  const { data: row, error } = await supabase.from(table).select('body, screen').eq('id', id).single()
+  if (error || !row) return json({ error: 'row not found' }, 404)
+  if (row.screen) return json({ result: 'already_screened' })
+
+  let verdict: Verdict | null
+  try {
+    verdict = findPersonalContact(row.body)
+      ? { verdict: 'held', reason: 'contact' }
+      : await classify(row.body, true)
+  } catch (err) {
+    console.error('[screen-bottle] social classifier', err instanceof Error ? err.message : err)
+    return json({ result: 'unscreened' }, 502)
+  }
+  if (!verdict) return json({ result: 'unscreened' })
+
+  const { data: result, error: applyErr } = await supabase.rpc('apply_social_screen', {
+    p_table: table,
+    p_id: id,
+    p_verdict: verdict.verdict,
+    p_reason: verdict.verdict === 'held' ? verdict.reason : null,
+  })
+  if (applyErr) {
+    console.error('[screen-bottle] apply_social_screen', applyErr.message)
+    return json({ error: 'apply failed' }, 500)
+  }
+  return json({ result })
+}
+
 Deno.serve(async (req) => {
   // Service role only — the trigger is the one caller.
   if (req.headers.get('Authorization')?.replace('Bearer ', '') !== SERVICE_ROLE_KEY) {
@@ -44,7 +80,9 @@ Deno.serve(async (req) => {
   }
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
-  const { bottle_id } = (await req.json().catch(() => ({}))) as { bottle_id?: string }
+  const payload = (await req.json().catch(() => ({}))) as { bottle_id?: string; table?: string; id?: string }
+  if (payload.table && payload.id) return screenSocial(payload.table, payload.id)
+  const { bottle_id } = payload
   if (!bottle_id) return json({ error: 'bottle_id required' }, 400)
 
   const { data: bottle, error } = await supabase

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
+import Toast from '@/components/ui/Toast'
 import { Sparkles, X } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -33,14 +34,11 @@ export default function RippleBanner() {
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div
+        <Toast
           key="ripple-banner"
-          initial={{ opacity: 0, x: 80, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 80, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          onDismiss={() => void ack()}
           className="pointer-events-auto w-full flex items-center gap-3 overflow-hidden
-                     bg-ocean-mid border border-seafoam/25 rounded-2xl px-4 py-3.5 shadow-banner text-left"
+                     glass-strong border-seafoam/25 rounded-3xl px-4 py-3.5 shadow-banner text-left"
           role="status"
           aria-live="polite"
         >
@@ -60,11 +58,11 @@ export default function RippleBanner() {
           <button
             onClick={() => void ack()}
             aria-label="Dismiss"
-            className="shrink-0 -mr-1 p-1.5 rounded-full text-sand/40 hover:text-sand hover:bg-white/5 transition-colors"
+            className="press shrink-0 -my-2 -mr-3 flex h-11 w-11 items-center justify-center rounded-full text-sand/50 hover:text-sand hover:bg-white/5 transition-[color,background-color,transform]"
           >
             <X size={16} />
           </button>
-        </motion.div>
+        </Toast>
       )}
     </AnimatePresence>
   )

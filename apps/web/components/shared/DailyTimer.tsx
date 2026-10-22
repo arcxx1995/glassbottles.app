@@ -89,9 +89,9 @@ export default function DailyTimer() {
       </p>
       <p className="font-mono text-2xl text-sand/60 tabular-nums tracking-tight">
         {pad(time.hours)}
-        <span className="text-sand/30 mx-0.5">:</span>
+        <span className="text-sand/45 mx-0.5">:</span>
         {pad(time.minutes)}
-        <span className="text-sand/30 mx-0.5">:</span>
+        <span className="text-sand/45 mx-0.5">:</span>
         {pad(time.seconds)}
       </p>
     </div>

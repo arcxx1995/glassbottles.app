@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion } from 'motion/react'
-import { X } from 'lucide-react'
+import { useState } from 'react'
+import Sheet from '@/components/ui/Sheet'
 import { cn } from '@/lib/utils'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
 import { useGetFutureBottlesQuery, useSendFutureBottleMutation } from '@/store/api/bottleApi'
@@ -45,14 +44,6 @@ export default function FutureSheet({
   const waitUntil = future?.can_send_after ?? null
   const empty = message.trim().length === 0
 
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   async function go() {
     setError(null)
     try {
@@ -65,24 +56,7 @@ export default function FutureSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <motion.div className="absolute inset-0 bg-ocean-deep/70 backdrop-blur-sm"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Send to future me"
-        className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-ocean-mid border border-white/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl"
-        initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-        transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-display text-xl text-sand">Send to future me</h2>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close"
-            className="p-2 -mr-2 rounded-xl text-sand/40 hover:text-sand/80 transition-colors">
-            <X size={18} strokeWidth={1.5} />
-          </button>
-        </div>
+    <Sheet title="Send to future me" onClose={onClose}>
         <p className="font-ui text-xs text-sand/50 leading-relaxed mb-4">
           Instead of a stranger, this bottle drifts back to you. It doesn&rsquo;t use today&rsquo;s throw.
         </p>
@@ -102,7 +76,7 @@ export default function FutureSheet({
               {WHEN.map((w) => (
                 <button key={w.months} type="button" aria-pressed={months === w.months}
                   onClick={() => setMonths(w.months)}
-                  className={cn('rounded-2xl border px-2 py-3 font-ui text-sm transition-colors',
+                  className={cn('press rounded-2xl border px-2 py-3 font-ui text-sm transition-[color,background-color,border-color,transform]',
                     months === w.months ? 'border-seafoam/50 bg-seafoam/10 text-sand' : 'border-white/10 text-sand/55 hover:text-sand/80')}>
                   {w.label}
                 </button>
@@ -111,7 +85,7 @@ export default function FutureSheet({
             {empty && <p className="font-ui text-xs text-sand/45 mt-3">Write something in the box first.</p>}
             {error && <p className="font-ui text-xs text-coral mt-3">{error}</p>}
             <button type="button" onClick={() => void go()} disabled={empty || isLoading}
-              className="mt-4 w-full py-3.5 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold text-sm transition-all active:scale-[0.98] hover:brightness-110 disabled:opacity-50">
+              className="press mt-4 w-full py-3.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50">
               {isLoading ? 'Sealing…' : 'Seal for future me'}
             </button>
           </>
@@ -121,7 +95,6 @@ export default function FutureSheet({
             {future.waiting.length} letter{future.waiting.length === 1 ? '' : 's'} to yourself still drifting
           </p>
         )}
-      </motion.div>
-    </div>
+    </Sheet>
   )
 }

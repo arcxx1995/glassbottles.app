@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'motion/react'
+import { spring } from '@/components/ui/springs'
 import { X } from 'lucide-react'
 import { helpLinesFor } from '@/lib/care'
 
@@ -20,15 +21,16 @@ export default function CareCard({
     <motion.div
       role="complementary"
       aria-label="Support"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative w-full max-w-[380px] rounded-2xl border border-seafoam/20 bg-ocean-mid/90 backdrop-blur-sm p-4 text-left"
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={spring}
+      className="relative w-full max-w-[380px] rounded-3xl glass-strong border-seafoam/25 p-4 text-left"
     >
       <button
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="absolute right-2 top-2 p-2 rounded-xl text-sand/35 hover:text-sand/70 transition-colors"
+        className="press absolute right-2 top-2 p-2 rounded-xl text-sand/35 hover:text-sand/70 transition-[color,transform]"
       >
         <X size={14} strokeWidth={1.5} />
       </button>
@@ -44,7 +46,7 @@ export default function CareCard({
               href={l.href}
               target={l.href.startsWith('http') ? '_blank' : undefined}
               rel="noreferrer"
-              className="flex flex-col rounded-xl border border-white/10 px-3 py-2 hover:border-seafoam/30 transition-colors"
+              className="press flex flex-col rounded-xl border border-white/10 px-3 py-2 hover:border-seafoam/30 transition-[border-color,transform]"
             >
               <span className="font-ui text-sm text-sand/85">{l.name}</span>
               <span className="font-ui text-[11px] text-sand/45 mt-0.5">{l.detail}</span>
@@ -52,7 +54,7 @@ export default function CareCard({
           </li>
         ))}
       </ul>
-      <p className="font-ui text-[10px] text-sand/30 leading-snug mt-2">
+      <p className="font-ui text-[10px] text-sand/45 leading-snug mt-2">
         In immediate danger? Call your local emergency number.
       </p>
     </motion.div>

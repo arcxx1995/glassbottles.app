@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
+import { spring } from '@/components/ui/springs'
 import { BellRing, Share } from 'lucide-react'
 import { enablePush, getPushState, type PushState } from '@/lib/push'
 
@@ -38,9 +39,10 @@ export default function PushNudge() {
   return (
     <motion.div
       role="status"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-[380px] rounded-2xl border border-white/10 bg-ocean-mid/90 backdrop-blur-sm px-4 py-3 text-left"
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={spring}
+      className="w-full max-w-[380px] rounded-3xl glass-strong px-4 py-3 text-left"
     >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 text-seafoam">
@@ -58,7 +60,7 @@ export default function PushNudge() {
               <button
                 type="button"
                 onClick={() => void enablePush().then((s) => (s === 'off' ? setState(s) : done()))}
-                className="px-3 py-1.5 rounded-xl bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-colors"
+                className="press px-3 py-1.5 rounded-full bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-[color,background-color,transform]"
               >
                 Notify me
               </button>
@@ -66,7 +68,7 @@ export default function PushNudge() {
             <button
               type="button"
               onClick={done}
-              className="px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-colors"
+              className="press px-3 py-1.5 rounded-xl font-ui text-xs text-sand/50 hover:text-sand/80 transition-[color,background-color,transform]"
             >
               {state === 'install' ? 'Got it' : 'Not now'}
             </button>

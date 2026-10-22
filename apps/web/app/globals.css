@@ -6,6 +6,8 @@
 
 /* ─── Design tokens as CSS custom properties ──────────────────────────────── */
 :root {
+  /* Dark-only app: native controls, scrollbars and autofill render dark too. */
+  color-scheme: dark;
   --color-ocean-deep: #0A1628;
   --color-ocean-mid:  #0D2137;
   --color-seafoam:    #4ECDC4;
@@ -28,10 +30,8 @@
   --ease-quart:  cubic-bezier(0.25, 1, 0.5, 1);
   --ease-back:   cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Motion — Framer spring presets (document only; used in component code)
-     --spring-reveal-bottle: stiffness 80,  damping 12  (slow, physical)
-     --spring-banner:        stiffness 320, damping 28  (snappy notification)
-  */
+  /* Motion — springs live in components/ui/springs.ts; CSS only does
+     press feedback and view transitions. */
 }
 
 /* ─── Base reset ──────────────────────────────────────────────────────────── */
@@ -46,6 +46,8 @@ body {
   font-family: var(--font-ui, 'DM Sans'), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ─── Text selection ──────────────────────────────────────────────────────── */
@@ -120,20 +122,70 @@ body {
   .h-app-main { height: calc(100svh - 4rem - env(safe-area-inset-bottom)); }
 }
 
+/* ─── Press feedback ──────────────────────────────────────────────────────── */
+/* Feedback on pointer-down, not on release. For plain <button>/<Link>s that   */
+/* aren't motion components (ui/Button does this with whileTap). Press-in is   */
+/* fast; release eases back a touch slower so the tap reads.                   */
+
+@layer utilities {
+  .press {
+    transition: transform 160ms cubic-bezier(0.25, 1, 0.5, 1);
+    touch-action: manipulation;
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+    transition-duration: 80ms;
+  }
+  .press-sm:active:not(:disabled) { transform: scale(0.92); }
+
+  /* Scroll edge effect: content dissolves into floating chrome instead of
+     meeting a hard border. Put on the scroller. */
+  .edge-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+  }
+  .edge-fade-y {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 1.5rem, #000 calc(100% - 3rem), transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 1.5rem, #000 calc(100% - 3rem), transparent);
+  }
+
+  /* Vibrancy: small text over glass gets a touch more weight and tracking. */
+  .vibrant { font-weight: 500; letter-spacing: 0.005em; }
+}
+
+/* ─── Route transitions (View Transitions API, lib/viewTransition.ts) ─────── */
+/* Root cross-fades with a slight lift; named elements (nav pill, bottle)     */
+/* morph between pages. Browsers without the API swap instantly.              */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+::view-transition-old(root) { animation-name: gb-vt-out; }
+::view-transition-new(root) { animation-name: gb-vt-in; }
+::view-transition-group(*) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+@keyframes gb-vt-out { to { opacity: 0; } }
+@keyframes gb-vt-in { from { opacity: 0; transform: translateY(6px); } }
+
 /* ─── Focus ring system ───────────────────────────────────────────────────── */
 /* All interactive elements: use focus-visible, not focus                     */
 
 :focus-visible {
   outline: 2px solid var(--color-seafoam);
   outline-offset: 2px;
-  border-radius: 4px;
+  /* No border-radius here: it reshaped pills and cards on focus. Outlines
+     already follow the element's own radius. */
 }
 
 /* ─── Ambient scene loops ─────────────────────────────────────────────────── */
 /* The endless sea/sky motion runs as CSS transform/opacity keyframes, which   */
 /* the compositor plays with no main-thread work. The same loops driven by     */
 /* motion's x/y/rotate cost a JS update per element per frame — ~23% of a      */
-/* throttled mid-tier CPU on an idle /home. Per-element amplitude, duration    */
+/* throttled mid-tier CPU on an idle /sea. Per-element amplitude, duration    */
 /* and delay come in through CSS variables and inline `animation`.             */
 
 @keyframes gb-drift {
@@ -175,7 +227,9 @@ body {
 }
 
 /* One switch for every CSS loop in the app, including Tailwind's pulse/spin
-   and the skeleton shimmer (motion's own animations follow MotionConfig). */
+   and the skeleton shimmer (motion's own animations follow MotionConfig).
+   Press feedback stays — it's a scale on the element under the finger, not
+   vestibular motion. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -187,4 +241,103 @@ body {
 @media print {
   @page { margin: 18mm; }
   html, body { background: #fff !important; }
+}
+
+/* ─── Glass material (Apple-style frosted surfaces) ───────────────────────── */
+@layer components {
+  .glass {
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.14),
+      0 8px 32px rgba(0,0,0,0.28);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+  .glass-strong {
+    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.20),
+      0 12px 40px rgba(0,0,0,0.35);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    backdrop-filter: blur(32px) saturate(200%);
+  }
+  .glass-tint {
+    background: linear-gradient(180deg, rgba(78,205,196,0.30), rgba(78,205,196,0.16));
+    border: 1px solid rgba(78,205,196,0.45);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      0 6px 24px rgba(78,205,196,0.22);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+  }
+  .glass-flat {
+    background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035)), rgba(13,33,55,0.72);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 20px rgba(0,0,0,0.22);
+  }
+  /* Controls that sit ON a glass surface (chips, avatars, secondary buttons).
+     No backdrop-filter: a frosted layer stacked on a frosted layer turns to
+     mush and costs a second blur pass. A light fill + catch-light reads as a
+     raised control on the material instead. */
+  .glass-fill {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  /* Inset grouped list (iOS Settings): one pane of glass holds several rows,
+     split by hairlines inset past the row icon. Rows keep their own material
+     when they stand alone; inside a group they shed it. */
+  .inset-group {
+    border-radius: 1.5rem;
+    overflow: hidden;
+  }
+  .inset-group > * {
+    position: relative;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .inset-group > * + *::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 4.5rem;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+  /* Text fields: a recessed well, not another pane of glass. Darker than the
+     surface it's cut into, shadow on the inside top edge. */
+  .field {
+    background: rgba(6,14,26,0.62);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.35);
+  }
+}
+
+/* Solid fallback when blur is unsupported or the user prefers less transparency */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-strong, .glass-tint { background: #0D2137; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-strong, .glass-tint {
+    background: #0D2137;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+/* More contrast: near-solid surfaces with a defined edge. */
+@media (prefers-contrast: more) {
+  .glass, .glass-strong, .glass-tint, .glass-flat, .glass-fill, .field {
+    background: #0D2137;
+    border-color: rgba(247, 231, 206, 0.45);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .edge-fade-b, .edge-fade-y { -webkit-mask-image: none; mask-image: none; }
 }

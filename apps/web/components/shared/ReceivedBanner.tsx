@@ -1,6 +1,9 @@
 'use client'
 
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
+import Toast from '@/components/ui/Toast'
+import { transitionTo } from '@/components/ui/TransitionLink'
+import { useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -67,27 +70,27 @@ export default function ReceivedBanner({
     }
   }
 
+  // The banner's bottle becomes the sealed bottle waiting in the inbox (a
+  // shared view transition). The name is only on the banner for the moment of
+  // capture: it's still in the DOM while it exits, and names must be unique.
+  const bottleRef = useRef<HTMLSpanElement>(null)
   function handleTap() {
-    hide()
-    router.push('/inbox')
+    bottleRef.current?.style.setProperty('view-transition-name', 'arriving-bottle')
+    transitionTo(router, '/inbox', () => {
+      bottleRef.current?.style.removeProperty('view-transition-name')
+      hide()
+    })
   }
 
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <Toast
           key="received-banner"
-          initial={{ opacity: 0, x: 80, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 80, scale: 0.95 }}
-          transition={{
-            type: 'spring',
-            stiffness: 340,
-            damping: 30,
-          }}
+          onDismiss={hide}
           className="pointer-events-auto w-full
                      flex items-center gap-3 overflow-hidden
-                     bg-ocean-mid border border-seafoam/20 rounded-2xl
+                     glass-strong border-seafoam/25 rounded-3xl
                      px-4 py-3.5 shadow-banner text-left"
           aria-live="polite"
           aria-atomic="true"
@@ -98,7 +101,7 @@ export default function ReceivedBanner({
             className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
           >
             {/* The app bottle — static, signals an arrival */}
-            <span className="shrink-0 select-none" role="img" aria-label="glass bottle">
+            <span ref={bottleRef} className="shrink-0 select-none" role="img" aria-label="glass bottle">
               <BottleSVG glowing width={26} height={39} />
             </span>
 
@@ -119,12 +122,11 @@ export default function ReceivedBanner({
           <button
             onClick={hide}
             aria-label="Dismiss"
-            className="shrink-0 -mr-1 p-1.5 rounded-full text-sand/40
-                       hover:text-sand hover:bg-white/5 transition-colors"
+            className="press shrink-0 -my-2 -mr-3 flex h-11 w-11 items-center justify-center rounded-full text-sand/50 hover:text-sand hover:bg-white/5 transition-[color,background-color,transform]"
           >
             <X size={16} />
           </button>
-        </motion.div>
+        </Toast>
       )}
     </AnimatePresence>
   )

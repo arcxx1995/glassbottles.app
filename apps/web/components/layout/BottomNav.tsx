@@ -1,18 +1,17 @@
 'use client'
 
-import Link from 'next/link'
+import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
-import { Anchor, Mail, Settings } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Anchor, Home, Mail, UserRound, Users } from 'lucide-react'
+import { useMe } from '@/components/social/useMe'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
+import { TransitionLink } from '@/components/ui/TransitionLink'
+import { springFlick, springMove } from '@/components/ui/springs'
 
-const NAV_ITEMS = [
-  { href: '/home', label: 'Bottle', Icon: Anchor },
-  { href: '/inbox', label: 'Inbox', Icon: Mail },
-  { href: '/settings', label: 'Settings', Icon: Settings },
-] as const
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -28,47 +27,75 @@ export default function BottomNav() {
     skipPollingIfUnfocused: true,
   })
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
+  const { me, pendingIn } = useMe()
+
+  // "Me" is your profile (Settings sits behind its gear); before a handle is
+  // claimed it falls back to Settings so that stays reachable on phones.
+  const meHref = (me ? `/u/${me.handle}` : '/settings') as Route
+  const NAV_ITEMS = [
+    { href: '/feed', label: 'Feed', Icon: Home, badge: 0 },
+    { href: '/sea', label: 'Sea', Icon: Anchor, badge: 0 },
+    { href: '/friends', label: 'Friends', Icon: Users, badge: pendingIn },
+    { href: '/inbox', label: 'Inbox', Icon: Mail, badge: unreadCount },
+    { href: meHref, label: 'Me', Icon: UserRound, badge: 0 },
+  ] as const
 
   return (
     <nav
-      className="print:hidden fixed bottom-0 left-0 right-0 z-50 bg-ocean-mid/80 backdrop-blur-md border-t border-white/5 pb-safe"
+      className="print:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe"
+      // Own layer in route transitions: the bar stays put while pages cross-fade.
+      style={{ viewTransitionName: 'bottom-nav' }}
       aria-label="Main navigation"
     >
-      <div className="flex items-center justify-around max-w-md mx-auto h-16 px-2">
-        {NAV_ITEMS.map(({ href, label, Icon }) => {
+      <div className="glass-strong flex items-center justify-around max-w-md mx-auto h-16 px-2 mb-2 rounded-full">
+        {NAV_ITEMS.map(({ href, label, Icon, badge }) => {
           const isActive =
             pathname === href || pathname.startsWith(href + '/')
-          const showBadge = href === '/inbox' && unreadCount > 0
+          const showBadge = badge > 0
 
           return (
-            <Link
+            <TransitionLink
               key={href}
               href={href}
               className={cn(
-                'relative flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-colors duration-200',
-                isActive
-                  ? 'text-seafoam'
-                  : 'text-sand/30 hover:text-sand/60'
+                'press relative flex flex-col items-center gap-1 flex-1 py-2 rounded-full transition-[color,background-color,border-color,transform] duration-200',
+                isActive ? 'text-seafoam' : 'text-sand/40 hover:text-sand/70'
               )}
               aria-current={isActive ? 'page' : undefined}
             >
+              {/* One pill, handed between tabs: it slides from where it was. */}
+              {isActive && (
+                <motion.span
+                  layoutId="nav-pill"
+                  transition={springMove}
+                  className="absolute inset-0 rounded-full bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                  aria-hidden="true"
+                />
+              )}
               <span className="relative inline-flex">
-                <Icon size={22} strokeWidth={1.5} aria-hidden="true" />
-                {showBadge && (
-                  <span
-                    className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full
-                               bg-coral text-ocean-deep font-ui font-semibold text-[9px]
-                               flex items-center justify-center px-[3px]"
-                    aria-label={`${unreadCount} unread`}
-                  >
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+                <Icon size={22} strokeWidth={isActive ? 1.75 : 1.5} aria-hidden="true" />
+                <AnimatePresence>
+                  {showBadge && (
+                    <motion.span
+                      key="badge"
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.4, opacity: 0 }}
+                      transition={springFlick}
+                      className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full
+                                 bg-coral text-ocean-deep font-ui font-semibold text-[9px]
+                                 flex items-center justify-center px-[3px]"
+                      aria-label={href === '/inbox' ? `${badge} unread` : `${badge} friend requests`}
+                    >
+                      {badge > 9 ? '9+' : badge}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </span>
-              <span className="font-ui text-[10px] font-medium tracking-wide">
+              <span className="relative font-ui text-[10px] font-medium tracking-wide">
                 {label}
               </span>
-            </Link>
+            </TransitionLink>
           )
         })}
       </div>

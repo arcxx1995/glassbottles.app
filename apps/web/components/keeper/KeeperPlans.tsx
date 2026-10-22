@@ -78,7 +78,7 @@ export default function KeeperPlans({
           onClick={() => void checkout('lifetime')}
         />
       )}
-      <p className="font-ui text-[10px] text-sand/25 leading-snug px-1">
+      <p className="font-ui text-[10px] text-sand/40 leading-snug px-1">
         Prices in USD; checkout shows your local currency. Cancel anytime.
       </p>
       {error && <p className="font-ui text-xs text-coral">{error}</p>}
@@ -109,7 +109,7 @@ function PlanButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-all active:scale-[0.98] disabled:opacity-50',
+        'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-[border-color,background-color,transform] press disabled:opacity-50',
         highlight
           ? 'border-seafoam/40 bg-seafoam/10 hover:bg-seafoam/15'
           : 'border-white/10 hover:border-white/20',

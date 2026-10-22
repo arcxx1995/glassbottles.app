@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useGetKeeperQuery } from '@/store/api/bottleApi'
 import { hasLiveSubscription } from '@/lib/keeper'
 import KeeperPlans, { billingUrl } from './KeeperPlans'
+import { spring } from '@/components/ui/springs'
 
 // Keeper membership card for settings. The bottle stays free; Keeper is an
 // optional membership for beautiful extras (Dodo Payments, migration 041).
@@ -72,26 +73,46 @@ export default function KeeperCard() {
   const canManage = (isKeeper && m?.plan !== 'lifetime') || live
 
   return (
-    <div className="bg-ocean-mid rounded-3xl border border-seafoam/15 overflow-hidden">
+    <div className="glass rounded-3xl overflow-hidden">
       <button
         type="button"
         onClick={() => canBuy && setExpanded((v) => !v)}
         aria-expanded={canBuy ? expanded : undefined}
-        className={cn('flex items-center gap-4 p-5 w-full text-left group', canBuy ? 'cursor-pointer' : 'cursor-default')}
+        className={cn('flex items-center gap-4 p-5 w-full text-left group', canBuy ? 'press cursor-pointer transition-transform' : 'cursor-default')}
       >
         <div className="w-9 h-9 rounded-xl bg-seafoam/10 flex items-center justify-center shrink-0">
           <Sparkles size={17} strokeWidth={1.5} className="text-seafoam" />
         </div>
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-sand/70 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
+          {/* Status changes (loading → member, lapsed → rejoined) cross-fade in
+              place instead of the text snapping. */}
+          <motion.span
+            key={title}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={spring}
+            className="font-ui text-sm font-medium text-sand/70 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap"
+          >
             {title}
-          </span>
-          <span className="font-ui text-xs text-sand/30 mt-0.5 leading-snug">{meta}</span>
+          </motion.span>
+          {isLoading ? (
+            <span className="skeleton mt-1.5 h-3 w-40 rounded-full" aria-label="Loading membership" />
+          ) : (
+            <motion.span
+              key={meta}
+              initial={{ opacity: 0, y: 2 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={spring}
+              className="font-ui text-xs text-sand/45 mt-0.5 leading-snug"
+            >
+              {meta}
+            </motion.span>
+          )}
         </div>
         {canBuy && (
           <span
             className={cn(
-              'font-ui text-sand/30 text-lg leading-none transition-transform duration-200',
+              'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
               expanded && 'rotate-90',
             )}
           >
@@ -115,7 +136,7 @@ export default function KeeperCard() {
               type="button"
               onClick={() => void openPortal()}
               disabled={portalBusy}
-              className="py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/70 transition-colors hover:text-sand hover:border-white/20 disabled:opacity-50"
+              className="press py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/70 transition-[color,border-color,transform] hover:text-sand hover:border-white/20 disabled:opacity-50"
             >
               {portalBusy ? 'Opening…' : 'Manage membership'}
             </button>
@@ -131,7 +152,7 @@ export default function KeeperCard() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={spring}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 pt-0">

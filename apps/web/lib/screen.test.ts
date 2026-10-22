@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findContact, parseVerdict } from '../../../supabase/functions/screen-bottle/screen'
+import { findContact, findPersonalContact, parseVerdict } from '../../../supabase/functions/screen-bottle/screen'
 
 // The Edge Function's pure logic (supabase/functions/screen-bottle/screen.ts),
 // tested here because the repo's runner is vitest, not Deno.
@@ -20,6 +20,13 @@ describe('findContact', () => {
     'Node.js broke my whole week, honestly',
     'I said "@ the beach" like an idiot',
   ])('lets through: %s', (text) => expect(findContact(text)).toBe(false))
+})
+
+describe('findPersonalContact (social mode)', () => {
+  it.each(['mail me sea.glass@example.com', 'call +91 98765 43210'])('holds: %s', (t) =>
+    expect(findPersonalContact(t)).toBe(true))
+  it.each(['thanks @tidewalker!', 'great read at example.org'])('lets through: %s', (t) =>
+    expect(findPersonalContact(t)).toBe(false))
 })
 
 describe('parseVerdict', () => {

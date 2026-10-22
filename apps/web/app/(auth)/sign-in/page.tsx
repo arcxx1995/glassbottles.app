@@ -20,6 +20,7 @@ import {
   AUTH_INPUT_CLASS,
   AUTH_PRIMARY_BTN_CLASS,
 } from '@/components/auth/authShared'
+import { spring } from '@/components/ui/springs'
 
 // Friendly copy for the canonical ?error= codes emitted by /auth/callback.
 const CALLBACK_ERRORS: Record<string, string> = {
@@ -49,7 +50,7 @@ function SignInForm() {
   const next =
     rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
       ? rawNext
-      : '/home'
+      : '/feed'
 
   // Back from Google via the back/forward cache: the page is restored with
   // googleLoading still true and the button spinning forever.
@@ -93,7 +94,7 @@ function SignInForm() {
 
     // Cookies are already set by signInWithPassword above, so a plain push runs
     // middleware with the fresh session. No router.refresh(): it re-requests
-    // /sign-in, which middleware redirects to /home — a second route resolution
+    // /sign-in, which middleware redirects to /sea — a second route resolution
     // racing this push and doubling the post-login loading frame.
     router.push(next as Route)
   }
@@ -127,7 +128,7 @@ function SignInForm() {
     <>
       <WaveBackground />
       <NightSky />
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-[100svh] px-6">
       <Link
         href="/"
         className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] left-6 inline-flex items-center gap-1.5 font-ui text-sm
@@ -144,7 +145,7 @@ function SignInForm() {
           className="text-center"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={spring}
         >
           <h1 className="font-display text-2xl text-sand mb-2">glassbottles</h1>
           <p className="font-ui text-sm text-sand/45">One bottle. One stranger. Every day.</p>
@@ -153,7 +154,7 @@ function SignInForm() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={spring}
           className="flex flex-col gap-3"
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
@@ -227,7 +228,7 @@ function SignInForm() {
           />
         </motion.div>
 
-        <p className="font-ui text-xs text-sand/25 text-center">
+        <p className="font-ui text-xs text-sand/40 text-center">
           New here?{' '}
           <Link href="/sign-up" className="text-seafoam hover:underline">
             Create an account

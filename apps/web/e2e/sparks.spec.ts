@@ -9,6 +9,7 @@ const deck = /\?$/
 test('a spark is a placeholder question, never the message', async ({ page }) => {
   const u = await makeUser('spark-free')
   await signIn(page, u.email)
+  await page.goto('/sea')
   const box = page.getByLabel('Message to place in your bottle')
   await page.getByRole('button', { name: 'Need a spark?' }).click()
   const first = await box.getAttribute('placeholder')
@@ -28,6 +29,7 @@ test('a Keeper still gets a spark when the AI is unreachable', async ({ page }) 
     access_until: new Date(Date.now() + 30 * 864e5).toISOString(),
   })
   await signIn(page, u.email)
+  await page.goto('/sea')
   await page.getByRole('button', { name: 'Need a spark?' }).click()
   await expect
     .poll(() => page.getByLabel('Message to place in your bottle').getAttribute('placeholder'))

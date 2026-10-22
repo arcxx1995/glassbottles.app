@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { motion } from 'motion/react'
+import { spring } from '@/components/ui/springs'
 
 const KEY = 'gb-analytics-consent'
 const OPEN_EVENT = 'gb-open-cookie-settings'
@@ -64,7 +66,12 @@ export default function ConsentAnalytics({ gaId }: { gaId: string | undefined })
           aria-label="Analytics cookies"
           className="fixed inset-x-0 bottom-0 z-[100] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
-          <div className="mx-auto flex max-w-xl flex-col gap-3 rounded-2xl border border-sand/15 bg-ocean-deep/95 p-4 text-sm text-sand/85 shadow-xl backdrop-blur sm:flex-row sm:items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={spring}
+            className="glass-strong mx-auto flex max-w-xl flex-col gap-3 rounded-3xl p-4 font-ui text-sm text-sand/85 sm:flex-row sm:items-center"
+          >
             <p className="flex-1">
               We use Google Analytics cookies to see how the site is used. Your messages are never
               shared. See our{' '}
@@ -76,18 +83,18 @@ export default function ConsentAnalytics({ gaId }: { gaId: string | undefined })
             <div className="flex gap-2">
               <button
                 onClick={() => decide('denied')}
-                className="flex-1 rounded-full border border-sand/25 px-4 py-2 text-sand hover:bg-sand/10 sm:flex-none"
+                className="press glass-fill flex-1 rounded-full px-4 py-2.5 text-sand hover:bg-white/[0.11] transition-[background-color,transform] sm:flex-none"
               >
                 Decline
               </button>
               <button
                 onClick={() => decide('granted')}
-                className="flex-1 rounded-full border border-sand/25 px-4 py-2 text-sand hover:bg-sand/10 sm:flex-none"
+                className="press glass-fill flex-1 rounded-full px-4 py-2.5 text-sand hover:bg-white/[0.11] transition-[background-color,transform] sm:flex-none"
               >
                 Accept
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </>

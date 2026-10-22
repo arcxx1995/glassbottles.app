@@ -29,6 +29,7 @@ import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor from '@/components/bottle/MessageEditor'
 import SailingSea, { type SailingBottleItem } from '@/components/bottle/SailingSea'
 import TetheredBottle from '@/components/bottle/TetheredBottle'
+import { easeOut } from '@/components/ui/springs'
 
 const ReceivedBottle = dynamic(
   () => import('@/components/bottle/ReceivedBottle'),
@@ -132,7 +133,7 @@ function IdlePanel() {
       <SailingSea bottles={OLD_SAILING} />
 
       {/* Foreground: heading + wider compose box with the bottle tethered
-          beneath it by the nail + rope — mirrors the real /home idle screen. */}
+          beneath it by the nail + rope — mirrors the real /sea idle screen. */}
       <div className="relative z-10 w-full min-h-[520px] flex flex-col items-center">
         <div className="text-center">
           <p className="font-display text-xl text-sand">Your bottle awaits</p>
@@ -263,8 +264,8 @@ function SailingControls({
     <button
       disabled={count === 0}
       onClick={onDeliver}
-      className="px-7 py-3 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
-                 text-sm tracking-wide transition-all duration-150 active:scale-[0.97]
+      className="px-7 py-3 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold
+                 text-sm tracking-wide transition-[filter,transform] duration-150 press
                  hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
     >
       Simulate a delivery
@@ -374,9 +375,9 @@ function ReceivedBannerPanel() {
         </div>
         <button
           onClick={() => setShow(true)}
-          className="px-8 py-3.5 rounded-2xl bg-seafoam text-ocean-deep font-ui
-                     font-semibold text-sm tracking-wide transition-all duration-150
-                     active:scale-[0.97] hover:brightness-110"
+          className="px-8 py-3.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui
+                     font-semibold text-sm tracking-wide transition-[filter,transform] duration-150
+                     press hover:brightness-110"
         >
           Trigger banner
         </button>
@@ -406,7 +407,7 @@ export default function PreviewPage() {
     <>
       <WaveBackground />
 
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 min-h-[100svh] flex flex-col">
 
         {/* DEV PREVIEW banner */}
         <div
@@ -432,7 +433,7 @@ export default function PreviewPage() {
                 onClick={() => setActivePanel(id)}
                 className={[
                   'px-3 py-1.5 rounded-chip font-ui text-xs font-medium whitespace-nowrap',
-                  'transition-all duration-150',
+                  'transition-[color,background-color,border-color,transform] duration-150',
                   activePanel === id
                     ? 'bg-seafoam text-ocean-deep shadow-seafoam'
                     : 'text-sand/50 hover:text-sand hover:bg-white/5',
@@ -469,7 +470,7 @@ export default function PreviewPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{ duration: 0.25, ease: easeOut }}
             >
               <ActivePanel />
             </motion.div>
@@ -478,7 +479,7 @@ export default function PreviewPage() {
 
         {/* Footer nav hint */}
         <div className="sticky bottom-0 w-full border-t border-white/5 bg-ocean-deep/80 backdrop-blur-md py-3">
-          <p className="font-mono text-[10px] text-sand/20 text-center tracking-wide">
+          <p className="font-mono text-[10px] text-sand/35 text-center tracking-wide">
             {PANEL_IDS.indexOf(activePanel) + 1} / {PANEL_IDS.length}
             {' '}—{' '}
             {PANEL_LABELS[activePanel]}

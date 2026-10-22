@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
+import Toast from '@/components/ui/Toast'
 import { X } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -54,7 +55,7 @@ export default function DeliveredBanner({
   const { data: status } = useGetTodayBottleStatusQuery(undefined, {
     skip: !user?.id || previewVisible !== undefined,
     // Slow reconcile poll: an ack on device A only reaches device B via a
-    // BottleStatus refetch. /home polls this query every 30s, but on /inbox or
+    // BottleStatus refetch. /sea polls this query every 30s, but on /inbox or
     // /settings nothing else refetches it — without this, an already-acked
     // "found someone" toast lingered on the second device until navigation.
     // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route
@@ -106,15 +107,12 @@ export default function DeliveredBanner({
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <Toast
           key="delivered-banner"
-          initial={{ opacity: 0, x: 80, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 80, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          onDismiss={handleDismiss}
           className="pointer-events-auto w-full
                      flex items-center gap-3 overflow-hidden
-                     bg-ocean-mid border border-coral/25 rounded-2xl
+                     glass-strong border-coral/30 rounded-3xl
                      px-4 py-3.5 shadow-banner text-left"
           role="status"
           aria-live="polite"
@@ -137,12 +135,11 @@ export default function DeliveredBanner({
           <button
             onClick={handleDismiss}
             aria-label="Dismiss"
-            className="shrink-0 -mr-1 p-1.5 rounded-full text-sand/40
-                       hover:text-sand hover:bg-white/5 transition-colors"
+            className="press shrink-0 -my-2 -mr-3 flex h-11 w-11 items-center justify-center rounded-full text-sand/50 hover:text-sand hover:bg-white/5 transition-[color,background-color,transform]"
           >
             <X size={16} />
           </button>
-        </motion.div>
+        </Toast>
       )}
     </AnimatePresence>
   )

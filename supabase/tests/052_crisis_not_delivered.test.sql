@@ -1,4 +1,4 @@
--- Runnable check for migration 052.
+-- Runnable check for migrations 052 and 053 (explicit terms, pulled-crisis strikes).
 --   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/052_crisis_not_delivered.test.sql
 -- Runs inside one transaction and rolls back.
 

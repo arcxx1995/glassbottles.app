@@ -63,6 +63,11 @@ export default function GuidelinesPage() {
       <p>Nothing you write reaches another person until it has passed these checks:</p>
       <ul className={list}>
         <li>
+          <strong className="text-sand/85">While you write:</strong> your draft is checked as you
+          type. If it breaks these rules, the throw button doesn&rsquo;t appear and you&rsquo;re
+          told why, so it can&rsquo;t be sent.
+        </li>
+        <li>
           <strong className="text-sand/85">At send:</strong> a filter rejects clearly prohibited
           words and phrases before the message is accepted.
         </li>
@@ -83,8 +88,8 @@ export default function GuidelinesPage() {
         message is capped at 1,000 characters, and you can send one bottle a day.
       </p>
       <p>
-        If a message reads like the writer may be in danger, it is still delivered and the writer
-        is shown where to find help.
+        If a message reads like the writer may be in danger (thoughts of suicide or self-harm), it
+        is not delivered. The writer is shown free helplines instead.
       </p>
 
       <LegalH2>Reporting</LegalH2>

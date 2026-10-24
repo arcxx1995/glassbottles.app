@@ -31,6 +31,16 @@ export interface TodayBottleStatus {
   unackedDelivered: UnackedDeliveredBottle[]
   /** Consecutive local days with a throw (migration 039). */
   tides?: number
+  /** Latest bottle the safety screen kept ashore, not yet acknowledged
+   *  (043; crisis since 052). Its throw for the day is already restored. */
+  heldBottle?: HeldBottle | null
+}
+
+export interface HeldBottle {
+  id: string
+  message: string
+  screen_reason: string | null
+  day_key: string
 }
 
 export interface SendBottleRequest {
@@ -130,6 +140,18 @@ export const bottleApi = createApi({
       queryFn: async () => {
         const supabase = createClient()
         const { error } = await supabase.rpc('ack_delivered_bottles')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['BottleStatus'],
+    }),
+    // Sender has seen why a bottle was kept ashore (043).
+    ackHeldBottle: builder.mutation<void, string>({
+      queryFn: async (bottleId) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('ack_held_bottle', { p_bottle_id: bottleId })
         if (error) {
           return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
         }
@@ -250,4 +272,5 @@ export const {
   useGetBottleCountQuery,
   useGetPublicStatsQuery,
   useAckDeliveredBottlesMutation,
+  useAckHeldBottleMutation,
 } = bottleApi

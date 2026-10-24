@@ -14,9 +14,11 @@ import { selectUser } from '@/store/authSlice'
 import {
   useSendBottleMutation,
   useGetTodayBottleStatusQuery,
+  useAckHeldBottleMutation,
 } from '@/store/api/bottleApi'
 import DailyTimer from '@/components/shared/DailyTimer'
-import MessageEditor from '@/components/bottle/MessageEditor'
+import MessageEditor, { HELD_COPY } from '@/components/bottle/MessageEditor'
+import CrisisSupport from '@/components/bottle/CrisisSupport'
 import BottleSkeleton from '@/components/shared/BottleSkeleton'
 import OceanCounter from '@/components/shared/OceanCounter'
 import SailingSea from '@/components/bottle/SailingSea'
@@ -34,6 +36,7 @@ export default function HomePage() {
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
+  const [ackHeldBottle] = useAckHeldBottleMutation()
   // Why the last throw failed; null = no error showing.
   const [sendError, setSendError] = useState<null | 'network' | 'content' | 'suspended' | 'age'>(null)
 
@@ -65,6 +68,9 @@ export default function HomePage() {
   )
   const todayKey = todayStatus?.quota.date
   const hasSent = todayStatus?.quota.has_sent ?? false
+  // A thrown bottle the screen kept ashore after the live check let it
+  // through (or the check was skipped): say so — it never silently vanishes.
+  const heldBottle = todayStatus?.heldBottle ?? null
   // status route fetches at most 21 — length 21 means "at or above the ceiling".
   const atCeiling = sailingBottles.length >= 21
 
@@ -284,7 +290,7 @@ export default function HomePage() {
               {(sendStatus === 'idle' || sendStatus === 'throwing') && (
                 <motion.div
                   key="compose"
-                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center -translate-y-8 sm:-translate-y-10"
+                  className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center [justify-content:safe_center] -translate-y-8 sm:-translate-y-10"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   // No exit fade: the landed throw bottle must NOT fade out. The
@@ -331,6 +337,29 @@ export default function HomePage() {
                             <>Your bottle couldn&apos;t be thrown. Check your connection and try again.</>
                           )}
                         </p>
+                      )}
+                      {heldBottle && !sendError && (
+                        <div className="max-w-[300px] mx-auto mt-3">
+                          {heldBottle.screen_reason === 'crisis' ? (
+                            <CrisisSupport
+                              lead="Your last bottle wasn’t sent to a stranger."
+                              onDismiss={() => void ackHeldBottle(heldBottle.id)}
+                            />
+                          ) : (
+                            <p className="font-ui text-xs text-coral leading-relaxed" role="alert">
+                              Your last bottle was kept ashore.{' '}
+                              {HELD_COPY[heldBottle.screen_reason ?? ''] ?? HELD_COPY.review}
+                              {heldBottle.day_key === todayKey && ' Your throw for today is back.'}{' '}
+                              <button
+                                type="button"
+                                onClick={() => void ackHeldBottle(heldBottle.id)}
+                                className="underline"
+                              >
+                                Okay
+                              </button>
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </motion.div>

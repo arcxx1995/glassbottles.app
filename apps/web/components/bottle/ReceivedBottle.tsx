@@ -6,7 +6,7 @@ import { Flag, CheckCheck } from 'lucide-react'
 import { useMarkBottleReadMutation, useReportBottleMutation } from '@/store/api/bottleApi'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
 import { feel } from '@/lib/feel'
-import type { Bottle } from '@/types'
+import type { Bottle, ReportReason } from '@/types'
 
 interface ReceivedBottleProps {
   bottle: Bottle
@@ -15,6 +15,15 @@ interface ReceivedBottleProps {
 }
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const
+
+// Picking a reason IS the confirm step: one tap reports and removes.
+const REPORT_REASONS: [ReportReason, string][] = [
+  ['sexual', 'Sexual'],
+  ['harassment', 'Abusive'],
+  ['spam', 'Spam'],
+  ['contact', 'Contact info'],
+  ['other', 'Other'],
+]
 
 // sealed → uncorking → open. A bottle that arrives unread starts sealed and
 // opens itself the first time it is properly on screen — opening IS reading,
@@ -56,9 +65,9 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
     void markRead(bottle.id)
   }, [stage, inView, bottle.is_read, bottle.id, markRead])
 
-  function confirmReport() {
+  function confirmReport(reason: ReportReason) {
     setConfirmingReport(false)
-    reportBottle(bottle.id)
+    reportBottle({ bottleId: bottle.id, reason })
       .unwrap()
       .then(() => onReported?.(true))
       .catch(() => onReported?.(false))
@@ -158,9 +167,9 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
       {/* Footer */}
       <div className="flex min-h-[36px] items-center justify-between gap-2 pt-3 border-t border-white/5">
         {confirmingReport ? (
-          <>
-            <p className="font-ui text-xs text-sand/60">Report and remove this bottle?</p>
-            <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 py-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-ui text-xs text-sand/60">Report and remove — what&rsquo;s wrong?</p>
               <button
                 type="button"
                 onClick={() => setConfirmingReport(false)}
@@ -168,15 +177,20 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={confirmReport}
-                className="px-3 py-1.5 rounded-xl bg-coral/15 text-coral font-ui text-xs font-medium hover:bg-coral/25 transition-colors"
-              >
-                Report
-              </button>
             </div>
-          </>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Report reason">
+              {REPORT_REASONS.map(([reason, label]) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => confirmReport(reason)}
+                  className="px-3 py-1.5 rounded-xl bg-coral/15 text-coral font-ui text-xs font-medium hover:bg-coral/25 transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : (
           <>
             <time dateTime={bottle.sent_at} className="font-mono text-xs text-sand/30">

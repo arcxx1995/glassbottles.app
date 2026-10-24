@@ -154,10 +154,19 @@ BEGIN
   IF NOT public.report_bottle(bid) THEN
     RAISE EXCEPTION 'BUG: a repeat 1-arg report should still read as success';
   END IF;
-  -- Non-admins can't see or act on the queue.
+  RESET role;
+  -- Non-admins can't see or act on the queue (C; the receiver may be D).
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-4000-8000-000000000512","role":"authenticated"}', true);
+  SET LOCAL role authenticated;
   BEGIN
     PERFORM public.admin_queue();
     RAISE EXCEPTION 'BUG: a non-admin read the queue';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    PERFORM public.admin_moderate(gen_random_uuid(), 'dismiss');
+    RAISE EXCEPTION 'BUG: a non-admin moderated';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   RESET role;
@@ -337,6 +346,31 @@ BEGIN
     RAISE EXCEPTION 'BUG: a held bio was not cleared';
   END IF;
   RAISE NOTICE 'ok: 3 reports hide; held bio cleared';
+END $$;
+
+-- Admin "suspend" removes the content and suspends its author.
+DO $$
+DECLARE
+  pid UUID;
+  qid UUID;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '', true);
+  INSERT INTO public.posts (author_id, body, screen) VALUES ('00000000-0000-4000-8000-000000000512', 'borderline', 'ok')
+  RETURNING id INTO pid;
+  PERFORM public.enqueue_moderation('post', pid, 'report', 'other', TRUE);
+  SELECT id INTO qid FROM public.moderation_queue WHERE kind = 'post' AND target_id = pid;
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-4000-8000-000000000513","role":"authenticated"}', true);
+  SET LOCAL role authenticated;
+  IF public.admin_moderate(qid, 'suspend') <> 'suspended' THEN
+    RAISE EXCEPTION 'BUG: admin suspend failed';
+  END IF;
+  RESET role;
+  IF (SELECT screen FROM public.posts WHERE id = pid) <> 'held'
+     OR (SELECT suspended_at FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000512') IS NULL THEN
+    RAISE EXCEPTION 'BUG: suspend did not remove the post and suspend its author';
+  END IF;
+  RAISE NOTICE 'ok: admin suspend removes + suspends';
 END $$;
 
 -- Grants: the new tables are invisible to clients.

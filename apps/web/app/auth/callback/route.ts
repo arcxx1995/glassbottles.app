@@ -109,5 +109,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`)
   }
 
+  // Google sign-up ticked "I'm 18+ and agree" before leaving (051). Email
+  // sign-ups carry it in user metadata instead; everyone else confirms in-app.
+  if (searchParams.get('age_confirmed') === '1') {
+    const { error: termsError } = await supabase.rpc('accept_terms')
+    if (termsError) console.error('[auth/callback] accept_terms failed:', termsError.message)
+  }
+
   return NextResponse.redirect(`${origin}${next}`)
 }

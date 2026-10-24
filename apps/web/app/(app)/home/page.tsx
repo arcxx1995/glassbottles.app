@@ -34,7 +34,8 @@ export default function HomePage() {
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
-  const [sendError, setSendError] = useState(false)
+  // Why the last throw failed; null = no error showing.
+  const [sendError, setSendError] = useState<null | 'network' | 'content' | 'suspended' | 'age'>(null)
 
   // Restore send state after page refresh — a user who already sent today
   // should land on the sailing sea, not the "Your bottle awaits" idle screen.
@@ -123,7 +124,7 @@ export default function HomePage() {
     if (sendStatus !== 'idle' || throwBusyRef.current) return
     throwBusyRef.current = true
     sendFailedRef.current = false
-    setSendError(false)
+    setSendError(null)
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
@@ -137,7 +138,12 @@ export default function HomePage() {
       // invalidated status refetch flips the screen to sailing; showing the
       // generic "check your connection" copy here was a lie.
       const code = (err as { data?: { code?: string } })?.data?.code
-      if (code !== '23505') setSendError(true)
+      // 051's guard raises these by name (blocklist, suspension, 18+ gate).
+      const reason = (err as { error?: string })?.error
+      if (reason === 'content_not_allowed') setSendError('content')
+      else if (reason === 'account_suspended') setSendError('suspended')
+      else if (reason === 'age_unconfirmed') setSendError('age')
+      else if (code !== '23505') setSendError('network')
       // If the drop already finished (it set 'thrown'), correct back to idle.
       dispatch(setThrowAnimating(false))
       dispatch(setSendStatus('idle'))
@@ -303,7 +309,27 @@ export default function HomePage() {
                           className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
                           role="alert"
                         >
-                          Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                          {sendError === 'content' ? (
+                            <>
+                              That message breaks our{' '}
+                              <a href="/guidelines" target="_blank" className="underline">
+                                community guidelines
+                              </a>
+                              . Rewrite it and throw again.
+                            </>
+                          ) : sendError === 'suspended' ? (
+                            <>
+                              Your account is suspended for breaking our{' '}
+                              <a href="/guidelines" target="_blank" className="underline">
+                                community guidelines
+                              </a>
+                              . Email hello@glassbottles.app if you think this is a mistake.
+                            </>
+                          ) : sendError === 'age' ? (
+                            <>Please confirm you&apos;re 18 or older before throwing a bottle.</>
+                          ) : (
+                            <>Your bottle couldn&apos;t be thrown. Check your connection and try again.</>
+                          )}
                         </p>
                       )}
                     </div>

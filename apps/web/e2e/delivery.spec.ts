@@ -66,7 +66,7 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
   await receiverCtx.close()
 })
 
-test('reporting asks first, then removes the bottle for good', async ({ page }) => {
+test('reporting asks why, then removes the bottle for good', async ({ page }) => {
   const a = await makeUser('rsender')
   const b = await makeUser('rreceiver')
   const unkind = `something unkind ${Date.now()}`
@@ -90,9 +90,18 @@ test('reporting asks first, then removes the bottle for good', async ({ page }) 
   await expect(page.getByText(unkind)).toBeVisible()
 
   await page.getByLabel('Report this bottle').click()
-  await page.getByRole('button', { name: 'Report', exact: true }).click()
+  await page.getByRole('group', { name: 'Report reason' }).getByRole('button', { name: 'Abusive' }).click()
   await expect(page.getByText(unkind)).toHaveCount(0)
   await expect(page.getByText(/Reported\./)).toBeVisible()
+
+  // 051: the report reaches the moderation queue with its reason.
+  const { data: bottle } = await admin.from('bottles').select('id').eq('message', unkind).single()
+  const { data: item } = await admin
+    .from('moderation_queue')
+    .select('source, reason, reports')
+    .eq('target_id', bottle!.id)
+    .single()
+  expect(item).toEqual({ source: 'report', reason: 'harassment', reports: 1 })
 
   await page.reload()
   await expect(page.getByText('No bottles yet')).toBeVisible()

@@ -840,8 +840,8 @@ BEGIN
 END;
 $$;
 
--- Actions: remove (hide / pull the content), restore (put it back, or lift a
--- suspension), suspend (the author), dismiss (no change).
+-- Actions: remove (hide / pull the content), suspend (remove + suspend the
+-- author), restore (put it back, or lift a suspension), dismiss (no change).
 CREATE OR REPLACE FUNCTION public.admin_moderate(p_item UUID, p_action TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -860,7 +860,7 @@ BEGIN
     RETURN 'not_found';
   END IF;
 
-  IF p_action = 'remove' THEN
+  IF p_action IN ('remove', 'suspend') THEN
     CASE q.kind
       -- is_reported pulls a delivered bottle from the receiver's inbox,
       -- logbook, ripple and keep (all filter on it).
@@ -880,6 +880,10 @@ BEGIN
       ELSE RAISE EXCEPTION 'cannot remove a %', q.kind USING ERRCODE = '22023';
     END CASE;
     v_result := 'removed';
+    IF p_action = 'suspend' THEN
+      PERFORM public.suspend_user(public.moderation_author(q.kind, q.target_id), 'moderator', FALSE);
+      v_result := 'suspended';
+    END IF;
 
   ELSIF p_action = 'restore' THEN
     CASE q.kind
@@ -901,10 +905,6 @@ BEGIN
       WHEN 'user' THEN UPDATE public.profiles SET suspended_at = NULL, suspension_reason = NULL WHERE id = q.target_id;
     END CASE;
     v_result := 'restored';
-
-  ELSIF p_action = 'suspend' THEN
-    PERFORM public.suspend_user(public.moderation_author(q.kind, q.target_id), 'moderator', FALSE);
-    v_result := 'suspended';
 
   ELSIF p_action = 'dismiss' THEN
     v_result := 'dismissed';

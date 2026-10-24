@@ -74,7 +74,8 @@ export async function middleware(request: NextRequest) {
 
   const isAppRoute = request.nextUrl.pathname.startsWith('/home') ||
     request.nextUrl.pathname.startsWith('/inbox') ||
-    request.nextUrl.pathname.startsWith('/settings')
+    request.nextUrl.pathname.startsWith('/settings') ||
+    request.nextUrl.pathname.startsWith('/admin')
 
   const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
     request.nextUrl.pathname === '/sign-up'
@@ -125,6 +126,7 @@ export const config = {
     '/home/:path*',
     '/inbox/:path*',
     '/settings/:path*',
+    '/admin/:path*',
     '/api/:path*',
     '/sign-in',
     '/sign-up',

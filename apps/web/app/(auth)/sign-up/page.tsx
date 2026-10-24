@@ -91,7 +91,11 @@ export default function SignUpPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/home` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback?next=/home`,
+        // 051: handle_new_user stamps age_confirmed_at + terms_accepted_at.
+        data: { age_confirmed: true },
+      },
     })
 
     if (error) {
@@ -123,7 +127,8 @@ export default function SignUpPage() {
     setFormError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      // The box above was ticked: the callback records it (accept_terms).
+      options: { redirectTo: `${location.origin}/auth/callback?age_confirmed=1` },
     })
     if (error) {
       setFormError(mapAuthError(error, 'sign-up'))
@@ -247,16 +252,24 @@ export default function SignUpPage() {
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-sand/30 bg-transparent
                                text-seafoam accent-seafoam focus-visible:outline-none
                                focus-visible:ring-2 focus-visible:ring-seafoam"
-                    aria-label="Agree to Terms & Conditions and Privacy Policy"
+                    aria-label="Confirm you are 18 or older and agree to the Terms, Community Guidelines and Privacy Policy"
                   />
                   <span className="font-ui text-xs leading-relaxed text-sand/55">
-                    I agree to the{' '}
+                    I&rsquo;m 18 or older and agree to the{' '}
                     <Link
                       href="/terms"
                       target="_blank"
                       className="text-seafoam hover:underline"
                     >
                       Terms &amp; Conditions
+                    </Link>
+                    ,{' '}
+                    <Link
+                      href="/guidelines"
+                      target="_blank"
+                      className="text-seafoam hover:underline"
+                    >
+                      Community Guidelines
                     </Link>{' '}
                     and{' '}
                     <Link
@@ -270,7 +283,7 @@ export default function SignUpPage() {
                   </span>
                 </label>
                 {touched && !agreed && (
-                  <FieldError>Please accept the Terms &amp; Conditions to continue.</FieldError>
+                  <FieldError>Please confirm you&rsquo;re 18+ and accept the terms to continue.</FieldError>
                 )}
 
                 <FormError>{formError}</FormError>

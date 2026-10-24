@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { createClient } from '@/lib/supabase/client'
-import type { Bottle, DailyQuota } from '@/types'
+import type { Bottle, DailyQuota, ReportReason } from '@/types'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
  *  No message/receiver fields leak; just id (key) and day_key (date label). */
@@ -171,11 +171,12 @@ export const bottleApi = createApi({
         }
       },
     }),
-    reportBottle: builder.mutation<void, string>({
-      queryFn: async (bottleId) => {
+    reportBottle: builder.mutation<void, { bottleId: string; reason: ReportReason }>({
+      queryFn: async ({ bottleId, reason }) => {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('report_bottle', {
           p_bottle_id: bottleId,
+          p_reason: reason,
         })
         if (error || data !== true) {
           return { error: { status: 'CUSTOM_ERROR' as const, error: error?.message ?? 'Bottle not found' } }
@@ -184,7 +185,7 @@ export const bottleApi = createApi({
       },
       // Optimistic: a reported bottle leaves the inbox at once (038 keeps it
       // out of get_received_bottles); a failed report puts it back.
-      async onQueryStarted(bottleId, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ bottleId }, { dispatch, queryFulfilled }) {
         const patch = dispatch(
           bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) =>
             draft.filter((x) => x.id !== bottleId)

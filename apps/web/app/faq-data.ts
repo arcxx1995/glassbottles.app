@@ -12,7 +12,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What if something harmful washes up?',
-    a: 'Every bottle has a report flag. Reported bottles are pulled from the water and repeat senders lose the sea.',
+    a: 'Every bottle is checked before it’s delivered — sexual content, cruelty, contact details and spam never reach anyone. If something still feels wrong, report it: it leaves your inbox, a moderator reviews it, and repeat senders lose the sea. glassbottles is 18+.',
   },
   {
     q: 'Why only one bottle a day?',

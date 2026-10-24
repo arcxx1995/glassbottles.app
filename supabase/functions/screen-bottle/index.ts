@@ -1,8 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { chatJSON } from '../_shared/openrouter.ts'
-import {
-  SCREEN_PROMPT, SOCIAL_SCREEN_PROMPT, VERDICT_SCHEMA, findContact, findPersonalContact, parseVerdict, type Verdict,
-} from './screen.ts'
+import { classify as classifyWith } from '../_shared/classify.ts'
+import { findContact, findPersonalContact, type Verdict } from './screen.ts'
 
 // screen-bottle — the safety screen (migration 043), plus social mode (050):
 // a body of {table, id} screens a post / comment / scrap / community / bio
@@ -12,9 +10,9 @@ import {
 // and again by the rescreen_pending cron for anything still unscreened.
 // Reads the message, decides one verdict, and hands it to apply_screen(),
 // which owns every state change (held → ashore + the day restored; crisis →
-// the sender is shown help). Fail-closed since 051: a failure here leaves the
-// row unscreened, which means undelivered / hidden from others; after 6
-// misses the cron holds it for human review.
+// the same since 052, and the sender is shown help). Fail-closed since 051: a
+// failure here leaves the row unscreened, which means undelivered / hidden
+// from others; after 6 misses the cron holds it for human review.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -27,21 +25,10 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
-async function classify(message: string, social = false): Promise<Verdict | null> {
-  if (!OPENROUTER_API_KEY) return null
-  const answer = await chatJSON({
-    apiKey: OPENROUTER_API_KEY,
-    model: OPENROUTER_MODEL,
-    system: social ? SOCIAL_SCREEN_PROMPT : SCREEN_PROMPT,
-    user: social ? `<post>\n${message}\n</post>` : `<bottle>\n${message}\n</bottle>`,
-    name: 'verdict',
-    schema: VERDICT_SCHEMA as unknown as Record<string, unknown>,
-    maxTokens: 60,
-  })
-  // No usable answer → no verdict; the row stays unscreened (undelivered)
-  // and the rescreen cron tries again.
-  return parseVerdict(answer)
-}
+// No usable answer → no verdict; the row stays unscreened (undelivered) and
+// the rescreen cron tries again.
+const classify = (message: string, social = false) =>
+  classifyWith(message, { apiKey: OPENROUTER_API_KEY, model: OPENROUTER_MODEL, social })
 
 // table → how to read its text, its key, and its screen column.
 const SOCIAL_TABLES: Record<string, { select: string; key: string; screen: string; text: (row: Record<string, string | null>) => string }> = {

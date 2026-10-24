@@ -87,7 +87,7 @@ BEGIN
 END;
 $$;
 
--- Crisis sails on; the matcher never delivers a held bottle; a late hold on
+-- Crisis is held (052); the matcher never delivers a held bottle; a late hold on
 -- a delivered bottle is recorded but never claws it back.
 RESET role;
 DO $$
@@ -101,8 +101,9 @@ BEGIN
           now() - interval '2 hours', (now() AT TIME ZONE 'UTC')::date - 3)
   RETURNING id INTO c;
   PERFORM public.apply_screen(c, 'crisis');
-  IF (SELECT is_stale OR screen <> 'crisis' FROM public.bottles WHERE id = c) THEN
-    RAISE EXCEPTION 'BUG: a crisis bottle was taken out of the water';
+  -- 052: crisis no longer sails; it is held ashore with reason 'crisis'.
+  IF (SELECT NOT is_stale OR screen <> 'held' OR screen_reason <> 'crisis' FROM public.bottles WHERE id = c) THEN
+    RAISE EXCEPTION 'BUG: a crisis bottle stayed in the water';
   END IF;
 
   SELECT id INTO held_old FROM public.bottles
@@ -124,7 +125,7 @@ BEGIN
   IF public.apply_screen(late, 'ok') <> 'already_screened' THEN
     RAISE EXCEPTION 'BUG: a second verdict overwrote the first';
   END IF;
-  RAISE NOTICE 'ok: crisis sails, held never matched, late hold recorded only, verdict once';
+  RAISE NOTICE 'ok: crisis held, held never matched, late hold recorded only, verdict once';
 END;
 $$;
 

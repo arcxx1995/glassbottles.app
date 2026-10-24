@@ -34,9 +34,12 @@ describe('parseVerdict', () => {
     expect(parseVerdict({ verdict: 'ok', reason: 'none' })).toEqual({ verdict: 'ok' })
     expect(parseVerdict({ verdict: 'crisis', reason: 'none' })).toEqual({ verdict: 'crisis' })
     expect(parseVerdict({ verdict: 'held', reason: 'harm' })).toEqual({ verdict: 'held', reason: 'harm' })
+    expect(parseVerdict({ verdict: 'held', reason: 'minor' })).toEqual({ verdict: 'held', reason: 'minor' })
   })
   it('gives no verdict for anything malformed (fail-open)', () => {
     expect(parseVerdict({ verdict: 'held', reason: 'none' })).toBeNull()
+    // 'review' is the cron's reason, never the classifier's.
+    expect(parseVerdict({ verdict: 'held', reason: 'review' })).toBeNull()
     expect(parseVerdict({ verdict: 'delete' })).toBeNull()
     expect(parseVerdict('ok')).toBeNull()
     expect(parseVerdict(null)).toBeNull()

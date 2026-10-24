@@ -5,14 +5,16 @@ import {
 } from './screen.ts'
 
 // screen-bottle — the safety screen (migration 043), plus social mode (050):
-// a body of {table, id} screens a post / comment / scrap and hands the
-// verdict to apply_social_screen() instead.
+// a body of {table, id} screens a post / comment / scrap / community / bio
+// (051) and hands the verdict to apply_social_screen() instead.
 //
-// Called by the on_bottle_screen trigger through pg_net for every new bottle.
+// Called by the on_bottle_screen trigger through pg_net for every new bottle,
+// and again by the rescreen_pending cron for anything still unscreened.
 // Reads the message, decides one verdict, and hands it to apply_screen(),
 // which owns every state change (held → ashore + the day restored; crisis →
-// the sender is shown help). Any failure here leaves the bottle unscreened,
-// and it sails as before after its hour: the screen fails open by design.
+// the sender is shown help). Fail-closed since 051: a failure here leaves the
+// row unscreened, which means undelivered / hidden from others; after 6
+// misses the cron holds it for human review.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -36,29 +38,44 @@ async function classify(message: string, social = false): Promise<Verdict | null
     schema: VERDICT_SCHEMA as unknown as Record<string, unknown>,
     maxTokens: 60,
   })
-  // No usable answer → no verdict; the bottle sails unscreened and the
-  // report flag stays the backstop.
+  // No usable answer → no verdict; the row stays unscreened (undelivered)
+  // and the rescreen cron tries again.
   return parseVerdict(answer)
 }
 
-const SOCIAL_TABLES = new Set(['posts', 'comments', 'scraps'])
+// table → how to read its text, its key, and its screen column.
+const SOCIAL_TABLES: Record<string, { select: string; key: string; screen: string; text: (row: Record<string, string | null>) => string }> = {
+  posts: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
+  comments: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
+  scraps: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
+  communities: {
+    select: 'name, description, screen', key: 'id', screen: 'screen',
+    text: (r) => [r.name, r.description].filter(Boolean).join('\n'),
+  },
+  social_profiles: { select: 'bio, bio_screen', key: 'user_id', screen: 'bio_screen', text: (r) => r.bio ?? '' },
+}
 
 async function screenSocial(table: string, id: string): Promise<Response> {
-  if (!SOCIAL_TABLES.has(table)) return json({ error: 'bad table' }, 400)
-  const { data: row, error } = await supabase.from(table).select('body, screen').eq('id', id).single()
-  if (error || !row) return json({ error: 'row not found' }, 404)
-  if (row.screen) return json({ result: 'already_screened' })
+  const spec = SOCIAL_TABLES[table]
+  if (!spec) return json({ error: 'bad table' }, 400)
+  const { data, error } = await supabase.from(table).select(spec.select).eq(spec.key, id).single()
+  if (error || !data) return json({ error: 'row not found' }, 404)
+  const row = data as unknown as Record<string, string | null>
+  if (row[spec.screen]) return json({ result: 'already_screened' })
+  const text = spec.text(row).trim()
 
   let verdict: Verdict | null
   try {
-    verdict = findPersonalContact(row.body)
+    verdict = !text
+      ? { verdict: 'ok' } // an emptied bio: nothing to hold
+      : findPersonalContact(text)
       ? { verdict: 'held', reason: 'contact' }
-      : await classify(row.body, true)
+      : await classify(text, true)
   } catch (err) {
     console.error('[screen-bottle] social classifier', err instanceof Error ? err.message : err)
     return json({ result: 'unscreened' }, 502)
   }
-  if (!verdict) return json({ result: 'unscreened' })
+  if (!verdict) return json({ result: 'unscreened' }, 502)
 
   const { data: result, error: applyErr } = await supabase.rpc('apply_social_screen', {
     p_table: table,
@@ -102,7 +119,7 @@ Deno.serve(async (req) => {
     console.error('[screen-bottle] classifier', err instanceof Error ? err.message : err)
     return json({ result: 'unscreened' }, 502)
   }
-  if (!verdict) return json({ result: 'unscreened' })
+  if (!verdict) return json({ result: 'unscreened' }, 502)
 
   const { data: result, error: applyErr } = await supabase.rpc('apply_screen', {
     p_bottle_id: bottle_id,

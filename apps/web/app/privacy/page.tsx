@@ -70,7 +70,8 @@ export default function PrivacyPolicyPage() {
       </p>
       <p>
         To keep the sea safe, the text of each message &mdash; never your name, email or account
-        &mdash; is checked by an automated AI classifier before it is delivered, to catch sexual
+        &mdash; is checked by an automated AI classifier as you write and again before it is
+        delivered (drafts are checked, not stored), to catch sexual
         content, cruelty, contact details and spam, and to offer support if a message reads like
         you may be in danger. The check runs through OpenRouter, which we instruct to use only AI
         providers that neither store the text nor train on it; it is processed only to return that

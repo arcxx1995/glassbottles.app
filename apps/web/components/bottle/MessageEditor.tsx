@@ -1,13 +1,46 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { setMessage, selectMessage } from '@/store/bottleSlice'
+import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import CrisisSupport from './CrisisSupport'
 
 const MAX_CHARS = 1000
 const MAX_TEXTAREA_HEIGHT = 168
+const CHECK_DEBOUNCE_MS = 800
+
+/** Why a bottle can't be thrown, by screen reason (check-message / 051). */
+export const HELD_COPY: Record<string, string> = {
+  blocked: 'It contains language that isn’t allowed here.',
+  sexual: 'Sexual content isn’t allowed here.',
+  minor: 'Sexual content isn’t allowed here.',
+  contact: 'Bottles stay anonymous: no contact details, handles or links.',
+  harm: 'It reads as hurtful or threatening toward someone.',
+  spam: 'It looks like advertising or spam.',
+  review: 'It needs a closer look before it can sail.',
+}
+
+type CheckResult = { verdict: 'ok' | 'held' | 'crisis' | 'unknown'; reason?: string }
+
+// Verdicts by draft text, so a pause and the throw don't ask twice.
+const checked = new Map<string, CheckResult>()
+
+/** The live filter: the safety screen's verdict on a draft (check-message,
+ *  migration 052). 'unknown' (screen unreachable) lets the throw through —
+ *  the screen after insert is fail-closed, so it still can't reach anyone. */
+async function checkMessage(text: string): Promise<CheckResult> {
+  const hit = checked.get(text)
+  if (hit) return hit
+  const { data, error } = await createClient().functions.invoke<CheckResult>('check-message', {
+    body: { text },
+  })
+  if (error || !data?.verdict) return { verdict: 'unknown' }
+  if (data.verdict !== 'unknown') checked.set(text, data)
+  return data
+}
 
 interface MessageEditorProps {
   onReady?: () => void
@@ -21,11 +54,41 @@ export default function MessageEditor({
   const dispatch = useAppDispatch()
   const message = useAppSelector(selectMessage)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Latest verdict; a hold stays up until a re-check of the edited text clears it.
+  const [check, setCheck] = useState<CheckResult | null>(null)
+  const [gating, setGating] = useState(false)
 
   const remaining = MAX_CHARS - message.length
   const isNearLimit = remaining <= 100
   const isOverLimit = remaining < 0
-  const canSend = message.trim().length > 0 && !isOverLimit
+  const draft = message.trim()
+  const blocked = draft.length > 0 && (check?.verdict === 'held' || check?.verdict === 'crisis')
+  const canSend = draft.length > 0 && !isOverLimit && !blocked
+
+  // Check while typing: once the writer pauses.
+  useEffect(() => {
+    if (!draft || draft.length > MAX_CHARS) return
+    let stale = false
+    const t = setTimeout(async () => {
+      const result = await checkMessage(draft)
+      if (!stale) setCheck(result)
+    }, CHECK_DEBOUNCE_MS)
+    return () => {
+      stale = true
+      clearTimeout(t)
+    }
+  }, [draft])
+
+  // And once more on the throw itself (cached if the pause already asked),
+  // so a quick tap can't beat the debounce.
+  async function handleThrow() {
+    if (gating || !onReady) return
+    setGating(true)
+    const result = await checkMessage(draft)
+    setGating(false)
+    setCheck(result)
+    if (result.verdict === 'ok' || result.verdict === 'unknown') onReady()
+  }
 
   useEffect(() => {
     // Auto-focus only on devices with a fine pointer (desktop). On touch this
@@ -88,6 +151,22 @@ export default function MessageEditor({
         </span>
       </div>
 
+      {/* The live filter's answer: why this can't be thrown, or, for someone
+          who may be in danger, people to talk to instead. */}
+      {blocked && check?.verdict === 'held' && (
+        <p role="alert" className="px-1 font-ui text-xs text-coral leading-relaxed">
+          This can&rsquo;t be thrown. {HELD_COPY[check.reason ?? ''] ?? HELD_COPY.review}{' '}
+          Edit it to continue —{' '}
+          <a href="/guidelines" target="_blank" className="underline">
+            community guidelines
+          </a>
+          .
+        </p>
+      )}
+      {blocked && check?.verdict === 'crisis' && (
+        <CrisisSupport lead="This bottle won’t be sent to a stranger." />
+      )}
+
       {/* Throw CTA — appears once text exists. Height animates so the layout
           eases open/closed instead of jumping when the button (un)mounts. */}
       <AnimatePresence initial={false}>
@@ -101,13 +180,14 @@ export default function MessageEditor({
             className="overflow-hidden"
           >
             <motion.button
-              onClick={onReady}
+              onClick={handleThrow}
+              disabled={gating}
               whileTap={{ scale: 0.97 }}
               className="w-full py-4 rounded-2xl bg-seafoam text-ocean-deep font-ui font-semibold
                          text-base tracking-wide transition-all duration-150
-                         hover:brightness-110"
+                         hover:brightness-110 disabled:opacity-70"
             >
-              Seal &amp; Throw
+              {gating ? 'Checking…' : <>Seal &amp; Throw</>}
             </motion.button>
           </motion.div>
         )}

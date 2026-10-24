@@ -57,6 +57,15 @@ export default function RealtimeBottleListener() {
           // sailingBottles (it animates out of the sea).
           dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
+        // The safety screen kept a sent bottle ashore (held), or read it as
+        // someone in danger (care) — refetch status; heldBottle drives the
+        // notice and the day's throw comes back (043/052).
+        .on('broadcast', { event: 'bottle_held' }, () => {
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+        })
+        .on('broadcast', { event: 'bottle_care' }, () => {
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
+        })
         .subscribe()
     }
 

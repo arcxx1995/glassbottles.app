@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findContact, findPersonalContact, parseVerdict } from '../../../supabase/functions/screen-bottle/screen'
+import { SCREEN_PROMPT, findContact, findCrisis, findPersonalContact, parseVerdict } from '../../../supabase/functions/screen-bottle/screen'
 
 // The Edge Function's pure logic (supabase/functions/screen-bottle/screen.ts),
 // tested here because the repo's runner is vitest, not Deno.
@@ -20,6 +20,30 @@ describe('findContact', () => {
     'Node.js broke my whole week, honestly',
     'I said "@ the beach" like an idiot',
   ])('lets through: %s', (text) => expect(findContact(text)).toBe(false))
+})
+
+describe('findCrisis (052)', () => {
+  it.each([
+    'I want to commit suicide, I want to fuck your pussy', // a reviewer's test, delivered pre-052
+    'some nights I think about killing myself',
+    'I just want to die',
+    'everyone would be better off dead without me',
+    'I keep cutting myself',
+    "I don't want to live anymore",
+    'feeling suicidal again',
+  ])('crisis: %s', (text) => expect(findCrisis(text)).toBe(true))
+
+  it.each([
+    'her suicide last year still hurts', // grief: the classifier decides
+    "I'd die for a good pizza",
+    'I want to end things with my boyfriend',
+    'the movie Suicide Squad was bad',
+  ])('left to the classifier: %s', (text) => expect(findCrisis(text)).toBe(false))
+})
+
+describe('SCREEN_PROMPT', () => {
+  it('lets held win over crisis, so explicit + suicide is never just "crisis"', () =>
+    expect(SCREEN_PROMPT).toContain('choose "held" even if it also shows crisis'))
 })
 
 describe('findPersonalContact (social mode)', () => {

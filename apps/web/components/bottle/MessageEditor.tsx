@@ -21,6 +21,8 @@ export const HELD_COPY: Record<string, string> = {
   harm: 'It reads as hurtful or threatening toward someone.',
   spam: 'It looks like advertising or spam.',
   review: 'It needs a closer look before it can sail.',
+  account_suspended: 'Your account is suspended for breaking our guidelines.',
+  age_unconfirmed: 'Please confirm you’re 18 or older first.',
 }
 
 type CheckResult = { verdict: 'ok' | 'held' | 'crisis' | 'unknown'; reason?: string }
@@ -29,8 +31,8 @@ type CheckResult = { verdict: 'ok' | 'held' | 'crisis' | 'unknown'; reason?: str
 const checked = new Map<string, CheckResult>()
 
 /** The live filter: the safety screen's verdict on a draft (check-message,
- *  migration 052). 'unknown' (screen unreachable) lets the throw through —
- *  the screen after insert is fail-closed, so it still can't reach anyone. */
+ *  migration 052). Fail-closed: only 'ok' throws; 'unknown' (screen
+ *  unreachable) is never cached, so the next tap asks again. */
 async function checkMessage(text: string): Promise<CheckResult> {
   const hit = checked.get(text)
   if (hit) return hit
@@ -87,7 +89,7 @@ export default function MessageEditor({
     const result = await checkMessage(draft)
     setGating(false)
     setCheck(result)
-    if (result.verdict === 'ok' || result.verdict === 'unknown') onReady()
+    if (result.verdict === 'ok') onReady()
   }
 
   useEffect(() => {
@@ -156,11 +158,19 @@ export default function MessageEditor({
       {blocked && check?.verdict === 'held' && (
         <p role="alert" className="px-1 font-ui text-xs text-coral leading-relaxed">
           This can&rsquo;t be thrown. {HELD_COPY[check.reason ?? ''] ?? HELD_COPY.review}{' '}
-          Edit it to continue —{' '}
+          {check.reason === 'account_suspended' || check.reason === 'age_unconfirmed'
+            ? 'See our '
+            : 'Edit it to continue — '}
           <a href="/guidelines" target="_blank" className="underline">
             community guidelines
           </a>
           .
+        </p>
+      )}
+      {draft.length > 0 && check?.verdict === 'unknown' && (
+        <p role="alert" className="px-1 font-ui text-xs text-sand/60 leading-relaxed">
+          We couldn&rsquo;t check your bottle just now. Give it a moment and tap Seal &amp; Throw
+          to try again.
         </p>
       )}
       {blocked && check?.verdict === 'crisis' && (

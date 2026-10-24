@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classify as classifyWith } from '../_shared/classify.ts'
-import { findContact, findPersonalContact, type Verdict } from './screen.ts'
+import { findContact, findCrisis, findPersonalContact, type Verdict } from './screen.ts'
 
 // screen-bottle — the safety screen (migration 043), plus social mode (050):
 // a body of {table, id} screens a post / comment / scrap / community / bio
@@ -101,6 +101,8 @@ Deno.serve(async (req) => {
   try {
     verdict = findContact(bottle.message)
       ? { verdict: 'held', reason: 'contact' }
+      : findCrisis(bottle.message)
+      ? { verdict: 'crisis' }
       : await classify(bottle.message)
   } catch (err) {
     console.error('[screen-bottle] classifier', err instanceof Error ? err.message : err)

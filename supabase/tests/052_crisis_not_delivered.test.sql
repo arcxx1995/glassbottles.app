@@ -63,6 +63,16 @@ BEGIN
     RAISE EXCEPTION 'BUG: crisis bottle not handed back: %', s -> 'heldBottle';
   END IF;
   PERFORM public.ack_held_bottle(b);
+
+  -- A pulled crisis bottle (is_reported, as 052 does to old deliveries) is
+  -- not a strike either.
+  RESET role;
+  UPDATE public.bottles SET is_reported = TRUE WHERE sender_id = '00000000-0000-4000-8000-000000000520';
+  PERFORM public.record_strike('00000000-0000-4000-8000-000000000520', 'harm');
+  IF (SELECT suspended_at FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000520') IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: pulled crisis bottles counted as strikes';
+  END IF;
+  SET LOCAL role authenticated;
   RAISE NOTICE 'ok: crisis → ashore, day restored, handed back, no strike, never matched';
 END;
 $$;
@@ -72,6 +82,15 @@ DO $$
 BEGIN
   IF NOT public.precheck_message('send me your nudes') THEN
     RAISE EXCEPTION 'BUG: precheck missed a blocklisted phrase';
+  END IF;
+  -- 052's explicit terms, incl. the review's exact message.
+  IF NOT public.precheck_message('I want to commit suicide, I want to fuck your pussy')
+     OR NOT public.precheck_message('so horny tonight')
+     OR NOT public.precheck_message('send porn') THEN
+    RAISE EXCEPTION 'BUG: precheck missed an explicit term from 052';
+  END IF;
+  IF public.precheck_message('a cocktail at the cumulative end of summer') THEN
+    RAISE EXCEPTION 'BUG: word boundaries broke (cocktail / cumulative)';
   END IF;
   IF public.precheck_message('the tide came in slow today') THEN
     RAISE EXCEPTION 'BUG: precheck flagged an ordinary message';

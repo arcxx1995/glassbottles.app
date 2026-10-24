@@ -51,7 +51,25 @@ export async function makeUser(
   return { id: data.user.id, email }
 }
 
+/**
+ * Answer the live filter (check-message, migration 052) — CI runs Supabase
+ * without the edge runtime, and the editor refuses to throw unchecked.
+ * signIn() stubs 'ok'; a later call wins (Playwright runs the newest route).
+ */
+export async function stubCheck(page: Page, verdict: { verdict: string; reason?: string }) {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+  await page.route('**/functions/v1/check-message', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 200, headers: cors })
+      : route.fulfill({ status: 200, headers: cors, json: verdict }),
+  )
+}
+
 export async function signIn(page: Page, email: string, path = '/sign-in') {
+  await stubCheck(page, { verdict: 'ok' })
   await page.goto(path)
   await page.getByPlaceholder('your@email.com').fill(email)
   await page.getByPlaceholder('Password').fill(PASSWORD)

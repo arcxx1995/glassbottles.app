@@ -1,12 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classify } from '../_shared/classify.ts'
-import { findContact } from '../screen-bottle/screen.ts'
+import { findContact, findCrisis } from '../screen-bottle/screen.ts'
 
 // check-message — the live filter (migration 052). The editor sends the draft
 // here while the person types (debounced) and again before a throw; the
 // answer decides whether "Seal & Throw" is offered at all. Same checks as the
-// screen after insert, in the same order: blocklist, contact details, model.
-// Writes nothing.
+// screen after insert, in the same order: blocklist, contact details, crisis
+// phrases, model. Writes nothing. No answer from the model → 'unknown', and
+// the editor refuses the throw until a check succeeds (fail-closed).
 //
 // Called from the app with the user's session (the platform verifies the
 // JWT). precheck_message() runs AS that user: suspension and 18+ checks, then
@@ -42,21 +43,19 @@ Deno.serve(async (req) => {
   const asUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: auth } } })
   const { data: blocked, error } = await asUser.rpc('precheck_message', { p_text: draft })
   if (error) {
-    // account_suspended / age_unconfirmed: the same names send_bottle raises.
-    const reason = error.message.includes('account_suspended')
-      ? 'account_suspended'
-      : error.message.includes('age_unconfirmed')
-      ? 'age_unconfirmed'
-      : 'unauthorized'
-    return json({ error: reason }, reason === 'unauthorized' ? 401 : 403)
+    // The same names send_bottle raises; answered as a hold so the editor
+    // can say why instead of "couldn't check".
+    for (const reason of ['account_suspended', 'age_unconfirmed']) {
+      if (error.message.includes(reason)) return json({ verdict: 'held', reason })
+    }
+    return json({ error: 'unauthorized' }, 401)
   }
   if (blocked) return json({ verdict: 'held', reason: 'blocked' })
   if (findContact(draft)) return json({ verdict: 'held', reason: 'contact' })
+  if (findCrisis(draft)) return json({ verdict: 'crisis' })
 
   try {
     const verdict = await classify(draft, { apiKey: OPENROUTER_API_KEY, model: OPENROUTER_MODEL })
-    // No answer: the editor lets the throw through; the screen after insert
-    // is fail-closed, so nothing unscreened is ever delivered.
     if (!verdict) return json({ verdict: 'unknown' })
     return json(verdict)
   } catch (err) {

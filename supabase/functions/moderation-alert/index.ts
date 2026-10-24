@@ -4,6 +4,8 @@
 //
 // Secrets: RESEND_API_KEY (shared with notify-receiver), ADMIN_ALERT_EMAIL.
 
+import { emailHtml } from '../_shared/email.ts'
+
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL')
@@ -31,8 +33,14 @@ Deno.serve(async (req) => {
       from: FROM_ADDRESS,
       to: [ADMIN_ALERT_EMAIL],
       subject: `Moderation: ${fresh} new item${fresh === 1 ? '' : 's'} to review`,
-      html: `<p>${fresh} new item${fresh === 1 ? '' : 's'} in the moderation queue (${open} open).</p>
-             <p><a href="https://glassbottles.app/admin/moderation">Review them</a></p>`,
+      html: emailHtml({
+        title: 'Moderation queue',
+        preheader: `${fresh} new in the moderation queue, ${open} open.`,
+        heading: `${fresh} new item${fresh === 1 ? '' : 's'} to review.`,
+        stats: [[String(fresh), 'new'], [String(open), 'open in queue']],
+        cta: { label: 'Open moderation queue', href: 'https://glassbottles.app/admin/moderation' },
+        footer: 'Sent to admins when new reports or flagged content land in the queue.',
+      }),
       text: `${fresh} new in the moderation queue (${open} open). https://glassbottles.app/admin/moderation`,
     }),
   })

@@ -4,6 +4,9 @@
 
 BEGIN;
 
+-- 051: fixture users are confirmed adults. Rolled back with the rest.
+ALTER TABLE public.profiles ALTER COLUMN age_confirmed_at SET DEFAULT now();
+
 INSERT INTO auth.users (id, email, email_confirmed_at) VALUES
   ('00000000-0000-4000-8000-000000000430', 'screen-a@example.invalid', now()),
   ('00000000-0000-4000-8000-000000000431', 'screen-b@example.invalid', now());

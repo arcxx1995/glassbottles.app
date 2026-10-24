@@ -78,6 +78,18 @@ test('when the check cannot answer, nothing is thrown', async ({ page }) => {
   expect(data).toHaveLength(0)
 })
 
+test('over the check rate limit, the writer is told to wait and nothing is thrown', async ({ page }) => {
+  const u = await makeUser('live-rate', { timezone: 'UTC' })
+  await signIn(page, u.email)
+  await stubCheck(page, { verdict: 'unknown', reason: 'rate_limited' })
+  await page.getByLabel('Message to place in your bottle').fill('the tide came in slow today')
+  await page.getByRole('button', { name: /Seal & Throw/ }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Wait a few minutes' })).toBeVisible({ timeout: 10_000 })
+
+  const { data } = await admin.from('bottles').select('id').eq('sender_id', u.id)
+  expect(data).toHaveLength(0)
+})
+
 // The backstop: a client that skips or fools the live check (stubbed 'ok'
 // here) still meets the insert guard, which refuses the words.
 test('a blocklisted message is refused at send, with the guidelines linked', async ({ page }) => {

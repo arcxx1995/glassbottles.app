@@ -169,8 +169,17 @@ export default function MessageEditor({
       )}
       {draft.length > 0 && check?.verdict === 'unknown' && (
         <p role="alert" className="px-1 font-ui text-xs text-sand/60 leading-relaxed">
-          We couldn&rsquo;t check your bottle just now. Give it a moment and tap Seal &amp; Throw
-          to try again.
+          {check.reason === 'rate_limited' ? (
+            <>
+              That&rsquo;s a lot of checks in a short time. Wait a few minutes, then tap Seal &amp;
+              Throw.
+            </>
+          ) : (
+            <>
+              We couldn&rsquo;t check your bottle just now. Give it a moment and tap Seal &amp; Throw
+              to try again.
+            </>
+          )}
         </p>
       )}
       {blocked && check?.verdict === 'crisis' && (

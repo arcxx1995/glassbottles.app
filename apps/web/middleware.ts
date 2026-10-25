@@ -135,6 +135,7 @@ export const config = {
     '/inbox/:path*',
     '/settings/:path*',
     '/logbook',
+    '/admin/:path*',
     '/api/:path*',
     '/sign-in',
     '/sign-up',

@@ -520,6 +520,12 @@ function FooterCTA({ reduced }: { reduced: boolean }) {
         >
           Terms
         </Link>
+        <Link
+          href="/guidelines"
+          className="font-ui text-xs text-sand/35 hover:text-sand/65 transition-colors duration-200"
+        >
+          Guidelines
+        </Link>
         <a
           href="https://github.com/arcxx1995/glassbottles.app"
           target="_blank"

@@ -5,6 +5,11 @@
 
 BEGIN;
 
+-- 051: fixture users are confirmed adults and their bottles count as screened
+-- (the screen itself is covered by 043 and 051). Rolled back with the rest.
+ALTER TABLE public.profiles ALTER COLUMN age_confirmed_at SET DEFAULT now();
+ALTER TABLE public.bottles  ALTER COLUMN screen SET DEFAULT 'ok';
+
 -- ── 1. Nothing privileged is callable with the public anon key ─────────────
 DO $$
 DECLARE v TEXT;

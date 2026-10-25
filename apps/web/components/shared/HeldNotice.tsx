@@ -5,16 +5,12 @@ import { spring } from '@/components/ui/springs'
 import { useAppDispatch } from '@/store'
 import { setMessage } from '@/store/bottleSlice'
 import { useAckHeldBottleMutation, type HeldBottle } from '@/store/api/bottleApi'
+import { HELD_COPY } from '@/components/bottle/MessageEditor'
+import CrisisSupport from '@/components/bottle/CrisisSupport'
 
 // A bottle the safety screen kept ashore (migration 043). Its words come back
 // so the sender can rewrite them; the day's throw is restored once per day.
-
-const WHY: Record<NonNullable<HeldBottle['screen_reason']>, string> = {
-  contact: 'Bottles travel without names, and this one seemed to carry contact details or a link.',
-  harm: 'It read as unkind toward someone.',
-  sexual: 'It had sexual content, which the sea doesn’t carry.',
-  spam: 'It read like an ad or a chain message.',
-}
+// A crisis hold (052) gets help lines instead, never a rewrite.
 
 export default function HeldNotice({
   held,
@@ -27,6 +23,14 @@ export default function HeldNotice({
   const dispatch = useAppDispatch()
   const [ack] = useAckHeldBottleMutation()
 
+  if (held.screen_reason === 'crisis') {
+    return (
+      <div className="w-full max-w-[420px]">
+        <CrisisSupport lead="Your last bottle wasn’t sent to a stranger." onDismiss={() => void ack(held.id)} />
+      </div>
+    )
+  }
+
   return (
     <motion.div
       role="status"
@@ -37,7 +41,7 @@ export default function HeldNotice({
     >
       <p className="font-display text-sm text-sand">Your bottle stayed ashore</p>
       <p className="font-ui text-[11px] text-sand/55 leading-snug mt-0.5">
-        {held.screen_reason ? WHY[held.screen_reason] : 'It didn’t pass the safety check.'}{' '}
+        {HELD_COPY[held.screen_reason ?? ''] ?? HELD_COPY.review}{' '}
         {canRethrow ? 'Today’s throw is yours again.' : 'You can throw again tomorrow.'}
       </p>
       <div className="flex items-center gap-1 mt-2 -ml-1">

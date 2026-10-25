@@ -15,7 +15,7 @@ const KEEPER = process.env.NEXT_PUBLIC_KEEPER === 'on'
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms &amp; Conditions" lastUpdated="20 October 2026">
+    <LegalPage title="Terms &amp; Conditions" lastUpdated="24 October 2026">
       <p>
         Welcome to glassbottles. By creating an account or using the service you agree to these
         Terms &amp; Conditions. If you do not agree, please do not use the service.
@@ -69,8 +69,9 @@ export default function TermsPage() {
 
       <LegalH2>Eligibility</LegalH2>
       <p>
-        You must be at least 13 years old (or the minimum age of digital consent in your country)
-        to use glassbottles. By using the service you confirm that you meet this requirement.
+        glassbottles is for adults only. You must be at least 18 years old to create an account or
+        use the service, and you confirm this when you sign up. We remove accounts we believe
+        belong to anyone under 18.
       </p>
 
       <LegalH2>Your account</LegalH2>
@@ -83,9 +84,13 @@ export default function TermsPage() {
       <LegalH2>Acceptable use</LegalH2>
       <p>You agree not to use glassbottles to write, send, or solicit any message that:</p>
       <ul className="flex flex-col gap-1.5 pl-5 list-disc marker:text-seafoam/60">
-        <li>harasses, threatens, bullies, or targets another person;</li>
+        <li>harasses, threatens, bullies, or targets another person, or urges anyone to self-harm;</li>
         <li>is hateful, discriminatory, or incites violence;</li>
-        <li>is sexually explicit, or sexualises or endangers minors;</li>
+        <li>
+          is sexual in any way &mdash; explicit or suggestive content, sexual propositions, or
+          requests for intimate images;
+        </li>
+        <li>sexualises or endangers minors in any way (we report this to the authorities);</li>
         <li>is spam, a scam, or an attempt to advertise or phish;</li>
         <li>shares another person&rsquo;s private information without consent;</li>
         <li>is illegal, or promotes illegal or dangerous activity.</li>
@@ -98,12 +103,20 @@ export default function TermsPage() {
       <LegalH2>Content and moderation</LegalH2>
       <p>
         You retain ownership of the messages you write, but you grant us the limited right to
-        store and deliver them as part of running the service. Because messages are anonymous and
-        sent to strangers, no person reads them in advance; instead an automated safety check
-        reads each bottle before delivery, and a bottle that shares contact details or links, is
-        cruel toward someone, is sexual, or is spam stays ashore and comes back to you to rewrite.
-        The check can make mistakes in both directions, so the report flag remains. We may remove
-        content and suspend or terminate accounts that violate these terms, at our discretion.
+        store, screen and deliver them as part of running the service. Every message is checked
+        before anyone else can see it: a filter blocks clearly prohibited words when you press
+        send, and an automated classifier reviews the text before it is delivered. Nothing is
+        delivered until that check has passed. Content the classifier is unsure about, and content
+        other users report, goes to a human moderator.
+      </p>
+      <p>
+        We may withhold or remove content and suspend or terminate accounts that violate these
+        terms. Accounts are suspended automatically after repeated violations, and immediately for
+        any content that sexualises minors. The full rules and how enforcement works are in our{' '}
+        <Link href="/guidelines" className="text-seafoam hover:underline">
+          Community Guidelines
+        </Link>
+        , which form part of these terms.
       </p>
 
       <LegalH2>Anonymity &amp; safety</LegalH2>

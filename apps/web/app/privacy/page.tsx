@@ -14,7 +14,7 @@ const CONTACT = 'hello@glassbottles.app'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="20 October 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="24 October 2026">
       <p>
         glassbottles (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;the service&rdquo;) is an
         anonymous message-in-a-bottle app. We keep the amount of personal data we collect to
@@ -69,11 +69,15 @@ export default function PrivacyPolicyPage() {
         reliable. We do not use your messages to build advertising profiles.
       </p>
       <p>
-        To keep the sea safe, the text of each bottle — never your name, email or account — is
-        checked by an automated AI classifier before it is delivered, to catch contact details,
-        cruelty, sexual content and spam, and to offer support if a bottle reads like you may be in
-        danger. The check runs through OpenRouter, which we instruct to use only AI providers that
-        neither store the text nor train on it; it is processed only to return that check.
+        To keep the sea safe, the text of each message &mdash; never your name, email or account
+        &mdash; is checked by an automated AI classifier as you write and again before it is
+        delivered (drafts are checked, not stored), to catch sexual
+        content, cruelty, contact details and spam, and to offer support if a message reads like
+        you may be in danger. The check runs through OpenRouter, which we instruct to use only AI
+        providers that neither store the text nor train on it; it is processed only to return that
+        check. Messages that are held by the check or reported by another user may be read by a
+        moderator, who sees the message but not who wrote it. We keep moderation records (the
+        verdict, reports and any action taken) to enforce our rules and prevent abuse.
       </p>
 
       <LegalH2>Anonymity between users</LegalH2>
@@ -121,8 +125,8 @@ export default function PrivacyPolicyPage() {
 
       <LegalH2>Children</LegalH2>
       <p>
-        glassbottles is not intended for anyone under 13 (or the minimum age required in your
-        country). We do not knowingly collect data from children.
+        glassbottles is for adults aged 18 and over. We do not knowingly collect data from anyone
+        under 18, and we delete accounts we learn belong to a minor.
       </p>
 
       <LegalH2>Changes to this policy</LegalH2>

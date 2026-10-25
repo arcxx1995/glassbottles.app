@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { createClient } from '@/lib/supabase/client'
-import type { Bottle, DailyQuota } from '@/types'
+import type { Bottle, DailyQuota, ReportReason } from '@/types'
 import type { AtelierPiece, BottleStyle, Vibe, Weather } from '@/lib/dressing'
 import { hasAccess } from '@/lib/keeper'
 
@@ -35,7 +35,8 @@ export interface TodayBottleStatus {
   unackedDelivered: UnackedDeliveredBottle[]
   /** Consecutive local days with a throw (migration 039). */
   tides?: number
-  /** The latest bottle the safety screen kept ashore, unseen (043). */
+  /** Latest bottle the safety screen kept ashore, not yet acknowledged
+   *  (043; crisis since 052). Its throw for the day is already restored. */
   heldBottle?: HeldBottle | null
   /** Own bottles a stranger said reached them, not yet seen (044). */
   ripples?: { id: string; rippled_at: string }[]
@@ -53,7 +54,7 @@ export interface Coins {
 export interface HeldBottle {
   id: string
   message: string
-  screen_reason: 'contact' | 'harm' | 'sexual' | 'spam' | null
+  screen_reason: string | null
   day_key: string
 }
 
@@ -314,11 +315,12 @@ export const bottleApi = createApi({
         }
       },
     }),
-    reportBottle: builder.mutation<void, string>({
-      queryFn: async (bottleId) => {
+    reportBottle: builder.mutation<void, { bottleId: string; reason: ReportReason }>({
+      queryFn: async ({ bottleId, reason }) => {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('report_bottle', {
           p_bottle_id: bottleId,
+          p_reason: reason,
         })
         if (error || data !== true) {
           return { error: { status: 'CUSTOM_ERROR' as const, error: error?.message ?? 'Bottle not found' } }
@@ -327,7 +329,7 @@ export const bottleApi = createApi({
       },
       // Optimistic: a reported bottle leaves the inbox at once (038 keeps it
       // out of get_received_bottles); a failed report puts it back.
-      async onQueryStarted(bottleId, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ bottleId }, { dispatch, queryFulfilled }) {
         const patch = dispatch(
           bottleApi.util.updateQueryData('getReceivedBottles', undefined, (draft) =>
             draft.filter((x) => x.id !== bottleId)

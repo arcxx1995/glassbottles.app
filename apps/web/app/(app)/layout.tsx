@@ -19,6 +19,12 @@ const RippleBanner = dynamic(
   { ssr: false }
 )
 
+// Client-only — 18+ / terms gate over the app until confirmed (051)
+const ConsentGate = dynamic(
+  () => import('@/components/shared/ConsentGate'),
+  { ssr: false }
+)
+
 // Client-only — persistent "your bottle was delivered" toast
 const DeliveredBanner = dynamic(
   () => import('@/components/shared/DeliveredBanner'),
@@ -29,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
       <RealtimeBottleListener />
+      <ConsentGate />
       {/* One stack for all toasts, so they never overlap each other — and
           above the bottom nav, clear of the throwable bottle pinned top-right. */}
       <div

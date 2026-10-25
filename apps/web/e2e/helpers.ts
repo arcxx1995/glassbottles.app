@@ -24,13 +24,19 @@ export async function canSignIn(email: string, password: string) {
   return !(await c.auth.signInWithPassword({ email, password })).error
 }
 
-/** A fresh confirmed (or unconfirmed) user with a known timezone. */
-export async function makeUser(name: string, opts: { timezone?: string; confirmed?: boolean } = {}) {
+/** A fresh confirmed (or unconfirmed) user with a known timezone. Adults by
+ *  default: the sign-up metadata stamps age_confirmed_at (051); pass
+ *  adult: false for an account that still has to pass the 18+ gate. */
+export async function makeUser(
+  name: string,
+  opts: { timezone?: string; confirmed?: boolean; adult?: boolean } = {},
+) {
   const email = `${name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password: PASSWORD,
     email_confirm: opts.confirmed ?? true,
+    user_metadata: opts.adult === false ? {} : { age_confirmed: true },
   })
   if (error || !data.user) throw error ?? new Error('createUser failed')
   if (opts.timezone) {
@@ -45,7 +51,25 @@ export async function makeUser(name: string, opts: { timezone?: string; confirme
   return { id: data.user.id, email }
 }
 
+/**
+ * Answer the live filter (check-message, migration 052) — CI runs Supabase
+ * without the edge runtime, and the editor refuses to throw unchecked.
+ * signIn() stubs 'ok'; a later call wins (Playwright runs the newest route).
+ */
+export async function stubCheck(page: Page, verdict: { verdict: string; reason?: string }) {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+  await page.route('**/functions/v1/check-message', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 200, headers: cors })
+      : route.fulfill({ status: 200, headers: cors, json: verdict }),
+  )
+}
+
 export async function signIn(page: Page, email: string, path = '/sign-in') {
+  await stubCheck(page, { verdict: 'ok' })
   await page.goto(path)
   await page.getByPlaceholder('your@email.com').fill(email)
   await page.getByPlaceholder('Password').fill(PASSWORD)
@@ -93,6 +117,15 @@ export async function deliverNow(senderId: string) {
     .eq('sender_id', senderId)
     .is('received_at', null)
   if (error) throw error
+  // No screen-bottle function runs locally; stand in for an 'ok' verdict, or
+  // the fail-closed matcher (051) waits forever.
+  const { error: screenErr } = await admin
+    .from('bottles')
+    .update({ screen: 'ok' })
+    .eq('sender_id', senderId)
+    .is('received_at', null)
+    .is('screen', null)
+  if (screenErr) throw screenErr
   const { data, error: rpcErr } = await admin.rpc('retry_unmatched_bottles')
   if (rpcErr) throw rpcErr
   return data as number

@@ -8,7 +8,14 @@ export interface Profile {
   last_active: string | null
   /** Joined current (migration 042) — cosmetic, free. */
   current?: CurrentId | null
+  /** 051: null = must confirm 18+ / accept terms before using the app.
+   *  Undefined on the session-seeded profile, before /api/profile answers. */
+  age_confirmed_at?: string | null
+  suspended_at?: string | null
 }
+
+/** Reasons a receiver can give when reporting a bottle (051 report_bottle). */
+export type ReportReason = 'sexual' | 'harassment' | 'spam' | 'contact' | 'other'
 
 export interface Bottle {
   id: string

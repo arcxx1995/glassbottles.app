@@ -38,6 +38,7 @@ import FutureSheet from './FutureSheet'
 import { createClient } from '@/lib/supabase/client'
 import { nextSpark } from '@/lib/sparks'
 import { selectUser } from '@/store/authSlice'
+import CrisisSupport from './CrisisSupport'
 
 const WEATHER_ICON: Record<Weather, typeof Sun> = {
   stormy: CloudLightning,
@@ -48,6 +49,39 @@ const WEATHER_ICON: Record<Weather, typeof Sun> = {
 
 export const MAX_CHARS = 1000
 const MAX_TEXTAREA_HEIGHT = 168
+const CHECK_DEBOUNCE_MS = 800
+
+/** Why a bottle can't be thrown, by screen reason (check-message / 051). */
+export const HELD_COPY: Record<string, string> = {
+  blocked: 'It contains language that isn’t allowed here.',
+  sexual: 'Sexual content isn’t allowed here.',
+  minor: 'Sexual content isn’t allowed here.',
+  contact: 'Bottles stay anonymous: no contact details, handles or links.',
+  harm: 'It reads as hurtful or threatening toward someone.',
+  spam: 'It looks like advertising or spam.',
+  review: 'It needs a closer look before it can sail.',
+  account_suspended: 'Your account is suspended for breaking our guidelines.',
+  age_unconfirmed: 'Please confirm you’re 18 or older first.',
+}
+
+type CheckResult = { verdict: 'ok' | 'held' | 'crisis' | 'unknown'; reason?: string }
+
+// Verdicts by draft text, so a pause and the throw don't ask twice.
+const checked = new Map<string, CheckResult>()
+
+/** The live filter: the safety screen's verdict on a draft (check-message,
+ *  migration 052). Fail-closed: only 'ok' throws; 'unknown' (screen
+ *  unreachable) is never cached, so the next tap asks again. */
+async function checkMessage(text: string): Promise<CheckResult> {
+  const hit = checked.get(text)
+  if (hit) return hit
+  const { data, error } = await createClient().functions.invoke<CheckResult>('check-message', {
+    body: { text },
+  })
+  if (error || !data?.verdict) return { verdict: 'unknown' }
+  if (data.verdict !== 'unknown') checked.set(text, data)
+  return data
+}
 
 interface MessageEditorProps {
   onReady?: () => void
@@ -61,13 +95,43 @@ export default function MessageEditor({
   const dispatch = useAppDispatch()
   const message = useAppSelector(selectMessage)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Latest verdict; a hold stays up until a re-check of the edited text clears it.
+  const [check, setCheck] = useState<CheckResult | null>(null)
+  const [gating, setGating] = useState(false)
 
   const spark = useSpark()
 
   const remaining = MAX_CHARS - message.length
   const isNearLimit = remaining <= 100
   const isOverLimit = remaining < 0
-  const canSend = message.trim().length > 0 && !isOverLimit
+  const draft = message.trim()
+  const blocked = draft.length > 0 && (check?.verdict === 'held' || check?.verdict === 'crisis')
+  const canSend = draft.length > 0 && !isOverLimit && !blocked
+
+  // Check while typing: once the writer pauses.
+  useEffect(() => {
+    if (!draft || draft.length > MAX_CHARS) return
+    let stale = false
+    const t = setTimeout(async () => {
+      const result = await checkMessage(draft)
+      if (!stale) setCheck(result)
+    }, CHECK_DEBOUNCE_MS)
+    return () => {
+      stale = true
+      clearTimeout(t)
+    }
+  }, [draft])
+
+  // And once more on the throw itself (cached if the pause already asked),
+  // so a quick tap can't beat the debounce.
+  async function handleThrow() {
+    if (gating || !onReady) return
+    setGating(true)
+    const result = await checkMessage(draft)
+    setGating(false)
+    setCheck(result)
+    if (result.verdict === 'ok') onReady()
+  }
 
   useEffect(() => {
     // Auto-focus only on devices with a fine pointer (desktop). On touch this
@@ -147,6 +211,39 @@ export default function MessageEditor({
         </span>
       </div>
 
+      {/* The live filter's answer: why this can't be thrown, or, for someone
+          who may be in danger, people to talk to instead. */}
+      {blocked && check?.verdict === 'held' && (
+        <p role="alert" className="px-1 font-ui text-xs text-coral leading-relaxed">
+          This can&rsquo;t be thrown. {HELD_COPY[check.reason ?? ''] ?? HELD_COPY.review}{' '}
+          {check.reason === 'account_suspended' || check.reason === 'age_unconfirmed'
+            ? 'See our '
+            : 'Edit it to continue — '}
+          <a href="/guidelines" target="_blank" className="underline">
+            community guidelines
+          </a>
+          .
+        </p>
+      )}
+      {draft.length > 0 && check?.verdict === 'unknown' && (
+        <p role="alert" className="px-1 font-ui text-xs text-sand/60 leading-relaxed">
+          {check.reason === 'rate_limited' ? (
+            <>
+              That&rsquo;s a lot of checks in a short time. Wait a few minutes, then tap Seal &amp;
+              Throw.
+            </>
+          ) : (
+            <>
+              We couldn&rsquo;t check your bottle just now. Give it a moment and tap Seal &amp; Throw
+              to try again.
+            </>
+          )}
+        </p>
+      )}
+      {blocked && check?.verdict === 'crisis' && (
+        <CrisisSupport lead="This bottle won’t be sent to a stranger." />
+      )}
+
       {/* Throw CTA — appears once text exists. Height animates so the layout
           eases open/closed instead of jumping when the button (un)mounts. */}
       <AnimatePresence initial={false}>
@@ -162,14 +259,15 @@ export default function MessageEditor({
             className="-mx-4 -mb-4 overflow-hidden px-4 pb-4"
           >
             <motion.button
-              onClick={onReady}
+              onClick={handleThrow}
+              disabled={gating}
               whileTap={{ scale: 0.97 }}
               transition={springPress}
               className="w-full py-4 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold
                          text-base tracking-wide transition-[filter] duration-150
-                         hover:brightness-110"
+                         hover:brightness-110 disabled:opacity-70"
             >
-              Seal &amp; Throw
+              {gating ? 'Checking…' : <>Seal &amp; Throw</>}
             </motion.button>
             {/* The hand path: the bottle top-right is throwable once there's a note. */}
             <p className="pt-2 text-center font-ui text-caption text-sand/35">

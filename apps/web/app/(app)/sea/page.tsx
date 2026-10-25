@@ -51,7 +51,8 @@ export default function HomePage() {
   const user = useAppSelector(selectUser)
 
   const [sendBottle] = useSendBottleMutation()
-  const [sendError, setSendError] = useState(false)
+  // Why the last throw failed; null = no error showing.
+  const [sendError, setSendError] = useState<null | 'network' | 'content' | 'suspended' | 'age'>(null)
 
   // Dressing (042): you throw — and watch drift — the bottle you dressed.
   // Keepers who joined a current also get that current's sea.
@@ -186,7 +187,7 @@ export default function HomePage() {
     if (sendStatus !== 'idle' || throwBusyRef.current) return
     throwBusyRef.current = true
     sendFailedRef.current = false
-    setSendError(false)
+    setSendError(null)
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
@@ -205,7 +206,12 @@ export default function HomePage() {
       // invalidated status refetch flips the screen to sailing; showing the
       // generic "check your connection" copy here was a lie.
       const code = (err as { data?: { code?: string } })?.data?.code
-      if (code !== '23505') setSendError(true)
+      // 051's guard raises these by name (blocklist, suspension, 18+ gate).
+      const reason = (err as { error?: string })?.error
+      if (reason === 'content_not_allowed') setSendError('content')
+      else if (reason === 'account_suspended') setSendError('suspended')
+      else if (reason === 'age_unconfirmed') setSendError('age')
+      else if (code !== '23505') setSendError('network')
       // 42501 keeper_only: the membership ended since it last loaded. Refetch
       // it so the next try throws the free look instead.
       if (code === '42501') dispatch(bottleApi.util.invalidateTags(['Membership']))
@@ -377,7 +383,7 @@ export default function HomePage() {
                 <motion.div
                   key="compose"
                   className={cn(
-                    'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center',
+                    'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center [justify-content:safe_center]',
                     // The lift clears the footer; a held notice needs the room instead.
                     !heldBottle && '-translate-y-8 sm:-translate-y-10',
                   )}
@@ -412,7 +418,27 @@ export default function HomePage() {
                             className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
                             role="alert"
                           >
-                            Your bottle couldn&apos;t be thrown. Check your connection and try again.
+                            {sendError === 'content' ? (
+                              <>
+                                That message breaks our{' '}
+                                <a href="/guidelines" target="_blank" className="underline">
+                                  community guidelines
+                                </a>
+                                . Rewrite it and throw again.
+                              </>
+                            ) : sendError === 'suspended' ? (
+                              <>
+                                Your account is suspended for breaking our{' '}
+                                <a href="/guidelines" target="_blank" className="underline">
+                                  community guidelines
+                                </a>
+                                . Email hello@glassbottles.app if you think this is a mistake.
+                              </>
+                            ) : sendError === 'age' ? (
+                              <>Please confirm you&apos;re 18 or older before throwing a bottle.</>
+                            ) : (
+                              <>Your bottle couldn&apos;t be thrown. Check your connection and try again.</>
+                            )}
                           </p>
                         )}
                       </div>
@@ -449,7 +475,7 @@ export default function HomePage() {
             >
               {/* A second hold today: the day isn't restored again. */}
               {isThrown && heldBottle && <HeldNotice held={heldBottle} canRethrow={false} />}
-              {showCare && <CareCard timezone={user?.timezone} onClose={closeCare} />}
+              {showCare && !heldBottle && <CareCard timezone={user?.timezone} onClose={closeCare} />}
               {/* Right after a throw, once: "want to know when it's found?" */}
               {isThrown && hasSent && !showCare && !heldBottle && <PushNudge />}
 

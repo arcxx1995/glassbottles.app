@@ -4,6 +4,11 @@
 
 BEGIN;
 
+-- 051: fixture users are confirmed adults and their bottles count as screened
+-- (the screen itself is covered by 043 and 051). Rolled back with the rest.
+ALTER TABLE public.profiles ALTER COLUMN age_confirmed_at SET DEFAULT now();
+ALTER TABLE public.bottles  ALTER COLUMN screen SET DEFAULT 'ok';
+
 -- One user per tides shape; offsets are days before today (UTC).
 CREATE TEMP TABLE shapes (n INT, offsets INT[], expected INT);
 INSERT INTO shapes VALUES

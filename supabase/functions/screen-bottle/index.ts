@@ -3,8 +3,8 @@ import { classify as classifyWith } from '../_shared/classify.ts'
 import { findContact, findCrisis, findPersonalContact, type Verdict } from './screen.ts'
 
 // screen-bottle — the safety screen (migration 043), plus social mode: a body
-// of {table, id} screens a bio (051; the feed tables went in 055) and hands
-// the verdict to apply_social_screen() instead.
+// of {table, id} screens a profile's handle + bio (051/056; the feed tables
+// went in 055) and hands the verdict to apply_social_screen() instead.
 //
 // Called by the on_bottle_screen trigger through pg_net for every new bottle,
 // and again by the rescreen_pending cron for anything still unscreened.
@@ -32,7 +32,11 @@ const classify = (message: string, social = false) =>
 
 // table → how to read its text, its key, and its screen column (bios only since 055).
 const SOCIAL_TABLES: Record<string, { select: string; key: string; screen: string; text: (row: Record<string, string | null>) => string }> = {
-  social_profiles: { select: 'bio, bio_screen', key: 'user_id', screen: 'bio_screen', text: (r) => r.bio ?? '' },
+  // Handle and bio together (056): the verdict decides whether a kayak floats.
+  social_profiles: {
+    select: 'handle, bio, bio_screen', key: 'user_id', screen: 'bio_screen',
+    text: (r) => [`@${r.handle}`, r.bio].filter(Boolean).join('\n'),
+  },
 }
 
 async function screenSocial(table: string, id: string): Promise<Response> {

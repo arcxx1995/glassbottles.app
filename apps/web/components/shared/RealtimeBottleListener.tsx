@@ -76,8 +76,9 @@ export default function RealtimeBottleListener() {
           dispatch(bottleApi.util.invalidateTags(['Future']))
         })
         .on('broadcast', { event: 'membership' }, () => {
-          // The Dodo webhook changed this user's Keeper membership (041).
-          dispatch(bottleApi.util.invalidateTags(['Membership']))
+          // The Dodo webhook changed this user's Keeper membership (041);
+          // the Harbour is Keepers-only (056).
+          dispatch(bottleApi.util.invalidateTags(['Membership', 'Harbour']))
         })
         .subscribe()
     }

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Bottle, DailyQuota, ReportReason } from '@/types'
 import type { AtelierPiece, BottleStyle, Vibe, Weather } from '@/lib/dressing'
 import { hasAccess } from '@/lib/keeper'
+import type { Harbour, Hull, Paddle } from '@/lib/harbour'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
  *  No message/receiver fields leak; just id (key) and day_key (date label). */
@@ -109,7 +110,7 @@ export interface KeeperState {
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Coins'],
+  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Coins', 'Harbour', 'KayakBlocks'],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -506,6 +507,102 @@ export const bottleApi = createApi({
       },
       providesTags: ['Membership'],
     }),
+
+    // The Harbour (056). Supabase-direct RPCs; the twelve change once a UTC
+    // day, so nothing here polls. Errors carry the RPC's message
+    // ('keeper_only', 'no_handle', 'content_not_allowed', ...).
+    getHarbour: builder.query<Harbour, void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_harbour')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as Harbour }
+      },
+      providesTags: ['Harbour'],
+    }),
+    // A handle is a row in social_profiles (050): written directly under RLS,
+    // with the blocklist guard (051) and the screen (056) behind it.
+    claimHandle: builder.mutation<void, { handle: string; bio?: string }>({
+      queryFn: async ({ handle, bio }) => {
+        const supabase = createClient()
+        const { data: auth } = await supabase.auth.getSession()
+        const uid = auth.session?.user.id
+        if (!uid) return { error: { status: 'CUSTOM_ERROR' as const, error: 'not authenticated' } }
+        const { error } = await supabase
+          .from('social_profiles')
+          .insert({ user_id: uid, handle: handle.toLowerCase(), bio: bio?.trim() || null })
+        if (error) {
+          const taken = error.code === '23505'
+          return { error: { status: 'CUSTOM_ERROR' as const, error: taken ? 'handle_taken' : error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Harbour'],
+    }),
+    updateBio: builder.mutation<void, string>({
+      queryFn: async (bio) => {
+        const supabase = createClient()
+        const { data: auth } = await supabase.auth.getSession()
+        const uid = auth.session?.user.id
+        if (!uid) return { error: { status: 'CUSTOM_ERROR' as const, error: 'not authenticated' } }
+        const { error } = await supabase
+          .from('social_profiles')
+          .update({ bio: bio.trim() || null })
+          .eq('user_id', uid)
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Harbour'],
+    }),
+    saveKayak: builder.mutation<void, { hull: Hull; paddle: Paddle; parked: boolean }>({
+      queryFn: async ({ hull, paddle, parked }) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('save_kayak', { p_hull: hull, p_paddle: paddle, p_parked: parked })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Harbour'],
+    }),
+    getKayakBlocks: builder.query<string[], void>({
+      queryFn: async () => {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_kayak_blocks')
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: data as string[] }
+      },
+      providesTags: ['KayakBlocks'],
+    }),
+    blockKayak: builder.mutation<void, { handle: string; block: boolean }>({
+      queryFn: async ({ handle, block }) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('block_kayak', { p_handle: handle, p_block: block })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Harbour', 'KayakBlocks'],
+    }),
+    // A report also hides that kayak from you at once (056).
+    reportKayak: builder.mutation<void, { handle: string; reason: ReportReason }>({
+      queryFn: async ({ handle, reason }) => {
+        const supabase = createClient()
+        const { error } = await supabase.rpc('report_kayak', { p_handle: handle, p_reason: reason })
+        if (error) {
+          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+        }
+        return { data: undefined }
+      },
+      invalidatesTags: ['Harbour'],
+    }),
   }),
 })
 
@@ -530,4 +627,11 @@ export const {
   useGetCoinsQuery,
   useUnlockPieceMutation,
   useSpotWhaleMutation,
+  useGetHarbourQuery,
+  useClaimHandleMutation,
+  useUpdateBioMutation,
+  useSaveKayakMutation,
+  useGetKayakBlocksQuery,
+  useBlockKayakMutation,
+  useReportKayakMutation,
 } = bottleApi

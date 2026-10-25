@@ -16,7 +16,7 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
 
   // Sender throws.
   await signIn(sender, a.email)
-  await expectPath(sender, '/feed')
+  await expectPath(sender, '/sea')
   await sender.goto('/sea')
   await expectPath(sender, '/sea')
   await sender.getByLabel('Message to place in your bottle').fill(message)
@@ -33,7 +33,7 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
 
   // Receiver is on the app (realtime socket open) when the cron runs.
   await signIn(receiver, b.email)
-  await expectPath(receiver, '/feed')
+  await expectPath(receiver, '/sea')
   await receiver.goto('/sea')
   await expectPath(receiver, '/sea')
   await isolateReceiver(b.id)
@@ -85,7 +85,7 @@ test('reporting asks why, then removes the bottle for good', async ({ page }) =>
   })
 
   await signIn(page, b.email)
-  await expectPath(page, '/feed')
+  await expectPath(page, '/sea')
   await page.goto('/inbox')
   await expect(page.getByText(unkind)).toBeVisible()
 
@@ -125,7 +125,7 @@ test('account deletion keeps a stranger’s delivered bottle', async ({ page }) 
   })
 
   await signIn(page, a.email)
-  await expectPath(page, '/feed')
+  await expectPath(page, '/sea')
   await page.goto('/settings')
   await page.getByRole('button', { name: /Delete account/ }).click()
   await page.getByPlaceholder('DELETE').fill('DELETE')

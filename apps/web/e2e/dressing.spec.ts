@@ -23,7 +23,7 @@ test('a Keeper dresses a bottle and the stranger receives it dressed', async ({ 
 
   const sender = await (await browser.newContext()).newPage()
   await signIn(sender, a.email)
-  await expectPath(sender, '/feed')
+  await expectPath(sender, '/sea')
   await sender.goto('/sea')
   await expectPath(sender, '/sea')
 

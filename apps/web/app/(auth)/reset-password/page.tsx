@@ -146,7 +146,7 @@ export default function ResetPasswordPage() {
                 type="button"
                 onClick={() => {
                   router.refresh()
-                  router.push('/feed')
+                  router.push('/sea')
                 }}
                 className={`${AUTH_PRIMARY_BTN_CLASS} w-full`}
               >

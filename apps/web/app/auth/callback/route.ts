@@ -10,7 +10,7 @@ import { cookies } from 'next/headers'
  * Single PKCE code-exchange landing point for both supported auth methods:
  *   - Google OAuth        (signInWithOAuth → provider redirect → ?code=...)
  *   - Email confirmation  (signUp / email-confirm link → ?code=...)
- *   - Password recovery   (resetPasswordForEmail → ?code=... → /feed then
+ *   - Password recovery   (resetPasswordForEmail → ?code=... → /sea then
  *                          client routes to the update-password screen)
  *
  * In every case Supabase appends `?code=<pkce_code>` and we exchange it for a
@@ -18,7 +18,7 @@ import { cookies } from 'next/headers'
  * `exchangeCodeForSession` call resolves OAuth, email-confirm, and recovery
  * codes. (Implicit `#access_token=...` hash flow is not used by this app.)
  *
- * We redirect to /feed on success (or `?next=` when same-origin), and to
+ * We redirect to /sea on success (or `?next=` when same-origin), and to
  * /sign-in with a canonical `?error=` code on failure. Cookies are written by
  * the SSR client exactly as the middleware expects them.
  *
@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type')
   // Optional: honour a `next` param for post-login destination, but only same-origin.
-  const rawNext = searchParams.get('next') ?? '/feed'
+  const rawNext = searchParams.get('next') ?? '/sea'
   // Reject protocol-relative (//evil.com) and backslash variants (/\evil.com)
   const next =
     rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
       ? rawNext
-      : '/feed'
+      : '/sea'
 
   if (!code && !tokenHash) {
     // Neither credential present — user navigated here directly or link was malformed.

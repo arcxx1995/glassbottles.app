@@ -19,7 +19,7 @@ export default function NotFound() {
         </p>
       </div>
       <Link
-        href="/feed"
+        href="/sea"
         className="press px-6 py-2.5 rounded-full bg-seafoam/10 font-ui text-sm font-medium text-seafoam hover:bg-seafoam/20 transition-[background-color,transform]"
       >
         Back to shore →

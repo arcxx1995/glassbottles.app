@@ -554,7 +554,7 @@ export default function LandingPage({ initialStats }: { initialStats: PublicStat
   // Redirect authenticated users to the app
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace('/feed')
+      router.replace('/sea')
     }
   }, [user, isLoading, router])
 

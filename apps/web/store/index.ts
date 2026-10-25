@@ -6,7 +6,6 @@ import authReducer from './authSlice'
 import bottleReducer, { resetBottleState } from './bottleSlice'
 import uiReducer, { resetUiState } from './uiSlice'
 import { bottleApi } from './api/bottleApi'
-import { socialApi } from './api/socialApi'
 
 export const store = configureStore({
   reducer: {
@@ -14,10 +13,9 @@ export const store = configureStore({
     bottle: bottleReducer,
     ui: uiReducer,
     [bottleApi.reducerPath]: bottleApi.reducer,
-    [socialApi.reducerPath]: socialApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(bottleApi.middleware, socialApi.middleware),
+    getDefaultMiddleware().concat(bottleApi.middleware),
 })
 
 // Wires window focus/online state into RTK Query so `skipPollingIfUnfocused`
@@ -38,7 +36,6 @@ export type AppDispatch = typeof store.dispatch
  */
 export function purgeSessionState(dispatch: AppDispatch) {
   dispatch(bottleApi.util.resetApiState())
-  dispatch(socialApi.util.resetApiState())
   dispatch(resetBottleState())
   dispatch(resetUiState())
 }

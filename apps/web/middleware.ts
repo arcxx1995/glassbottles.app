@@ -12,7 +12,7 @@ const hasAuthCookie = (request: NextRequest) =>
 const safeNext = (next: string | null) =>
   next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\')
     ? next
-    : '/feed'
+    : '/sea'
 
 export async function middleware(request: NextRequest) {
   // API routes: cheap cookie-presence guard only — no Supabase Auth call.
@@ -122,15 +122,9 @@ export const config = {
      *   - /_next/          — Next.js internals
      *   - /favicon.ico
      */
-    '/feed',
     '/sea',
-    '/u/:path*',
-    '/c/:path*',
-    '/friends',
-    '/communities',
     '/inbox',
     '/settings',
-    '/feed/:path*',
     '/sea/:path*',
     '/inbox/:path*',
     '/settings/:path*',

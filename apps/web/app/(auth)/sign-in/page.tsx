@@ -50,7 +50,7 @@ function SignInForm() {
   const next =
     rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
       ? rawNext
-      : '/feed'
+      : '/sea'
 
   // Back from Google via the back/forward cache: the page is restored with
   // googleLoading still true and the button spinning forever.

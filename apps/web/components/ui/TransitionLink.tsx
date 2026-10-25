@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useEffect, type ComponentProps, type MouseEvent, type ReactElement, type Ref } from 'react'
+import { forwardRef, useEffect, type ComponentProps, type MouseEvent, type Ref } from 'react'
 import type { Route } from 'next'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -53,11 +53,10 @@ export function useViewTransitionSettle() {
 }
 
 /** next/link that navigates through a view transition on a plain click. */
-type LinkPropsFor<R> = ComponentProps<typeof Link<R>>
-
-// Generic like next/link, so typed routes still check `/u/${handle}` hrefs.
+// Not generic: next/link only becomes generic once `next build` writes the
+// typed-routes .d.ts, and CI typechecks before building.
 export const TransitionLink = forwardRef(
-  function TransitionLink<R>({ onClick, href, ...props }: LinkPropsFor<R>, ref: Ref<HTMLAnchorElement>) {
+  function TransitionLink({ onClick, href, ...props }: ComponentProps<typeof Link>, ref: Ref<HTMLAnchorElement>) {
     const router = useRouter()
     return (
       <Link
@@ -80,4 +79,4 @@ export const TransitionLink = forwardRef(
       />
     )
   },
-) as <R>(props: LinkPropsFor<R> & { ref?: Ref<HTMLAnchorElement> }) => ReactElement
+)

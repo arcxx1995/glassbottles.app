@@ -33,6 +33,7 @@ async function sample(page: Page, label: string, during?: () => Promise<void>) {
   const b = await read()
   const secs = b.Timestamp - a.Timestamp
   const per = (k: string) => Math.round(((b[k] - a[k]) * 1000) / secs)
+  // eslint-disable-next-line no-console -- the measurement is the output
   console.log(
     `[perf] ${label.padEnd(14)} fps=${framesPerSec.toFixed(1).padStart(5)}  task=${per('TaskDuration')}ms/s  script=${per('ScriptDuration')}ms/s  style=${per('RecalcStyleDuration')}ms/s  layout=${per('LayoutDuration')}ms/s`,
   )

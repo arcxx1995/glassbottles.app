@@ -260,7 +260,7 @@ BEGIN
 END $$;
 
 SELECT set_config('request.jwt.claims', '', true); -- server-side from here
--- ── Social: pre-moderated, blocklisted, 3 reports hide ─────────────────────
+-- ── Bios: blocklisted, screened, held bio cleared (posts etc. dropped in 055)
 UPDATE public.profiles SET suspended_at = NULL
 WHERE id IN ('00000000-0000-4000-8000-000000000510', '00000000-0000-4000-8000-000000000511');
 INSERT INTO public.social_profiles (user_id, handle) VALUES
@@ -276,99 +276,71 @@ SELECT set_config('request.jwt.claims',
 DO $$
 BEGIN
   BEGIN
-    INSERT INTO public.posts (author_id, body) VALUES (auth.uid(), 'who wants to sext? sexting anyone');
-    RAISE EXCEPTION 'BUG: blocklisted post accepted';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  BEGIN
     UPDATE public.social_profiles SET bio = 'kys' WHERE user_id = auth.uid();
     RAISE EXCEPTION 'BUG: blocklisted bio accepted';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
-  INSERT INTO public.posts (author_id, body) VALUES (auth.uid(), 'first post, hello');
-  IF NOT EXISTS (SELECT 1 FROM public.posts WHERE body = 'first post, hello') THEN
-    RAISE EXCEPTION 'BUG: author cannot see their own unscreened post';
-  END IF;
-  RAISE NOTICE 'ok: social blocklist; author sees own pending post';
-END $$;
-
-SELECT set_config('request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000511","role":"authenticated"}', true);
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM public.posts WHERE body = 'first post, hello') THEN
-    RAISE EXCEPTION 'BUG: an unscreened post is visible to others';
-  END IF;
-  RAISE NOTICE 'ok: unscreened posts hidden from others';
+  UPDATE public.social_profiles SET bio = 'hello, harbour' WHERE user_id = auth.uid();
+  RAISE NOTICE 'ok: bio blocklist';
 END $$;
 RESET role;
+SELECT set_config('request.jwt.claims', '', true);
 
 DO $$
 DECLARE
-  pid UUID := (SELECT id FROM public.posts WHERE body = 'first post, hello');
-  sid UUID;
+  a UUID := '00000000-0000-4000-8000-000000000510';
+  c UUID := '00000000-0000-4000-8000-000000000512';
 BEGIN
-  -- Social re-screen: a pending post counts an attempt; an exhausted one is
-  -- held for review.
-  UPDATE public.posts SET created_at = now() - interval '10 minutes' WHERE id = pid;
+  -- A pending bio counts an attempt; an exhausted one is held for review.
+  UPDATE public.social_profiles SET created_at = now() - interval '10 minutes' WHERE user_id = a;
   PERFORM public.rescreen_pending();
-  IF (SELECT screen_attempts FROM public.posts WHERE id = pid) <> 1 THEN
-    RAISE EXCEPTION 'BUG: social rescreen did not count an attempt';
+  IF (SELECT screen_attempts FROM public.social_profiles WHERE user_id = a) <> 1 THEN
+    RAISE EXCEPTION 'BUG: bio rescreen did not count an attempt';
   END IF;
-  INSERT INTO public.posts (author_id, body) VALUES ('00000000-0000-4000-8000-000000000510', 'never screened')
-  RETURNING id INTO sid;
-  UPDATE public.posts SET screen_attempts = 6 WHERE id = sid;
+  UPDATE public.social_profiles SET bio = 'never screened' WHERE user_id = c;
+  UPDATE public.social_profiles SET screen_attempts = 6 WHERE user_id = c;
   PERFORM public.rescreen_pending();
-  IF (SELECT screen || '/' || screen_reason FROM public.posts WHERE id = sid) <> 'held/review' THEN
-    RAISE EXCEPTION 'BUG: exhausted post not held for review';
+  IF (SELECT bio_screen FROM public.social_profiles WHERE user_id = c) <> 'held'
+     OR NOT EXISTS (SELECT 1 FROM public.moderation_queue WHERE kind = 'profile' AND target_id = c) THEN
+    RAISE EXCEPTION 'BUG: exhausted bio not held for review';
   END IF;
 
-  PERFORM public.apply_social_screen('posts', pid, 'ok');
-  INSERT INTO public.social_reports (reporter_id, target_type, target_id) VALUES
-    ('00000000-0000-4000-8000-000000000511', 'post', pid),
-    ('00000000-0000-4000-8000-000000000512', 'post', pid);
-  IF (SELECT screen FROM public.posts WHERE id = pid) <> 'ok' THEN
-    RAISE EXCEPTION 'BUG: two reports hid a post';
-  END IF;
-  INSERT INTO public.social_reports (reporter_id, target_type, target_id) VALUES
-    ('00000000-0000-4000-8000-000000000513', 'post', pid);
-  IF (SELECT screen || '/' || screen_reason FROM public.posts WHERE id = pid) <> 'held/review' THEN
-    RAISE EXCEPTION 'BUG: three reports did not hide the post';
-  END IF;
-  IF (SELECT reports FROM public.moderation_queue WHERE kind = 'post' AND target_id = pid) <> 3 THEN
-    RAISE EXCEPTION 'BUG: report count not tracked on the queue item';
-  END IF;
-
-  -- Bios and communities are screened; a held bio is cleared.
+  -- A held bio is cleared.
   UPDATE public.social_profiles SET bio = 'something rude' WHERE user_id = '00000000-0000-4000-8000-000000000511';
   PERFORM public.apply_social_screen('social_profiles', '00000000-0000-4000-8000-000000000511', 'held', 'harm');
   IF (SELECT bio FROM public.social_profiles WHERE user_id = '00000000-0000-4000-8000-000000000511') IS NOT NULL THEN
     RAISE EXCEPTION 'BUG: a held bio was not cleared';
   END IF;
-  RAISE NOTICE 'ok: 3 reports hide; held bio cleared';
+  BEGIN
+    PERFORM public.apply_social_screen('posts', a, 'ok');
+    RAISE EXCEPTION 'BUG: apply_social_screen accepted a dropped table';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM LIKE 'BUG:%' THEN RAISE; END IF;
+  END;
+  RAISE NOTICE 'ok: bio rescreen, held bio cleared';
 END $$;
 
--- Admin "suspend" removes the content and suspends its author.
+-- Admin "suspend" removes the bio and suspends its owner.
 DO $$
 DECLARE
-  pid UUID;
   qid UUID;
+  c UUID := '00000000-0000-4000-8000-000000000512';
+  d UUID := '00000000-0000-4000-8000-000000000513';
 BEGIN
   PERFORM set_config('request.jwt.claims', '', true);
-  INSERT INTO public.posts (author_id, body, screen) VALUES ('00000000-0000-4000-8000-000000000512', 'borderline', 'ok')
-  RETURNING id INTO pid;
-  PERFORM public.enqueue_moderation('post', pid, 'report', 'other', TRUE);
-  SELECT id INTO qid FROM public.moderation_queue WHERE kind = 'post' AND target_id = pid;
-  PERFORM set_config('request.jwt.claims',
-    '{"sub":"00000000-0000-4000-8000-000000000513","role":"authenticated"}', true);
+  UPDATE public.social_profiles SET bio = 'borderline', bio_screen = 'ok' WHERE user_id = c;
+  PERFORM public.enqueue_moderation('profile', c, 'report', 'other', TRUE);
+  SELECT id INTO qid FROM public.moderation_queue
+  WHERE kind = 'profile' AND target_id = c AND resolved_at IS NULL;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', d, 'role', 'authenticated')::text, true);
   SET LOCAL role authenticated;
   IF public.admin_moderate(qid, 'suspend') <> 'suspended' THEN
     RAISE EXCEPTION 'BUG: admin suspend failed';
   END IF;
   RESET role;
-  IF (SELECT screen FROM public.posts WHERE id = pid) <> 'held'
-     OR (SELECT suspended_at FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000512') IS NULL THEN
-    RAISE EXCEPTION 'BUG: suspend did not remove the post and suspend its author';
+  IF (SELECT bio FROM public.social_profiles WHERE user_id = c) IS NOT NULL
+     OR (SELECT suspended_at FROM public.profiles WHERE id = c) IS NULL THEN
+    RAISE EXCEPTION 'BUG: suspend did not clear the bio and suspend its owner';
   END IF;
   RAISE NOTICE 'ok: admin suspend removes + suspends';
 END $$;

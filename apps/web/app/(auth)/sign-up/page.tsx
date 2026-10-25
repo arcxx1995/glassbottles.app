@@ -86,7 +86,7 @@ export default function SignUpPage() {
 
     // emailRedirectTo routes the confirmation link's {{ .ConfirmationURL }}
     // through /auth/callback (where the PKCE code is exchanged for a session)
-    // and on to /feed — the idle "Your bottle awaits" screen. Without it the
+    // and on to /sea — the idle "Your bottle awaits" screen. Without it the
     // link fell back to the project Site URL (root), so confirming dropped the
     // user on the landing page with no session, never on the app.
     const { data, error } = await supabase.auth.signUp({

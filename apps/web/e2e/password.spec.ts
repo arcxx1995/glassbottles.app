@@ -4,7 +4,7 @@ import { admin, canSignIn, makeUser, signIn, expectPath, PASSWORD } from './help
 test('settings password change needs the current password', async ({ page }) => {
   const u = await makeUser('pwchange')
   await signIn(page, u.email)
-  await expectPath(page, '/feed')
+  await expectPath(page, '/sea')
   await page.goto('/settings')
   await page.getByRole('button', { name: /Change password/ }).click()
 
@@ -24,7 +24,7 @@ test('settings password change needs the current password', async ({ page }) => 
 test('a normal session cannot use the reset page to set a password', async ({ page }) => {
   const u = await makeUser('resetbypass')
   await signIn(page, u.email)
-  await expectPath(page, '/feed')
+  await expectPath(page, '/sea')
   await page.goto('/reset-password')
   await expect(page.getByText('Link expired')).toBeVisible()
 })

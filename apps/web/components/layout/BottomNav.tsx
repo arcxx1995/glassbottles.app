@@ -1,10 +1,8 @@
 'use client'
 
-import type { Route } from 'next'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Anchor, Home, Mail, UserRound, Users } from 'lucide-react'
-import { useMe } from '@/components/social/useMe'
+import { Anchor, Mail, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -27,17 +25,10 @@ export default function BottomNav() {
     skipPollingIfUnfocused: true,
   })
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
-  const { me, pendingIn } = useMe()
-
-  // "Me" is your profile (Settings sits behind its gear); before a handle is
-  // claimed it falls back to Settings so that stays reachable on phones.
-  const meHref = (me ? `/u/${me.handle}` : '/settings') as Route
   const NAV_ITEMS = [
-    { href: '/feed', label: 'Feed', Icon: Home, badge: 0 },
     { href: '/sea', label: 'Sea', Icon: Anchor, badge: 0 },
-    { href: '/friends', label: 'Friends', Icon: Users, badge: pendingIn },
     { href: '/inbox', label: 'Inbox', Icon: Mail, badge: unreadCount },
-    { href: meHref, label: 'Me', Icon: UserRound, badge: 0 },
+    { href: '/settings', label: 'Settings', Icon: Settings, badge: 0 },
   ] as const
 
   return (
@@ -85,7 +76,7 @@ export default function BottomNav() {
                       className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full
                                  bg-coral text-ocean-deep font-ui font-semibold text-[9px]
                                  flex items-center justify-center px-[3px]"
-                      aria-label={href === '/inbox' ? `${badge} unread` : `${badge} friend requests`}
+                      aria-label={`${badge} unread`}
                     >
                       {badge > 9 ? '9+' : badge}
                     </motion.span>

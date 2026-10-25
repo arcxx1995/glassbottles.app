@@ -21,7 +21,6 @@ import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser, setUser } from '@/store/authSlice'
 import type { Profile } from '@/types'
 import KeeperCard from '@/components/keeper/KeeperCard'
-import BioCard from '@/components/social/BioCard'
 import { CURRENTS, CURRENT_INFO, type CurrentId } from '@/lib/dressing'
 import { disablePush, enablePush, getPushState, type PushState } from '@/lib/push'
 
@@ -946,11 +945,6 @@ export default function SettingsPage() {
                 <ChangeEmailRow currentEmail={email} />
                 <ChangePasswordRow />
               </div>
-            </motion.section>
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
-              <SectionLabel>Profile</SectionLabel>
-              <BioCard />
             </motion.section>
 
             <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>

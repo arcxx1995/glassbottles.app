@@ -17,7 +17,6 @@ export default function robots(): MetadataRoute.Robots {
         '/auth/',
         '/shot/',
         '/preview/',
-        '/feed',
         '/sea',
         '/inbox',
         '/settings',

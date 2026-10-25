@@ -2,9 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classify as classifyWith } from '../_shared/classify.ts'
 import { findContact, findCrisis, findPersonalContact, type Verdict } from './screen.ts'
 
-// screen-bottle — the safety screen (migration 043), plus social mode (050):
-// a body of {table, id} screens a post / comment / scrap / community / bio
-// (051) and hands the verdict to apply_social_screen() instead.
+// screen-bottle — the safety screen (migration 043), plus social mode: a body
+// of {table, id} screens a bio (051; the feed tables went in 055) and hands
+// the verdict to apply_social_screen() instead.
 //
 // Called by the on_bottle_screen trigger through pg_net for every new bottle,
 // and again by the rescreen_pending cron for anything still unscreened.
@@ -30,15 +30,8 @@ const json = (body: unknown, status = 200) =>
 const classify = (message: string, social = false) =>
   classifyWith(message, { apiKey: OPENROUTER_API_KEY, model: OPENROUTER_MODEL, social })
 
-// table → how to read its text, its key, and its screen column.
+// table → how to read its text, its key, and its screen column (bios only since 055).
 const SOCIAL_TABLES: Record<string, { select: string; key: string; screen: string; text: (row: Record<string, string | null>) => string }> = {
-  posts: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
-  comments: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
-  scraps: { select: 'body, screen', key: 'id', screen: 'screen', text: (r) => r.body ?? '' },
-  communities: {
-    select: 'name, description, screen', key: 'id', screen: 'screen',
-    text: (r) => [r.name, r.description].filter(Boolean).join('\n'),
-  },
   social_profiles: { select: 'bio, bio_screen', key: 'user_id', screen: 'bio_screen', text: (r) => r.bio ?? '' },
 }
 

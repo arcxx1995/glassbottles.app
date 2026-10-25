@@ -25,7 +25,7 @@ async function latestBottle(senderId: string) {
 test('a held bottle comes back to rewrite, and the rewrite sails', async ({ page }) => {
   const u = await makeUser('held', { timezone: 'UTC' })
   await signIn(page, u.email)
-  await expectPath(page, '/feed')
+  await expectPath(page, '/sea')
   await page.goto('/sea')
   await expectPath(page, '/sea')
 

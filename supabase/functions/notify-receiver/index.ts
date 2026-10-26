@@ -174,10 +174,11 @@ Deno.serve(async (req) => {
       html: emailHtml({
         title: 'A bottle washed up',
         preheader: 'Someone sent you a message in a bottle.',
+        eyebrow: 'A new bottle',
         heading: 'A bottle washed up for you.',
         paragraphs: ['Someone out there sent you a message in a bottle. Open the app to read it.'],
         cta: { label: 'Open your bottle', href: 'https://glassbottles.app/home' },
-        footer: 'You&rsquo;re getting this because someone sent you a bottle. <a href="https://glassbottles.app/settings" style="color:#4ECDC4;">Turn off email notifications</a> in Settings.',
+        footer: 'You&rsquo;re getting this because someone sent you a bottle. <a href="https://glassbottles.app/settings" style="color:rgba(247,231,206,0.7);text-decoration:underline;">Turn off email notifications</a> in Settings.',
       }),
       text: `Someone sent you a message. Open glassbottles.app to read it.`,
     }),

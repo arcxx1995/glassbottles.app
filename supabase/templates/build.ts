@@ -12,6 +12,7 @@ const templates = {
   'confirmation.html': emailHtml({
     title: 'Confirm your glassbottles account',
     preheader: 'Confirm your email to finish signing up.',
+    eyebrow: 'New account',
     heading: 'A bottle&rsquo;s waiting to be cast for you.',
     paragraphs: ['Confirm your email to finish signing up.'],
     cta: { label: 'Confirm email', href: callback('signup', '/home') },
@@ -22,6 +23,7 @@ const templates = {
   'recovery.html': emailHtml({
     title: 'Reset your glassbottles password',
     preheader: 'Choose a new password for your account.',
+    eyebrow: 'Password reset',
     heading: 'Reset your password.',
     paragraphs: ['Someone asked to reset the password for this account. If it was you, choose a new one below.'],
     cta: { label: 'Choose a new password', href: callback('recovery', '/reset-password') },
@@ -32,6 +34,7 @@ const templates = {
   'email-change.html': emailHtml({
     title: 'Confirm your new glassbottles email',
     preheader: 'Confirm the new address for your account.',
+    eyebrow: 'Account email',
     heading: 'Confirm your new email.',
     paragraphs: [
       'You asked to change your account email from <b style="color:#F7E7CE;">{{ .Email }}</b> to <b style="color:#F7E7CE;">{{ .NewEmail }}</b>.',

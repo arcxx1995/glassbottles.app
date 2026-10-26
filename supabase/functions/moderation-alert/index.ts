@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
       html: emailHtml({
         title: 'Moderation queue',
         preheader: `${fresh} new in the moderation queue, ${open} open.`,
+        eyebrow: 'Moderation',
         heading: `${fresh} new item${fresh === 1 ? '' : 's'} to review.`,
         stats: [[String(fresh), 'new'], [String(open), 'open in queue']],
         cta: { label: 'Open moderation queue', href: 'https://glassbottles.app/admin/moderation' },

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { animate, motion, useDragControls, useMotionValue, useTransform } from 'motion/react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -69,8 +70,11 @@ export default function Sheet({
     }
   }, [onClose])
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+  // Portalled to <body>: inside a page it would share <main>'s stacking
+  // context and sit under the bottom nav (and a transformed ancestor would
+  // break position: fixed). Context, and so AnimatePresence exits, still flow.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
       <motion.div
         className="absolute inset-0 bg-ocean-deep/50"
         // Phone: the dim tracks the sheet's position (drag thins it).
@@ -145,6 +149,7 @@ export default function Sheet({
           {children}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   )
 }

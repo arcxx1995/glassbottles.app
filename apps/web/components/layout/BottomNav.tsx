@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Anchor, Mail, Settings } from 'lucide-react'
+import { Anchor, Mail, Sailboat, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -27,6 +27,10 @@ export default function BottomNav() {
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
   const NAV_ITEMS = [
     { href: '/sea', label: 'Sea', Icon: Anchor, badge: 0 },
+    // The Harbour is Keepers-only (056); hidden while Keeper is off.
+    ...(process.env.NEXT_PUBLIC_KEEPER === 'on'
+      ? [{ href: '/harbour', label: 'Harbour', Icon: Sailboat, badge: 0 } as const]
+      : []),
     { href: '/inbox', label: 'Inbox', Icon: Mail, badge: unreadCount },
     { href: '/settings', label: 'Settings', Icon: Settings, badge: 0 },
   ] as const

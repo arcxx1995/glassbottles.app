@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     plan?: KeeperPlan
     returnTo?: string
   }
+  // Allow-listed: never echo a client path into the redirect. 'home' was the
+  // Sea's old name.
+  const back = returnTo === 'harbour' ? 'harbour' : returnTo === 'home' || returnTo === 'sea' ? 'sea' : 'settings'
   if (!plan || !KEEPER_PLANS.includes(plan)) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }
@@ -66,8 +69,8 @@ export async function POST(req: NextRequest) {
         : { email: user.email },
       metadata: { user_id: user.id },
       // Back where the purchase started — a fixed choice, never a caller URL.
-      return_url: `${origin}/${returnTo === 'home' ? 'home' : 'settings'}?keeper=welcome`,
-      cancel_url: `${origin}/${returnTo === 'home' ? 'home' : 'settings'}`,
+      return_url: `${origin}/${back}?keeper=welcome`,
+      cancel_url: `${origin}/${back}`,
       // One trial per account: anyone who has ever had a membership row pays.
       ...(plan !== 'lifetime' && !membership
         ? { subscription_data: { trial_period_days: TRIAL_DAYS } }

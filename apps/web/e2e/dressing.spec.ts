@@ -1,18 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { admin, deliverNow, expectPath, isolateReceiver, makeUser, signIn } from './helpers'
+import { admin, deliverNow, expectPath, isolateReceiver, makeKeeper, makeUser, signIn } from './helpers'
 
 // Bottle dressing (migration 042): weather and vibe are free, Atelier Keeper
 // pieces need Keeper, and the stranger receives the bottle as it was dressed.
-
-async function makeKeeper(userId: string) {
-  const { error } = await admin.from('memberships').insert({
-    user_id: userId,
-    plan: 'yearly',
-    status: 'active',
-    access_until: new Date(Date.now() + 30 * 864e5).toISOString(),
-  })
-  if (error) throw error
-}
 
 test('a Keeper dresses a bottle and the stranger receives it dressed', async ({ browser }) => {
   test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')

@@ -123,9 +123,11 @@ export const config = {
      *   - /favicon.ico
      */
     '/sea',
+    '/harbour',
     '/inbox',
     '/settings',
     '/sea/:path*',
+    '/harbour/:path*',
     '/inbox/:path*',
     '/settings/:path*',
     '/logbook',

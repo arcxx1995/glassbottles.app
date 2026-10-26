@@ -21,6 +21,7 @@ import { useAppDispatch, useAppSelector } from '@/store'
 import { selectUser, setUser } from '@/store/authSlice'
 import type { Profile } from '@/types'
 import KeeperCard from '@/components/keeper/KeeperCard'
+import HarbourSettings from '@/components/harbour/HarbourSettings'
 import { CURRENTS, CURRENT_INFO, type CurrentId } from '@/lib/dressing'
 import { disablePush, enablePush, getPushState, type PushState } from '@/lib/push'
 
@@ -972,6 +973,12 @@ export default function SettingsPage() {
               <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
                 <SectionLabel>Membership</SectionLabel>
                 <KeeperCard />
+              </motion.section>
+            )}
+            {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+              <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
+                <SectionLabel>Harbour</SectionLabel>
+                <HarbourSettings />
               </motion.section>
             )}
 

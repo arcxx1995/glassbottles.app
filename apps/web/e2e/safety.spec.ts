@@ -44,7 +44,7 @@ test('a held bottle comes back to rewrite, and the rewrite sails', async ({ page
   expect(error).toBeNull()
   expect(data).toBe('held')
   await expect(page.getByText('Your bottle stayed ashore')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText(/contact details or a link/)).toBeVisible()
+  await expect(page.getByText(/no contact details, handles or links/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Rewrite it' }).click()
   await expect(page.getByText('Your bottle stayed ashore')).toHaveCount(0)
@@ -59,25 +59,31 @@ test('a held bottle comes back to rewrite, and the rewrite sails', async ({ page
     .toBe(1)
 })
 
-test('a bottle in crisis still sails, and its sender is offered help', async ({ page }) => {
+test('a bottle in crisis is held, never delivered, and its sender is offered help', async ({ page }) => {
   const u = await makeUser('care', { timezone: 'Asia/Kolkata' })
   await signIn(page, u.email)
   await page.goto('/sea')
   await page.getByLabel('Message to place in your bottle').fill('some nights I just want to die')
   await page.getByRole('button', { name: /Seal & Throw/ }).click()
 
+  // The client's own read shows support at once.
   const card = page.getByRole('complementary', { name: 'Support' })
   await expect(card).toBeVisible()
   await expect(card.getByText('Tele-MANAS')).toBeVisible()
-  await expect(card.getByText('Find a helpline')).toBeVisible()
 
-  // Sailing, not blocked; and once closed it stays closed for the day.
+  // 052: the screen's crisis verdict holds the bottle ashore — no stranger
+  // receives it — and the sender sees help lines in place of the card.
   const id = await latestBottle(u.id)
-  await admin.rpc('apply_screen', { p_bottle_id: id, p_verdict: 'crisis' })
-  expect((await admin.from('bottles').select('is_stale').eq('id', id).single()).data?.is_stale).toBe(false)
-  await card.getByRole('button', { name: 'Close' }).click()
+  expect((await admin.rpc('apply_screen', { p_bottle_id: id, p_verdict: 'crisis' })).data).toBe('held')
+  const { data: b } = await admin.from('bottles').select('is_stale, screen, screen_reason').eq('id', id).single()
+  expect(b).toEqual({ is_stale: true, screen: 'held', screen_reason: 'crisis' })
+  const help = page.getByRole('alert').filter({ hasText: 'carry this alone' })
+  await expect(help).toBeVisible({ timeout: 15_000 })
   await expect(card).toHaveCount(0)
+
+  // Dismissed help stays dismissed.
+  await help.getByRole('button').click()
+  await expect(help).toHaveCount(0)
   await page.reload()
-  await expect(page.getByText('Sent today ✓')).toBeVisible()
-  await expect(page.getByRole('complementary', { name: 'Support' })).toHaveCount(0)
+  await expect(page.getByRole('alert').filter({ hasText: 'carry this alone' })).toHaveCount(0)
 })

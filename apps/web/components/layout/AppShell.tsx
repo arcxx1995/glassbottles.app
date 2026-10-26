@@ -12,12 +12,12 @@ export default function AppShell({
 }) {
   const path = usePathname()
   useViewTransitionSettle()
-  const inSea = path === '/sea'
+  // The Sea and the Harbour paint their own full-screen water.
+  const ownWater = path === '/sea' || path === '/harbour' || path.startsWith('/harbour/')
   return (
     <div className="relative h-[100svh] overflow-hidden print:h-auto print:overflow-visible">
-      {/* The Sea paints its own full-screen ocean (SailingSea); a second one
-          underneath it was invisible but still animating. */}
-      {!inSea && <div className="print:hidden"><WaveBackground /></div>}
+      {/* A second ocean under theirs was invisible but still animating. */}
+      {!ownWater && <div className="print:hidden"><WaveBackground /></div>}
       <main className="relative z-10 h-app-main overflow-hidden pt-safe print:h-auto print:overflow-visible">
         {children}
       </main>

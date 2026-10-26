@@ -26,7 +26,7 @@ export default function KeeperPlans({
   returnTo = 'settings',
   onBeforeCheckout,
 }: {
-  returnTo?: 'settings' | 'home'
+  returnTo?: 'settings' | 'home' | 'harbour'
   /** Stash anything the redirect to Dodo would lose (e.g. a half-written bottle). */
   onBeforeCheckout?: () => void
 }) {

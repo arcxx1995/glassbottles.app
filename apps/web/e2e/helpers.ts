@@ -51,6 +51,17 @@ export async function makeUser(
   return { id: data.user.id, email }
 }
 
+/** A live Keeper membership (041) for 30 days. */
+export async function makeKeeper(userId: string) {
+  const { error } = await admin.from('memberships').insert({
+    user_id: userId,
+    plan: 'yearly',
+    status: 'active',
+    access_until: new Date(Date.now() + 30 * 864e5).toISOString(),
+  })
+  if (error) throw error
+}
+
 /**
  * Answer the live filter (check-message, migration 052) — CI runs Supabase
  * without the edge runtime, and the editor refuses to throw unchecked.

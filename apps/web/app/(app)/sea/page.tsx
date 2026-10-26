@@ -383,7 +383,9 @@ export default function HomePage() {
                 <motion.div
                   key="compose"
                   className={cn(
-                    'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center [justify-content:safe_center]',
+                    // Not safe-center: with the dressing row the column outgrows a
+                    // 720px screen, and safe-center pushed Seal & Throw under the footer.
+                    'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center',
                     // The lift clears the footer; a held notice needs the room instead.
                     !heldBottle && '-translate-y-8 sm:-translate-y-10',
                   )}

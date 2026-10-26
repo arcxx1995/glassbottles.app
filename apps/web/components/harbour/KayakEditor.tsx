@@ -120,7 +120,7 @@ export default function KayakEditor({ mine, onClose }: { mine: MyKayak | null; o
         <Swatches label="Hull" options={HULLS} colors={HULL_COLOR} value={hull} onChange={setHull} />
         <Swatches label="Paddle" options={PADDLES} colors={PADDLE_COLOR} value={paddle} onChange={setPaddle} />
 
-        <div className="glass inset-group flex items-center justify-between gap-3 px-4 py-3">
+        <div className="glass flex items-center justify-between gap-3 rounded-3xl px-4 py-3">
           <div>
             <p className="font-ui text-sm text-sand">Float in the Harbour</p>
             <p className="font-ui text-[11px] leading-snug text-sand/45">

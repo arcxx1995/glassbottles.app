@@ -2,13 +2,14 @@
 
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Anchor, Mail, Sailboat, Settings } from 'lucide-react'
+import { Anchor, Mail, Sailboat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { useGetReceivedBottlesQuery } from '@/store/api/bottleApi'
 import { TransitionLink } from '@/components/ui/TransitionLink'
 import { springFlick, springMove } from '@/components/ui/springs'
+import YouMenu from './YouMenu'
 
 
 export default function BottomNav() {
@@ -32,7 +33,6 @@ export default function BottomNav() {
       ? [{ href: '/harbour', label: 'Harbour', Icon: Sailboat, badge: 0 } as const]
       : []),
     { href: '/inbox', label: 'Inbox', Icon: Mail, badge: unreadCount },
-    { href: '/settings', label: 'Settings', Icon: Settings, badge: 0 },
   ] as const
 
   return (
@@ -93,6 +93,7 @@ export default function BottomNav() {
             </TransitionLink>
           )
         })}
+        <YouMenu />
       </div>
     </nav>
   )

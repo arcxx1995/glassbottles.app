@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { emailHtml } from '../_shared/email.ts'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -170,14 +171,15 @@ Deno.serve(async (req) => {
       from: FROM_ADDRESS,
       to: [receiverEmail],
       subject: 'A bottle washed up 🫙',
-      html: `
-        <p>Hey,</p>
-        <p>You received a message in a bottle. Open the app to read it — don't leave them drifting.</p>
-        <p style="margin-top:32px;font-size:0.85em;color:#888;">
-          You're getting this because someone sent you a glassbottle.
-          If you no longer want email notifications, you can turn them off in your account settings.
-        </p>
-      `,
+      html: emailHtml({
+        title: 'A bottle washed up',
+        preheader: 'Someone sent you a message in a bottle.',
+        eyebrow: 'A new bottle',
+        heading: 'A bottle washed up for you.',
+        paragraphs: ['Someone out there sent you a message in a bottle. Open the app to read it.'],
+        cta: { label: 'Open your bottle', href: 'https://glassbottles.app/home' },
+        footer: 'You&rsquo;re getting this because someone sent you a bottle. <a href="https://glassbottles.app/settings" style="color:rgba(247,231,206,0.7);text-decoration:underline;">Turn off email notifications</a> in Settings.',
+      }),
       text: `Someone sent you a message. Open glassbottles.app to read it.`,
     }),
   })

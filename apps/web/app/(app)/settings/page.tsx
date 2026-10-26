@@ -137,7 +137,8 @@ function ToggleRow({
       <div className="flex flex-col flex-1 min-w-0">
         <span className="font-ui text-sm font-medium text-sand/60 whitespace-nowrap">{label}</span>
         {meta && (
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">{meta}</span>
+          // Wraps: nowrap ran the line under the switch on narrow phones.
+          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug">{meta}</span>
         )}
       </div>
 
@@ -743,6 +744,10 @@ export default function SettingsPage() {
 
   // Email comes from Supabase Auth session, not the profiles table
   const [email, setEmail] = useState<string | null>(null)
+  // The profile is in the store on the client's first render but not on the
+  // server's, so anything drawn from it waits for mount (hydration mismatch).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   // Optimistic mirror of profiles.email_notifications (defaults on).
   const [emailNotifs, setEmailNotifs] = useState<boolean>(
@@ -803,7 +808,7 @@ export default function SettingsPage() {
           </p>
         )}
         {/* Member since — profile has created_at */}
-        {user?.created_at && (
+        {mounted && user?.created_at && (
           <p className="font-mono text-[10px] text-sand/35 mt-0.5">
             member since{' '}
             {new Date(user.created_at).toLocaleDateString('en-US', {

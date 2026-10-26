@@ -51,14 +51,16 @@ export default function HarbourPage() {
         <div className="rounded-2xl bg-black/20 px-3.5 py-2 backdrop-blur-md">
           <h1 className="font-display text-xl text-white">The Harbour</h1>
           {keeper && tide && (
-            <p className="font-ui text-[11px] text-white/70">Today&rsquo;s twelve · new kayaks at {tide}</p>
+            <p className="font-ui text-[11px] text-white/70">
+              Today&rsquo;s twelve · <span className="whitespace-nowrap">new kayaks at {tide}</span>
+            </p>
           )}
         </div>
         {keeper && mine?.launched && (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="press pointer-events-auto rounded-full bg-black/25 px-4 py-2 font-ui text-xs font-medium text-white backdrop-blur-md"
+            className="press pointer-events-auto shrink-0 whitespace-nowrap rounded-full bg-black/25 px-4 py-2 font-ui text-xs font-medium text-white backdrop-blur-md"
           >
             Your kayak
           </button>

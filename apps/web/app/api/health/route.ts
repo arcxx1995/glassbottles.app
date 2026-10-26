@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-export const runtime = 'edge'
+// Node runtime (Edge is deprecated); dynamic so the timestamp is live.
+export const dynamic = 'force-dynamic'
 
 export function GET() {
   return NextResponse.json(

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useReducedMotion } from 'motion/react'
 import type { Light } from '@/lib/harbour'
+import type { SeaTheme } from '@/lib/dressing'
 
 // The Harbour's water, seen from straight above: a sandy-bottomed lagoon with
 // depth, light caustics on the seabed, fine surface ripple and a sun (or moon)
@@ -14,6 +15,9 @@ import type { Light } from '@/lib/harbour'
 
 type Rgb = [number, number, number]
 const hex = (h: string): Rgb => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as Rgb
+/** a → b by t, as #rrggbb (the CSS fallback gradient needs strings too). */
+const mix = (a: string, b: string, t: number) =>
+  '#' + hex(a).map((v, i) => Math.round((v + (hex(b)[i] - v) * t) * 255).toString(16).padStart(2, '0')).join('')
 
 export const LIGHTS: Record<Light, { deep: string; shallow: string; caustic: string; glint: string; causticAmt: number; glintAmt: number }> = {
   dawn: { deep: '#0F4E66', shallow: '#4AA9B0', caustic: '#FFE3C2', glint: '#FFD2A8', causticAmt: 0.55, glintAmt: 0.8 },
@@ -84,10 +88,20 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`
 
-export default function HarbourWater({ light, zoom = 1 }: { light: Light; zoom?: number }) {
+// A Keeper's current tints the lagoon toward its sea, keeping the hour's light.
+export default function HarbourWater({ light, zoom = 1, tint }: { light: Light; zoom?: number; tint?: SeaTheme }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduced = useReducedMotion() ?? false
-  const L = LIGHTS[light]
+  const L = useMemo(() => {
+    const base = LIGHTS[light]
+    if (!tint) return base
+    return {
+      ...base,
+      deep: mix(base.deep, tint.bands[4], 0.35),
+      shallow: mix(base.shallow, tint.bands[0], 0.35),
+      caustic: mix(base.caustic, tint.foam, 0.2),
+    }
+  }, [light, tint])
 
   useEffect(() => {
     const canvas = ref.current

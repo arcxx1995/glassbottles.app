@@ -1,27 +1,25 @@
 import { expect, test } from '@playwright/test'
 import { admin, expectPath, makeUser, signIn } from './helpers'
 
-// The You tab: a menu with your current, Settings and log out (and, when
-// Keeper is on, your handle and kayak).
+// The You tab: a menu with Settings and log out (and, when Keeper is on,
+// your handle and kayak). Your current is picked from the Sea's header.
 
-test('the You menu sets your current, opens Settings and logs out', async ({ page }) => {
+test('the Sea sets your current; the You menu opens Settings and logs out', async ({ page }) => {
   const u = await makeUser('you-menu')
   await signIn(page, u.email)
   await page.goto('/sea')
 
-  const you = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' })
-  await you.click()
-  const menu = page.getByRole('menu', { name: 'You' })
-  await expect(menu).toBeVisible()
-
-  // Your current → sheet → pick one.
-  await menu.getByRole('menuitem', { name: /Your current/ }).click()
-  await expect(menu).toHaveCount(0)
-  await page.getByRole('dialog').getByRole('button', { name: /Night Owl/ }).click()
+  // The current pill (top right of the Sea) → pick one.
+  await page.getByRole('button', { name: /Your current: Open sea/ }).click()
+  await page.getByRole('menu', { name: 'Your current' }).getByRole('menuitemradio', { name: /Night Owl/ }).click()
   await expect
     .poll(async () => (await admin.from('profiles').select('current').eq('id', u.id).single()).data?.current)
     .toBe('night_owl')
+  await expect(page.getByRole('button', { name: /Your current: Night Owl/ })).toBeVisible()
   await page.keyboard.press('Escape')
+
+  const you = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'You' })
+  const menu = page.getByRole('menu', { name: 'You' })
 
   // Escape and outside taps close the menu.
   await you.click()

@@ -197,7 +197,7 @@ function Swatch({ piece }: { piece: AtelierPiece }) {
   const { look } = piece
   const fill =
     piece.kind === 'glass'
-      ? `linear-gradient(135deg, ${look.edge}, ${look.tint}), #0D2137`
+      ? `linear-gradient(135deg, ${look.edge}, ${look.tint}), rgb(var(--c-ocean-mid))`
       : piece.kind === 'seal'
         ? (look.wax ?? '#C4A882')
         : piece.kind === 'paper'

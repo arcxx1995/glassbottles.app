@@ -483,7 +483,7 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
             height: 2,
             transform: 'translateX(-50%)',
             background:
-              'linear-gradient(to right, transparent, rgba(78,205,196,0.5), transparent)',
+              'linear-gradient(to right, transparent, rgb(var(--c-seafoam) / 0.5), transparent)',
             borderRadius: 2,
           }}
         />
@@ -497,7 +497,7 @@ function FloatingBottle({ item }: { item: SailingBottleItem }) {
               bottom: H * 0.12,
               width: W * 0.8,
               height: W * 0.32,
-              border: '1px solid rgba(78,205,196,0.35)',
+              border: '1px solid rgb(var(--c-seafoam) / 0.35)',
               borderRadius: '50%',
               opacity: 0, // only visible while the ripple plays
               animation: `gb-ripple 3s ease-out ${layout.bobDelay + r * 1.5}s infinite`,

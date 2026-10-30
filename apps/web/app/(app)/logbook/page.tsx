@@ -56,11 +56,12 @@ export default function LogbookPage() {
   const locked = error === 'keeper_only'
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto px-5 pt-10 pb-24 sm:pt-14 print:h-auto print:overflow-visible print:p-0 print:text-black">
+    // Scrolls below the shell's wordmark row (mt-14), never under it.
+    <div className="mt-14 flex h-[calc(100%-3.5rem)] flex-col overflow-y-auto px-5 pt-2 pb-24 print:mt-0 print:h-auto print:overflow-visible print:p-0 print:text-black">
       <div className="mx-auto w-full max-w-xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <h1 className="font-display text-title text-sand print:text-black">Logbook</h1>
+            <h1 className="font-display text-headline text-sand print:text-black">Logbook</h1>
             <p className="font-ui text-sm text-sand/40 mt-1 print:text-black/60">
               Every bottle you threw, and every one that found you.
             </p>

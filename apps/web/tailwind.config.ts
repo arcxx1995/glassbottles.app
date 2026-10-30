@@ -39,21 +39,22 @@ const config: Config = {
     extend: {
       colors: {
         // Core palette
-        'ocean-deep': '#0A1628',   // primary bg — deepest ocean
-        'ocean-mid':  '#0D2137',   // card / surface bg
-        seafoam:      '#4ECDC4',   // primary accent — active states, icons
+        // Accent + ocean follow the viewer's current (data-current on <html>, globals.css).
+        'ocean-deep': 'rgb(var(--c-ocean-deep) / <alpha-value>)',   // primary bg — deepest ocean
+        'ocean-mid':  'rgb(var(--c-ocean-mid) / <alpha-value>)',    // card / surface bg
+        seafoam:      'rgb(var(--c-seafoam) / <alpha-value>)',      // primary accent — active states, icons
         sand:         '#F7E7CE',   // text, highlights — warm readable
         coral:        '#FF6B6B',   // CTA — throw button ONLY, destructive
         glass:        'rgba(255,255,255,0.08)',  // bottle material, frosted surfaces
         foam:         'rgba(255,255,255,0.04)',  // subtle backgrounds, dividers
         // Semantic aliases (for Ishan's component work)
-        'surface-1':  '#0D2137',   // == ocean-mid: card bg
-        'surface-0':  '#0A1628',   // == ocean-deep: page bg
+        'surface-1':  'rgb(var(--c-ocean-mid) / <alpha-value>)',   // == ocean-mid: card bg
+        'surface-0':  'rgb(var(--c-ocean-deep) / <alpha-value>)',   // == ocean-deep: page bg
         'text-primary':   '#F7E7CE',              // == sand
         'text-secondary': 'rgba(247,231,206,0.5)', // sand/50
         'text-tertiary':  'rgba(247,231,206,0.25)',// sand/25
         'border-subtle':  'rgba(255,255,255,0.05)',// white/5 — card borders
-        'border-active':  'rgba(78,205,196,0.30)', // seafoam/30 — focus rings
+        'border-active':  'rgb(var(--c-seafoam) / 0.30)', // seafoam/30 — focus rings
       },
       fontFamily: {
         // display: bottle content, hero headings, page titles
@@ -139,10 +140,10 @@ const config: Config = {
         // Component shadow vocabulary
         'card':    '0 4px 24px rgba(0,0,0,0.3)',
         'banner':  '0 8px 32px rgba(0,0,0,0.4)',
-        'seafoam': '0 0 16px rgba(78,205,196,0.25)',
+        'seafoam': '0 0 16px rgb(var(--c-seafoam) / 0.25)',
         'coral':   '0 0 16px rgba(255,107,107,0.30)',
-        'glow-sm': '0 0 10px rgba(78,205,196,0.55)',
-        'glow-md': '0 0 20px rgba(78,205,196,0.35)',
+        'glow-sm': '0 0 10px rgb(var(--c-seafoam) / 0.55)',
+        'glow-md': '0 0 20px rgb(var(--c-seafoam) / 0.35)',
       },
     },
   },

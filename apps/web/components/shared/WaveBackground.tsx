@@ -14,7 +14,7 @@ export default function WaveBackground() {
       aria-hidden="true"
     >
       {/* Gradient base */}
-      <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep via-[#0C1C2E] to-[#091520]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep via-ocean-deep to-[#050B14]" />
 
       {/* Ambient radial glow */}
       <div
@@ -25,7 +25,7 @@ export default function WaveBackground() {
           width: '60vw',
           height: '60vw',
           background:
-            'radial-gradient(circle, rgba(78,205,196,0.05) 0%, transparent 65%)',
+            'radial-gradient(circle, rgb(var(--c-seafoam) / 0.05) 0%, transparent 65%)',
           animation: 'gb-pulse 7s ease-in-out infinite',
         }}
       />
@@ -50,7 +50,7 @@ export default function WaveBackground() {
           >
             <path
               d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z"
-              fill="#4ECDC4"
+              className="fill-seafoam"
             />
           </svg>
         </div>
@@ -59,7 +59,7 @@ export default function WaveBackground() {
       {/* Bottom solid ocean fill */}
       <div
         className="absolute bottom-0 left-0 right-0"
-        style={{ height: '48px', background: 'rgba(78,205,196,0.04)' }}
+        style={{ height: '48px', background: 'rgb(var(--c-seafoam) / 0.04)' }}
       />
     </div>
   )

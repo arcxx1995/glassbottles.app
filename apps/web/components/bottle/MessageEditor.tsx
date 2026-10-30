@@ -157,7 +157,7 @@ export default function MessageEditor({
       transition={spring}
     >
       {/* Editor surface */}
-      <div className="glass relative rounded-3xl p-4 transition-[border-color,box-shadow] duration-200 focus-within:border-seafoam/35 focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_32px_rgba(0,0,0,0.28),0_0_0_4px_rgba(78,205,196,0.10)]">
+      <div className="glass relative rounded-3xl p-4 transition-[border-color,box-shadow] duration-200 focus-within:border-seafoam/35 focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_32px_rgba(0,0,0,0.28),0_0_0_4px_rgb(var(--c-seafoam)/0.10)]">
         <textarea
           ref={textareaRef}
           value={message}

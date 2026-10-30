@@ -11,6 +11,7 @@ import CrisisSupport from '@/components/bottle/CrisisSupport'
 import { spring } from '@/components/ui/springs'
 import { useGetHarbourQuery } from '@/store/api/bottleApi'
 import { lightAt, type Light, type MyKayak } from '@/lib/harbour'
+import { useCurrentSea } from '@/components/harbour/useCurrentSea'
 
 // The Harbour (056): today's twelve kayaks, rafted together. Keepers only;
 // everyone else sees the water and a quiet invitation.
@@ -38,16 +39,17 @@ export default function HarbourPage() {
 
   const mine = data?.mine ?? null
   const keeper = data?.keeper ?? false
+  const tint = useCurrentSea(keeper)
 
   return (
     <div className="relative h-full overflow-hidden">
-      <HarbourWater light={light} />
+      <HarbourWater light={light} tint={tint} />
 
       {data && (
         <HarbourScene kayaks={data.kayaks} mine={mine} night={light === 'night'} ghost={!keeper} />
       )}
 
-      <header className="pointer-events-none relative z-10 flex items-start justify-between gap-3 px-5 pt-6 sm:pt-8">
+      <header className="pointer-events-none relative z-10 flex items-start justify-between gap-3 px-5 pt-16">
         <div className="rounded-2xl bg-black/20 px-3.5 py-2 backdrop-blur-md">
           <h1 className="font-display text-xl text-white">The Harbour</h1>
           {keeper && tide && (

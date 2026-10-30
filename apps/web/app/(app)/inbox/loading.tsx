@@ -1,9 +1,9 @@
 export default function InboxLoading() {
   return (
-    <div className="flex h-full flex-col overflow-hidden pt-10 sm:pt-14">
+    <div className="flex h-full flex-col overflow-hidden pt-16">
       {/* Header ghost */}
       <div className="px-5 mb-6">
-        <div className="skeleton h-7 w-16 rounded-xl" />
+        <div className="skeleton h-6 w-14 rounded-xl" />
         <div className="skeleton h-4 w-36 rounded-xl mt-2" style={{ opacity: 0.6 }} />
       </div>
 

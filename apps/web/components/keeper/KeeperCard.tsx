@@ -73,16 +73,14 @@ export default function KeeperCard() {
   const canManage = (isKeeper && m?.plan !== 'lifetime') || live
 
   return (
-    <div className="glass rounded-3xl overflow-hidden">
+    <div>
       <button
         type="button"
         onClick={() => canBuy && setExpanded((v) => !v)}
         aria-expanded={canBuy ? expanded : undefined}
-        className={cn('flex items-center gap-4 p-5 w-full text-left group', canBuy ? 'press cursor-pointer transition-transform' : 'cursor-default')}
+        className={cn('flex items-center gap-3 px-4 py-3 w-full text-left group', canBuy ? 'press cursor-pointer transition-transform' : 'cursor-default')}
       >
-        <div className="w-9 h-9 rounded-xl bg-seafoam/10 flex items-center justify-center shrink-0">
-          <Sparkles size={17} strokeWidth={1.5} className="text-seafoam" />
-        </div>
+        <Sparkles size={16} strokeWidth={1.5} className="shrink-0 text-sand/45" />
         <div className="flex flex-col flex-1 min-w-0">
           {/* Status changes (loading → member, lapsed → rejoined) cross-fade in
               place instead of the text snapping. */}
@@ -91,7 +89,7 @@ export default function KeeperCard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={spring}
-            className="font-ui text-sm font-medium text-sand/70 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap"
+            className="font-ui text-sm text-sand/85 whitespace-nowrap"
           >
             {title}
           </motion.span>
@@ -112,7 +110,7 @@ export default function KeeperCard() {
         {canBuy && (
           <span
             className={cn(
-              'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
+              'font-ui text-sand/35 text-base leading-none transition-transform duration-300 ease-ease-quart',
               expanded && 'rotate-90',
             )}
           >
@@ -122,7 +120,7 @@ export default function KeeperCard() {
       </button>
 
       {(welcome && !isKeeper && !isLoading) || isError || canManage || error ? (
-        <div className="px-5 pb-5 -mt-1 flex flex-col gap-3">
+        <div className="px-4 pb-4 -mt-1 flex flex-col gap-2.5">
           {welcome && !isKeeper && !isLoading && (
             <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
               Welcome aboard. Your membership will appear here in a moment.
@@ -136,7 +134,7 @@ export default function KeeperCard() {
               type="button"
               onClick={() => void openPortal()}
               disabled={portalBusy}
-              className="press py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/70 transition-[color,border-color,transform] hover:text-sand hover:border-white/20 disabled:opacity-50"
+              className="press h-8 rounded-lg border border-white/10 font-ui text-[13px] text-sand/70 transition-[color,border-color,transform] hover:text-sand hover:border-white/20 disabled:opacity-50"
             >
               {portalBusy ? 'Opening…' : 'Manage membership'}
             </button>
@@ -155,7 +153,7 @@ export default function KeeperCard() {
             transition={spring}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 pt-0">
+            <div className="px-4 pb-4 pt-0">
               <KeeperPlans />
             </div>
           </motion.div>

@@ -13,6 +13,7 @@ import { TransitionLink } from '@/components/ui/TransitionLink'
 import { spring } from '@/components/ui/springs'
 import { useBlockKayakMutation, useGetHarbourQuery, useReportKayakMutation } from '@/store/api/bottleApi'
 import { lightAt, type Light } from '@/lib/harbour'
+import { useCurrentSea } from '@/components/harbour/useCurrentSea'
 import type { ReportReason } from '@/types'
 
 // Inside a kayak: the same kayak from the ring, close up and upright (the
@@ -37,6 +38,7 @@ export default function KayakPage({ params }: { params: { handle: string } }) {
   const [report] = useReportKayakMutation()
   const [block] = useBlockKayakMutation()
   const [failed, setFailed] = useState(false)
+  const tint = useCurrentSea(data?.keeper ?? false)
 
   useEffect(() => setLight(lightAt(new Date().getHours())), [])
 
@@ -59,9 +61,9 @@ export default function KayakPage({ params }: { params: { handle: string } }) {
 
   return (
     <div className="relative h-full overflow-hidden">
-      <HarbourWater light={light} zoom={2.6} />
+      <HarbourWater light={light} zoom={2.6} tint={tint} />
 
-      <header className="relative z-10 flex items-center justify-between px-4 pt-5">
+      <header className="relative z-10 flex items-center justify-between px-4 pt-16">
         <TransitionLink
           href="/harbour"
           className="press inline-flex h-9 items-center gap-1 rounded-full bg-black/25 pl-2 pr-4 font-ui text-xs text-white backdrop-blur-md"
@@ -91,10 +93,10 @@ export default function KayakPage({ params }: { params: { handle: string } }) {
       </header>
 
       {kayak ? (
-        <div className="absolute inset-0 flex items-center justify-center pt-8">
+        <div className="absolute inset-0 flex items-center justify-center pt-20">
           <div
             className="relative"
-            style={{ height: 'min(calc(100svh - 10rem), 900px)', aspectRatio: '2 / 3', viewTransitionName: `kayak-${handle}` }}
+            style={{ height: 'min(calc(100svh - 12rem), 900px)', aspectRatio: '2 / 3', viewTransitionName: `kayak-${handle}` }}
           >
             <KayakArt hull={kayak.hull} paddle={kayak.paddle} lantern={light === 'night'} className="h-full w-full drop-shadow-[0_8px_18px_rgba(0,20,30,0.45)]" />
             {/* The handle, painted along the hull like a maker's decal. */}

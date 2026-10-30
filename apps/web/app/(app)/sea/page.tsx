@@ -33,6 +33,8 @@ import HeldNotice from '@/components/shared/HeldNotice'
 import CareCard from '@/components/shared/CareCard'
 import PushNudge from '@/components/shared/PushNudge'
 import Whale from '@/components/bottle/Whale'
+import CurrentPicker from '@/components/shared/CurrentPicker'
+import { HeaderSlot } from '@/components/layout/AppShell'
 import { looksLikeCrisis } from '@/lib/care'
 import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
@@ -273,8 +275,10 @@ export default function HomePage() {
     }
   }
 
+  const bottleShown = !isInitializing && !statusFailed && (sendStatus === 'idle' || sendStatus === 'throwing')
+
   return (
-    <div className="relative flex h-full flex-col items-center overflow-hidden px-5 pt-10 sm:pt-14">
+    <div className="relative flex h-full flex-col items-center overflow-hidden px-5 pt-16 sm:pt-24">
       {/* Full-viewport sea background, present across the whole throw flow so the
           idle pier, the drop, and the sailing sea share one continuous ocean.
           Floating bottles only appear once sailing (idle/throwing pass []).
@@ -288,7 +292,7 @@ export default function HomePage() {
       {/* The throwable bottle — pinned to the screen top-right, wiggling with a
           shimmer. Shown only while a throw is available; on throw it vanishes and
           re-appears at a random spot on the sea. */}
-      {!isInitializing && !statusFailed && (sendStatus === 'idle' || sendStatus === 'throwing') && (
+      {bottleShown && (
         <TetheredBottle
           dropping={sendStatus === 'throwing'}
           landingDayKey={todayKey}
@@ -298,18 +302,17 @@ export default function HomePage() {
         />
       )}
 
-      {/* Header */}
-      <div className="relative z-10 mb-4 flex w-full items-center justify-between sm:mb-8">
-        <div className="flex items-center gap-2.5">
-          <h1 className="font-display text-2xl text-sand tracking-tight">
-            glassbottles
-          </h1>
-          {/* Tides: a quiet run-of-days count, left by the wordmark — the right
-              corner belongs to the throwable bottle. No warnings, no loss
-              copy: a missed day just starts a new tide. */}
+      {/* Beside the shell's wordmark (AppShell HeaderSlot). Tides on the
+          left; the right corner holds the current, kept clear of the
+          throwable bottle pinned top-right (mr-14 ≈ its 52px + gap). */}
+      <h1 className="sr-only">The Sea</h1>
+      <HeaderSlot>
+        <div className="flex min-w-0 items-center gap-2">
+          {/* Tides: a quiet run-of-days count. No warnings, no loss copy: a
+              missed day just starts a new tide. */}
           {(todayStatus?.tides ?? 0) >= 2 && (
             <span
-              className="font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
+              className="whitespace-nowrap font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
               title="Days in a row you've thrown a bottle"
             >
               {todayStatus!.tides} tides
@@ -318,26 +321,29 @@ export default function HomePage() {
           {/* Earn-only coins (049) — spent in the Atelier. */}
           {(coins?.balance ?? 0) > 0 && (
             <span
-              className="font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
+              className="hidden whitespace-nowrap font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full min-[400px]:inline"
               title="Coins you've earned — spend them on pieces in Dress"
             >
               {coins!.balance} ✦
             </span>
           )}
         </div>
-        <AnimatePresence>
-          {hasSent && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={springFlick}
-              className="font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full"
-            >
-              Sent today ✓
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </div>
+        <div className={cn('flex shrink-0 items-center gap-2', bottleShown && 'mr-14')}>
+          <AnimatePresence>
+            {hasSent && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={springFlick}
+                className="hidden whitespace-nowrap font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full sm:inline"
+              >
+                Sent today ✓
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <CurrentPicker isKeeper={isKeeper} />
+        </div>
+      </HeaderSlot>
 
       {/* Stage */}
       <div className="relative z-10 flex min-h-0 w-full max-w-md flex-1 flex-col items-center">

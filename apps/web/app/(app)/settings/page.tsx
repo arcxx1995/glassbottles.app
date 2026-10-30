@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { spring } from '@/components/ui/springs'
 import Switch from '@/components/ui/Switch'
-import { Bell, BellRing, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
+import { Bell, BellRing, ChevronRight, LogOut, Mail, KeyRound, Trash2, Waves } from 'lucide-react'
 import { feel, feelEnabled, setFeelEnabled } from '@/lib/feel'
 import type { AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -35,123 +35,119 @@ function staggerItem(i: number) {
   }
 }
 
-// ─── Row component ────────────────────────────────────────────────────────────
+// ─── Rows ─────────────────────────────────────────────────────────────────────
+// Vercel-style: one flat bordered card per section, rows split by hairlines,
+// small type, bare icons.
 
-interface RowProps {
-  icon: React.ReactNode
-  iconBg: string
-  iconColor: string
+const CARD = 'overflow-hidden rounded-xl border border-white/10 bg-ocean-mid/50 divide-y divide-white/[0.06]'
+const ROW = 'flex w-full items-center gap-3 px-4 py-3 text-left'
+const FIELD = cn(AUTH_INPUT_CLASS, 'rounded-lg px-3 py-2')
+const BTN =
+  'h-8 flex-1 rounded-lg border border-white/10 font-ui text-[13px] text-sand/70 transition-colors hover:border-white/20 hover:text-sand disabled:opacity-50'
+const BTN_PRIMARY =
+  'press h-8 flex-1 rounded-lg bg-seafoam font-ui text-[13px] font-semibold text-ocean-deep hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none'
+
+function RowText({ label, meta, destructive = false, wrap = false }: {
   label: string
-  meta?: string
-  onClick?: () => void
+  meta?: string | null
   destructive?: boolean
-}
-
-function SettingsRow({
-  icon,
-  iconBg,
-  iconColor,
-  label,
-  meta,
-  onClick,
-  destructive = false,
-}: RowProps) {
+  /** Toggle rows wrap: one line ran under the switch on narrow phones. */
+  wrap?: boolean
+}) {
   return (
-    <div
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault()
-          onClick()
-        }
-      }}
-      className={`
-        flex items-center gap-4 glass rounded-3xl p-5
-        transition-[border-color,transform] duration-200 group w-full text-left
-        ${onClick
-          ? destructive
-            ? 'press cursor-pointer hover:border-coral/20'
-            : 'press cursor-pointer hover:border-seafoam/20'
-          : ''
-        }
-      `}
-    >
-      {/* Icon tile */}
-      <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
-        <span className={iconColor}>{icon}</span>
-      </div>
-
-      {/* Text */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <span
-          className={`
-            font-ui text-sm font-medium transition-colors duration-200            ${destructive
-              ? 'text-coral/70 group-hover:text-coral'
-              : 'text-sand/60 group-hover:text-sand/90'
-            }
-          `}
-        >
-          {label}
-        </span>
-        {meta && (
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
-            {meta}
-          </span>
-        )}
-      </div>
-    </div>
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className={cn('font-ui text-sm', destructive ? 'text-coral/85' : 'text-sand/85')}>{label}</span>
+      {meta && (
+        <span className={cn('font-ui text-xs text-sand/45', wrap ? 'leading-snug' : 'truncate')}>{meta}</span>
+      )}
+    </span>
   )
 }
 
-// ─── Toggle row ───────────────────────────────────────────────────────────────
+function RowIcon({ children, destructive = false }: { children: React.ReactNode; destructive?: boolean }) {
+  return <span className={cn('shrink-0', destructive ? 'text-coral/70' : 'text-sand/45')}>{children}</span>
+}
 
-interface ToggleRowProps {
+function SettingsRow({ icon, label, meta, onClick, destructive = false }: {
   icon: React.ReactNode
-  iconBg: string
-  iconColor: string
+  label: string
+  meta?: string
+  onClick: () => void
+  destructive?: boolean
+}) {
+  return (
+    <button type="button" onClick={onClick} className={cn(ROW, 'transition-colors hover:bg-white/[0.03]')}>
+      <RowIcon destructive={destructive}>{icon}</RowIcon>
+      <RowText label={label} meta={meta} destructive={destructive} />
+    </button>
+  )
+}
+
+function ToggleRow({ icon, label, meta, checked, disabled = false, onChange }: {
+  icon: React.ReactNode
   label: string
   meta?: string
   checked: boolean
   disabled?: boolean
   onChange: (next: boolean) => void
-}
-
-function ToggleRow({
-  icon,
-  iconBg,
-  iconColor,
-  label,
-  meta,
-  checked,
-  disabled = false,
-  onChange,
-}: ToggleRowProps) {
+}) {
   return (
-    <div className="flex items-center gap-4 glass rounded-3xl p-5">
-      <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
-        <span className={iconColor}>{icon}</span>
-      </div>
-
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="font-ui text-sm font-medium text-sand/60 whitespace-nowrap">{label}</span>
-        {meta && (
-          // Wraps: nowrap ran the line under the switch on narrow phones.
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug">{meta}</span>
-        )}
-      </div>
-
+    <div className={ROW}>
+      <RowIcon>{icon}</RowIcon>
+      <RowText label={label} meta={meta} wrap />
       <Switch checked={checked} onChange={onChange} disabled={disabled} label={label} />
     </div>
   )
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
+// A row that opens in place (change email, password, delete).
+function Disclosure({ icon, label, meta, destructive = false, open, onToggle, children }: {
+  icon: React.ReactNode
+  label: string
+  meta?: string | null
+  destructive?: boolean
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={cn(ROW, 'transition-colors hover:bg-white/[0.03]')}
+      >
+        <RowIcon destructive={destructive}>{icon}</RowIcon>
+        <RowText label={label} meta={meta} destructive={destructive} />
+        <ChevronRight
+          size={14}
+          strokeWidth={1.75}
+          className={cn('shrink-0 text-sand/35 transition-transform duration-300 ease-ease-quart', open && 'rotate-90')}
+          aria-hidden="true"
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={spring}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-2.5 px-4 pb-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-ui text-[10px] text-sand/45 uppercase tracking-widest px-1 mb-2 mt-2">
+    <p className="mb-1.5 px-1 font-ui text-[11px] font-medium uppercase tracking-wider text-sand/45">
       {children}
     </p>
   )
@@ -223,105 +219,66 @@ function ChangeEmailRow({ currentEmail }: { currentEmail: string | null }) {
   }
 
   return (
-    <div className="glass rounded-3xl overflow-hidden">
-      {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => (open ? close() : setOpen(true))}
-        aria-expanded={open}
-        className="flex items-center gap-4 p-5 w-full text-left group cursor-pointer"
-      >
-        <div className="w-9 h-9 rounded-xl bg-seafoam/10 flex items-center justify-center shrink-0">
-          <Mail size={17} strokeWidth={1.5} className="text-seafoam" />
-        </div>
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
-            Change email
-          </span>
-          {/* truncate: a long address ran out of the card on phones */}
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug truncate">
-            {currentEmail ?? 'Update the address tied to your account'}
-          </span>
-        </div>
-        <span
-          className={cn(
-            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
-            open && 'rotate-90',
+    <Disclosure
+      icon={<Mail size={16} strokeWidth={1.5} />}
+      label="Change email"
+      meta={currentEmail ?? 'Update the address tied to your account'}
+      open={open}
+      onToggle={() => (open ? close() : setOpen(true))}
+    >
+      {sent ? (
+        <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
+          Confirmation links sent. Check both your current and new inbox to
+          finish the change — your email updates once both are confirmed.
+        </p>
+      ) : (
+        <>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="new@email.com"
+            value={value}
+            disabled={loading}
+            onChange={(e) => setValue(e.target.value)}
+            onBlur={() => setTouched(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void handleSave()
+              }
+            }}
+            className={FIELD}
+          />
+          {touched && !valid && value.length > 0 && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">
+              Enter a valid email address.
+            </p>
           )}
-        >
-          ›
-        </span>
-      </button>
-
-      {/* Expandable body */}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={spring}
-            className="overflow-hidden"
-          >
-            <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
-              {sent ? (
-                <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
-                  Confirmation links sent. Check both your current and new inbox to
-                  finish the change — your email updates once both are confirmed.
-                </p>
-              ) : (
-                <>
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="new@email.com"
-                    value={value}
-                    disabled={loading}
-                    onChange={(e) => setValue(e.target.value)}
-                    onBlur={() => setTouched(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        void handleSave()
-                      }
-                    }}
-                    className={AUTH_INPUT_CLASS}
-                  />
-                  {touched && !valid && value.length > 0 && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">
-                      Enter a valid email address.
-                    </p>
-                  )}
-                  {error && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={close}
-                      disabled={loading}
-                      className="flex-1 py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/60 transition-colors hover:text-sand/90 hover:border-white/20 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleSave()}
-                      disabled={loading || !valid}
-                      className="press flex-1 py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                      {loading ? 'Sending…' : 'Save'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          {error && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
+          )}
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={close}
+              disabled={loading}
+              className={BTN}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={loading || !valid}
+              className={BTN_PRIMARY}
+            >
+              {loading ? 'Sending…' : 'Save'}
+            </button>
+          </div>
+        </>
+      )}
+    </Disclosure>
   )
 }
 
@@ -339,9 +296,7 @@ function FeelRow() {
   useEffect(() => setOn(feelEnabled()), [])
   return (
     <ToggleRow
-      icon={<Waves size={17} strokeWidth={1.5} />}
-      iconBg="bg-seafoam/10"
-      iconColor="text-seafoam"
+      icon={<Waves size={16} strokeWidth={1.5} />}
       label="Sounds & haptics"
       meta="Splash, cork pop, a chime on delivery"
       checked={on}
@@ -373,9 +328,7 @@ function PushRow() {
   if (state === 'unsupported') return null
   return (
     <ToggleRow
-      icon={<BellRing size={17} strokeWidth={1.5} />}
-      iconBg="bg-seafoam/10"
-      iconColor="text-seafoam"
+      icon={<BellRing size={16} strokeWidth={1.5} />}
       label="Notifications on this device"
       meta={PUSH_META[state]}
       checked={state === 'on'}
@@ -461,144 +414,108 @@ function ChangePasswordRow() {
   }
 
   return (
-    <div className="glass rounded-3xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => (open ? close() : setOpen(true))}
-        aria-expanded={open}
-        className="flex items-center gap-4 p-5 w-full text-left group cursor-pointer"
-      >
-        <div className="w-9 h-9 rounded-xl bg-seafoam/10 flex items-center justify-center shrink-0">
-          <KeyRound size={17} strokeWidth={1.5} className="text-seafoam" />
-        </div>
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-sand/60 group-hover:text-sand/90 transition-colors duration-200 whitespace-nowrap">
-            Change password
-          </span>
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
-            Update the password you sign in with
-          </span>
-        </div>
-        <span
-          className={cn(
-            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
-            open && 'rotate-90',
+    <Disclosure
+      icon={<KeyRound size={16} strokeWidth={1.5} />}
+      label="Change password"
+      meta={'Update the password you sign in with'}
+      open={open}
+      onToggle={() => (open ? close() : setOpen(true))}
+    >
+      {done ? (
+        <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
+          {passwordEmail
+            ? <>Password updated. You&rsquo;ll use it next time you sign in.</>
+            : <>Check your inbox for a link to set your password.</>}
+        </p>
+      ) : passwordEmail === '' ? (
+        <>
+          <p className="font-ui text-xs text-sand/50 leading-relaxed">
+            You sign in with Google, so there&rsquo;s no password yet. We&rsquo;ll
+            email you a link to set one.
+          </p>
+          {error && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
           )}
-        >
-          ›
-        </span>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={spring}
-            className="overflow-hidden"
+          <button
+            type="button"
+            onClick={() => void sendResetLink()}
+            disabled={loading}
+            className={BTN_PRIMARY}
           >
-            <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
-              {done ? (
-                <p className="font-ui text-xs text-seafoam/90 leading-relaxed">
-                  {passwordEmail
-                    ? <>Password updated. You&rsquo;ll use it next time you sign in.</>
-                    : <>Check your inbox for a link to set your password.</>}
-                </p>
-              ) : passwordEmail === '' ? (
-                <>
-                  <p className="font-ui text-xs text-sand/50 leading-relaxed">
-                    You sign in with Google, so there&rsquo;s no password yet. We&rsquo;ll
-                    email you a link to set one.
-                  </p>
-                  {error && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void sendResetLink()}
-                    disabled={loading}
-                    className="press py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50"
-                  >
-                    {loading ? 'Sending…' : 'Email me a link'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Current password"
-                    value={current}
-                    disabled={loading}
-                    onChange={(e) => setCurrent(e.target.value)}
-                    className={AUTH_INPUT_CLASS}
-                  />
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={`New password (min ${PASSWORD_MIN})`}
-                    value={pw}
-                    disabled={loading}
-                    onChange={(e) => setPw(e.target.value)}
-                    onBlur={() => setTouched(true)}
-                    className={AUTH_INPUT_CLASS}
-                  />
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Confirm new password"
-                    value={confirm}
-                    disabled={loading}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    onBlur={() => setTouched(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        void handleSave()
-                      }
-                    }}
-                    className={AUTH_INPUT_CLASS}
-                  />
-                  {touched && pw.length > 0 && !pwOk && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">
-                      Password must be at least {PASSWORD_MIN} characters.
-                    </p>
-                  )}
-                  {touched && pwOk && confirm.length > 0 && !matches && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">
-                      Passwords don&rsquo;t match.
-                    </p>
-                  )}
-                  {error && (
-                    <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={close}
-                      disabled={loading}
-                      className="flex-1 py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/60 transition-colors hover:text-sand/90 hover:border-white/20 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleSave()}
-                      disabled={loading || !canSave}
-                      className="press flex-1 py-2.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                      {loading ? 'Saving…' : 'Update'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            {loading ? 'Sending…' : 'Email me a link'}
+          </button>
+        </>
+      ) : (
+        <>
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Current password"
+            value={current}
+            disabled={loading}
+            onChange={(e) => setCurrent(e.target.value)}
+            className={FIELD}
+          />
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder={`New password (min ${PASSWORD_MIN})`}
+            value={pw}
+            disabled={loading}
+            onChange={(e) => setPw(e.target.value)}
+            onBlur={() => setTouched(true)}
+            className={FIELD}
+          />
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder="Confirm new password"
+            value={confirm}
+            disabled={loading}
+            onChange={(e) => setConfirm(e.target.value)}
+            onBlur={() => setTouched(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void handleSave()
+              }
+            }}
+            className={FIELD}
+          />
+          {touched && pw.length > 0 && !pwOk && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">
+              Password must be at least {PASSWORD_MIN} characters.
+            </p>
+          )}
+          {touched && pwOk && confirm.length > 0 && !matches && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">
+              Passwords don&rsquo;t match.
+            </p>
+          )}
+          {error && (
+            <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
+          )}
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={close}
+              disabled={loading}
+              className={BTN}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={loading || !canSave}
+              className={BTN_PRIMARY}
+            >
+              {loading ? 'Saving…' : 'Update'}
+            </button>
+          </div>
+        </>
+      )}
+    </Disclosure>
   )
 }
 
@@ -642,95 +559,59 @@ function DeleteAccountRow() {
   }
 
   return (
-    <div className="glass rounded-3xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => (open ? close() : setOpen(true))}
-        aria-expanded={open}
-        className="flex items-center gap-4 p-5 w-full text-left group cursor-pointer"
-      >
-        <div className="w-9 h-9 rounded-xl bg-coral/10 flex items-center justify-center shrink-0">
-          <Trash2 size={17} strokeWidth={1.5} className="text-coral" />
-        </div>
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="font-ui text-sm font-medium text-coral/70 group-hover:text-coral transition-colors duration-200 whitespace-nowrap">
-            Delete account
-          </span>
-          <span className="font-ui text-xs text-sand/45 mt-0.5 leading-snug whitespace-nowrap">
-            Permanently erase your account and your inbox
-          </span>
-        </div>
-        <span
-          className={cn(
-            'font-ui text-sand/45 text-lg leading-none transition-transform duration-300 ease-ease-quart',
-            open && 'rotate-90',
-          )}
+    <Disclosure
+      icon={<Trash2 size={16} strokeWidth={1.5} />}
+      label="Delete account"
+      meta={'Permanently erase your account and your inbox'} destructive
+      open={open}
+      onToggle={() => (open ? close() : setOpen(true))}
+    >
+      <p className="font-ui text-xs text-sand/50 leading-relaxed">
+        This can&rsquo;t be undone. Your account, profile, inbox and any
+        bottles still drifting are permanently deleted. Bottles that already
+        washed ashore stay with the strangers who found them, unlinked from
+        your account. Type{' '}
+        <span className="text-coral font-semibold">{DELETE_PHRASE}</span> to
+        confirm.
+      </p>
+      <input
+        type="text"
+        autoComplete="off"
+        autoCapitalize="characters"
+        placeholder={DELETE_PHRASE}
+        value={phrase}
+        disabled={loading}
+        onChange={(e) => setPhrase(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            void handleDelete()
+          }
+        }}
+        className={FIELD}
+      />
+      {error && (
+        <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
+      )}
+      <div className="flex items-center gap-2 pt-0.5">
+        <button
+          type="button"
+          onClick={close}
+          disabled={loading}
+          className={BTN}
         >
-          ›
-        </span>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={spring}
-            className="overflow-hidden"
-          >
-            <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
-              <p className="font-ui text-xs text-sand/50 leading-relaxed">
-                This can&rsquo;t be undone. Your account, profile, inbox and any
-                bottles still drifting are permanently deleted. Bottles that already
-                washed ashore stay with the strangers who found them, unlinked from
-                your account. Type{' '}
-                <span className="text-coral font-semibold">{DELETE_PHRASE}</span> to
-                confirm.
-              </p>
-              <input
-                type="text"
-                autoComplete="off"
-                autoCapitalize="characters"
-                placeholder={DELETE_PHRASE}
-                value={phrase}
-                disabled={loading}
-                onChange={(e) => setPhrase(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    void handleDelete()
-                  }
-                }}
-                className={AUTH_INPUT_CLASS}
-              />
-              {error && (
-                <p className="font-ui text-xs text-coral px-1 -mt-1">{error}</p>
-              )}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={close}
-                  disabled={loading}
-                  className="flex-1 py-2.5 rounded-2xl border border-white/10 font-ui text-sm text-sand/60 transition-colors hover:text-sand/90 hover:border-white/20 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={loading || !confirmed}
-                  className="press flex-1 py-2.5 rounded-full shadow-coral bg-coral text-ocean-deep font-ui font-semibold text-sm hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  {loading ? 'Deleting…' : 'Delete forever'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          disabled={loading || !confirmed}
+          className={cn(BTN_PRIMARY, 'bg-coral')}
+        >
+          {loading ? 'Deleting…' : 'Delete forever'}
+        </button>
+      </div>
+    </Disclosure>
   )
 }
 
@@ -796,113 +677,82 @@ export default function SettingsPage() {
     await signOut((path) => router.replace(path))
   }
 
+  const since =
+    mounted && user?.created_at
+      ? `member since ${new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+      : null
+
   return (
-    <div className="no-scrollbar flex h-full flex-col overflow-y-auto px-5 pt-10 pb-10 sm:overflow-hidden sm:pt-14 sm:pb-0">
-      {/* Mobile: single column, page scrolls. sm+: two columns fit the viewport
-          with no scroll (overflow-hidden frame). */}
-      <motion.div className="mb-6 shrink-0" {...staggerItem(0)}>
-        <h1 className="font-display text-title text-sand">Settings</h1>
-        {email && (
-          <p className="font-mono text-xs text-sand/45 mt-1 truncate max-w-[240px]">
-            {email}
-          </p>
-        )}
-        {/* Member since — profile has created_at */}
-        {mounted && user?.created_at && (
-          <p className="font-mono text-[10px] text-sand/35 mt-0.5">
-            member since{' '}
-            {new Date(user.created_at).toLocaleDateString('en-US', {
-              month: 'long',
-              year: 'numeric',
-            })}
-          </p>
-        )}
-      </motion.div>
-
-      {/* Two centered columns that share the available height. Full text (no
-          truncation), no page scroll, and the lower band is kept clear so the
-          wave animation reads underneath. Account is the starting column. */}
-      <div className="flex flex-col sm:min-h-0 sm:flex-1 sm:overflow-hidden">
-        <div className="no-scrollbar flex flex-col gap-5 sm:min-h-0 sm:flex-1 sm:flex-row sm:justify-center sm:gap-6 sm:overflow-y-auto">
-
-          {/* ── Column 1: Account · Notifications · Privacy ─────────── */}
-          <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
-            <motion.section className="flex flex-col gap-3" {...staggerItem(1)}>
-              <SectionLabel>Account</SectionLabel>
-              <div className="glass inset-group">
-                <ChangeEmailRow currentEmail={email} />
-                <ChangePasswordRow />
-              </div>
-            </motion.section>
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(2)}>
-              <SectionLabel>Notifications</SectionLabel>
-              <div className="glass inset-group">
-                <ToggleRow
-                  icon={<Bell size={17} strokeWidth={1.5} />}
-                  iconBg="bg-coral/10"
-                  iconColor="text-coral"
-                  label="Email on bottle arrival"
-                  meta="When a stranger's bottle reaches you"
-                  checked={emailNotifs}
-                  disabled={notifsSaving}
-                  onChange={handleToggleNotifs}
-                />
-                <PushRow />
-                <FeelRow />
-              </div>
-            </motion.section>
-          </div>
-
-          {/* ── Column 2: Membership · Danger zone · Session ───────── */}
-          <div className="mx-auto flex w-full max-w-[27rem] flex-col gap-5">
-            {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
-              <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
-                <SectionLabel>Membership</SectionLabel>
-                <KeeperCard />
-              </motion.section>
-            )}
-            {blocked.length > 0 && (
-              <motion.section className="flex flex-col gap-3" {...staggerItem(4)}>
-                <SectionLabel>Blocked in the Harbour</SectionLabel>
-                <HarbourSettings blocked={blocked} />
-              </motion.section>
-            )}
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(5)}>
-              <SectionLabel>Danger zone</SectionLabel>
-              <DeleteAccountRow />
-            </motion.section>
-
-            <motion.section className="flex flex-col gap-3" {...staggerItem(6)}>
-              <SectionLabel>Session</SectionLabel>
-              <SettingsRow
-                icon={<LogOut size={17} strokeWidth={1.5} />}
-                iconBg="bg-coral/10"
-                iconColor="text-coral"
-                label="Sign out"
-                meta="End your session on this device"
-                onClick={() => void handleSignOut()}
-                destructive
-              />
-            </motion.section>
-          </div>
-
-        </div>
-
-        {/* Footer — anonymity note over the brand line, above the wave band. */}
-        <motion.div
-          className="text-center shrink-0 pt-5 pb-3"
-          {...staggerItem(7)}
-        >
-          <p className="font-ui text-xs text-sand/45 leading-relaxed max-w-[420px] mx-auto">
-            You&rsquo;re anonymous by design — the strangers who find your bottles
-            never learn who you are.
-          </p>
-          <p className="font-mono text-[10px] text-sand/35 mt-2">
-            glassbottles · one bottle, one stranger
-          </p>
+    // Scrolls below the shell's wordmark row (mt-14), never under it.
+    <div className="no-scrollbar mt-14 h-[calc(100%-3.5rem)] overflow-y-auto px-5 pt-2 pb-10">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+        <motion.div {...staggerItem(0)}>
+          <h1 className="font-display text-headline text-sand">Settings</h1>
+          {(email || since) && (
+            <p className="mt-0.5 truncate font-mono text-[11px] text-sand/45">
+              {[email, since].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </motion.div>
+
+        <motion.section {...staggerItem(1)}>
+          <SectionLabel>Account</SectionLabel>
+          <div className={CARD}>
+            <ChangeEmailRow currentEmail={email} />
+            <ChangePasswordRow />
+            <SettingsRow
+              icon={<LogOut size={16} strokeWidth={1.5} />}
+              label="Sign out"
+              meta="End your session on this device"
+              onClick={() => void handleSignOut()}
+            />
+          </div>
+        </motion.section>
+
+        <motion.section {...staggerItem(2)}>
+          <SectionLabel>Notifications</SectionLabel>
+          <div className={CARD}>
+            <ToggleRow
+              icon={<Bell size={16} strokeWidth={1.5} />}
+              label="Email on bottle arrival"
+              meta="When a stranger's bottle reaches you"
+              checked={emailNotifs}
+              disabled={notifsSaving}
+              onChange={handleToggleNotifs}
+            />
+            <PushRow />
+            <FeelRow />
+          </div>
+        </motion.section>
+
+        {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+          <motion.section {...staggerItem(3)}>
+            <SectionLabel>Membership</SectionLabel>
+            <div className={CARD}>
+              <KeeperCard />
+            </div>
+          </motion.section>
+        )}
+        {blocked.length > 0 && (
+          <motion.section {...staggerItem(4)}>
+            <SectionLabel>Blocked in the Harbour</SectionLabel>
+            <div className={CARD}>
+              <HarbourSettings blocked={blocked} />
+            </div>
+          </motion.section>
+        )}
+
+        <motion.section {...staggerItem(5)}>
+          <SectionLabel>Danger zone</SectionLabel>
+          <div className={cn(CARD, 'border-coral/20')}>
+            <DeleteAccountRow />
+          </div>
+        </motion.section>
+
+        <motion.p className="pt-2 text-center font-ui text-xs leading-relaxed text-sand/40" {...staggerItem(6)}>
+          You&rsquo;re anonymous by design — the strangers who find your bottles
+          never learn who you are.
+        </motion.p>
       </div>
     </div>
   )

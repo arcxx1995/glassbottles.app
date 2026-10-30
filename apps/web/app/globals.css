@@ -8,9 +8,14 @@
 :root {
   /* Dark-only app: native controls, scrollbars and autofill render dark too. */
   color-scheme: dark;
-  --color-ocean-deep: #0A1628;
-  --color-ocean-mid:  #0D2137;
-  --color-seafoam:    #4ECDC4;
+  /* Accent + ocean as RGB triplets, so Tailwind's /opacity modifiers work.
+     A Keeper's current swaps them (data-current, set by AppShell). */
+  --c-ocean-deep: 10 22 40;
+  --c-ocean-mid:  13 33 55;
+  --c-seafoam:    78 205 196;
+  --color-ocean-deep: rgb(var(--c-ocean-deep));
+  --color-ocean-mid:  rgb(var(--c-ocean-mid));
+  --color-seafoam:    rgb(var(--c-seafoam));
   --color-sand:       #F7E7CE;
   --color-coral:      #FF6B6B;
   --color-glass:      rgba(255, 255, 255, 0.08);
@@ -33,6 +38,13 @@
   /* Motion — springs live in components/ui/springs.ts; CSS only does
      press feedback and view transitions. */
 }
+
+/* Currents (lib/dressing.ts CURRENT_INFO): accent = sea.foam, deep = bands[4],
+   mid = halfway between bands[3] and bands[4]. Sand and coral never change. */
+:root[data-current="night_owl"]   { --c-seafoam: 124 245 255; --c-ocean-deep: 8 10 34;   --c-ocean-mid: 12 15 46; }
+:root[data-current="quiet_wins"]  { --c-seafoam: 245 201 138; --c-ocean-deep: 20 31 42;  --c-ocean-mid: 27 42 55; }
+:root[data-current="heavy_water"] { --c-seafoam: 175 195 209; --c-ocean-deep: 17 23 29;  --c-ocean-mid: 24 32 40; }
+:root[data-current="busy_minds"]  { --c-seafoam: 255 158 199; --c-ocean-deep: 10 34 56;  --c-ocean-mid: 15 47 71; }
 
 /* ─── Base reset ──────────────────────────────────────────────────────────── */
 
@@ -68,12 +80,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(78, 205, 196, 0.25);
+  background: rgb(var(--c-seafoam) / 0.25);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(78, 205, 196, 0.50);
+  background: rgb(var(--c-seafoam) / 0.50);
 }
 
 /* ─── Skeleton shimmer utility ────────────────────────────────────────────── */
@@ -264,11 +276,11 @@ body {
     backdrop-filter: blur(32px) saturate(200%);
   }
   .glass-tint {
-    background: linear-gradient(180deg, rgba(78,205,196,0.30), rgba(78,205,196,0.16));
-    border: 1px solid rgba(78,205,196,0.45);
+    background: linear-gradient(180deg, rgb(var(--c-seafoam) / 0.30), rgb(var(--c-seafoam) / 0.16));
+    border: 1px solid rgb(var(--c-seafoam) / 0.45);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.35),
-      0 6px 24px rgba(78,205,196,0.22);
+      0 6px 24px rgb(var(--c-seafoam) / 0.22);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     backdrop-filter: blur(16px) saturate(180%);
   }
@@ -322,11 +334,11 @@ body {
 
 /* Solid fallback when blur is unsupported or the user prefers less transparency */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass, .glass-strong, .glass-tint { background: #0D2137; }
+  .glass, .glass-strong, .glass-tint { background: rgb(var(--c-ocean-mid)); }
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass, .glass-strong, .glass-tint {
-    background: #0D2137;
+    background: rgb(var(--c-ocean-mid));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -334,7 +346,7 @@ body {
 /* More contrast: near-solid surfaces with a defined edge. */
 @media (prefers-contrast: more) {
   .glass, .glass-strong, .glass-tint, .glass-flat, .glass-fill, .field {
-    background: #0D2137;
+    background: rgb(var(--c-ocean-mid));
     border-color: rgba(247, 231, 206, 0.45);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

@@ -72,11 +72,11 @@ export default function InboxPage() {
   }, [notice])
 
   return (
-    <div className="flex h-full flex-col overflow-hidden pt-10 sm:pt-14">
+    <div className="flex h-full flex-col overflow-hidden pt-16">
       {/* Header — fixed; only the list region below scrolls */}
       <div className="px-5 mb-6">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-title text-sand">Inbox</h1>
+          <h1 className="font-display text-headline text-sand">Inbox</h1>
           {unreadCount > 0 && (
             <motion.span
               initial={{ scale: 0 }}

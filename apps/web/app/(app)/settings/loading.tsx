@@ -1,9 +1,9 @@
 export default function SettingsLoading() {
   return (
-    <div className="flex h-full flex-col px-5 pt-10 sm:pt-14">
+    <div className="flex h-full flex-col px-5 pt-16">
       {/* Header ghost */}
       <div className="mb-8">
-        <div className="skeleton h-7 w-24 rounded-xl" />
+        <div className="skeleton h-6 w-20 rounded-xl" />
       </div>
 
       {/* Card ghosts */}

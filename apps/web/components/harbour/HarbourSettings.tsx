@@ -6,7 +6,7 @@ import { useBlockKayakMutation } from '@/store/api/bottleApi'
 export default function HarbourSettings({ blocked }: { blocked: string[] }) {
   const [block, { isLoading }] = useBlockKayakMutation()
   return (
-    <div className="glass inset-group">
+    <div className="divide-y divide-white/[0.06]">
       {blocked.map((h) => (
         <div key={h} className="flex items-center justify-between gap-3 px-4 py-3">
           <span className="font-ui text-sm text-sand/80">@{h}</span>

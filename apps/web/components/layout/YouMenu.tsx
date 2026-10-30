@@ -3,28 +3,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Compass, LogOut, Sailboat, Settings, UserRound } from 'lucide-react'
+import { LogOut, Sailboat, Settings, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/signOut'
-import { CURRENT_INFO } from '@/lib/dressing'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { useGetHarbourQuery } from '@/store/api/bottleApi'
 import { spring, springMove } from '@/components/ui/springs'
 import KayakEditor from '@/components/harbour/KayakEditor'
-import CurrentSheet from '@/components/shared/CurrentSheet'
 
 const KEEPER_ON = process.env.NEXT_PUBLIC_KEEPER === 'on'
 
 // The nav's last tab: a small menu rising from it — your handle, your kayak,
-// your current, Settings, and log out.
+// Settings, and log out. (Your current lives on the Sea: CurrentPicker.)
 export default function YouMenu() {
   const pathname = usePathname()
   const router = useRouter()
   const user = useAppSelector(selectUser)
   const [open, setOpen] = useState(false)
   const [opened, setOpened] = useState(false)
-  const [sheet, setSheet] = useState<null | 'kayak' | 'current'>(null)
+  const [sheet, setSheet] = useState<null | 'kayak'>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const firstItem = useRef<HTMLButtonElement>(null)
 
@@ -54,7 +52,6 @@ export default function YouMenu() {
     setOpen(false)
     run()
   }
-  const current = user?.current ? CURRENT_INFO[user.current].name : 'Open sea'
 
   const item =
     'press flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left font-ui text-sm text-sand/85 transition-[background-color,transform] hover:bg-white/[0.06] focus-visible:bg-white/[0.08] focus-visible:outline-none'
@@ -98,7 +95,7 @@ export default function YouMenu() {
             style={{ transformOrigin: 'bottom right' }}
             // Near-opaque, not glass: a backdrop blur nested in the nav's own
             // blur sees nothing behind it, so the page showed through.
-            className="absolute bottom-[calc(100%+0.9rem)] right-0 w-60 rounded-3xl border border-white/10 bg-[#0E2238]/[0.97] p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+            className="absolute bottom-[calc(100%+0.9rem)] right-0 w-60 rounded-3xl border border-white/10 bg-ocean-mid/[0.97] p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
           >
             {KEEPER_ON && (
               <p className="truncate px-3 pb-1.5 pt-2 font-ui text-xs text-sand/50">
@@ -123,13 +120,8 @@ export default function YouMenu() {
               type="button"
               role="menuitem"
               className={item}
-              onClick={pick(() => setSheet('current'))}
+              onClick={pick(() => router.push('/settings'))}
             >
-              <Compass size={17} strokeWidth={1.5} className="text-seafoam" aria-hidden="true" />
-              <span className="flex-1">Your current</span>
-              <span className="font-ui text-[11px] text-sand/40">{current}</span>
-            </button>
-            <button type="button" role="menuitem" className={item} onClick={pick(() => router.push('/settings'))}>
               <Settings size={17} strokeWidth={1.5} className="text-sand/60" aria-hidden="true" />
               Settings
             </button>
@@ -149,7 +141,6 @@ export default function YouMenu() {
 
       <AnimatePresence>
         {sheet === 'kayak' && <KayakEditor mine={mine} onClose={() => setSheet(null)} />}
-        {sheet === 'current' && <CurrentSheet onClose={() => setSheet(null)} />}
       </AnimatePresence>
     </div>
   )

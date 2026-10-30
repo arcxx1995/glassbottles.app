@@ -10,5 +10,10 @@ import { disablePush } from '@/lib/push'
 export async function signOut(go: (path: '/sign-in') => void) {
   await disablePush().catch(() => 'off')
   await createClient().auth.signOut({ scope: 'local' })
+  try {
+    localStorage.removeItem('gb:current') // AppShell's CURRENT_KEY
+  } catch {
+    /* blocked storage: nothing was stored */
+  }
   go('/sign-in')
 }

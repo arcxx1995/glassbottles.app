@@ -12,7 +12,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'What if something harmful washes up?',
-    a: 'Every bottle is checked before it’s delivered — sexual content, cruelty, contact details and spam never reach anyone. If something still feels wrong, report it: it leaves your inbox, a moderator reviews it, and repeat senders lose the sea. glassbottles is 18+.',
+    a: 'Every bottle is checked before it’s delivered — sexual content, cruelty, contact details and spam never reach anyone. If something still feels wrong, report it: it leaves your shelf, a moderator reviews it, and repeat senders lose the sea. glassbottles is 18+.',
   },
   {
     q: 'Why only one bottle a day?',
@@ -22,7 +22,7 @@ export const FAQ_ITEMS = [
     q: 'Does it cost anything?',
     a:
       process.env.NEXT_PUBLIC_KEEPER === 'on'
-        ? 'The bottle is free, always — one message, one stranger, every day. Keeper is an optional membership for beautiful extras, like styled glass and wax seals your stranger receives.'
+        ? 'The bottle is free, always — one message, one stranger, every day. Keeper is an optional membership for beautiful extras, like styled glass and wax seals, and every bottle on your shelf dressed.'
         : 'No. One message, one stranger, every day — free, always.',
   },
 ] as const

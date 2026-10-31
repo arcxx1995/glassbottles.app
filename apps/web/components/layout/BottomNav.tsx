@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Anchor, Mail, Sailboat } from 'lucide-react'
+import { Anchor, Milk, Sailboat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -16,7 +16,7 @@ export default function BottomNav() {
   const pathname = usePathname()
   const user = useAppSelector(selectUser)
 
-  // Unread count for inbox badge. Realtime is the primary signal
+  // Unread count for the shelf badge. Realtime is the primary signal
   // (RealtimeBottleListener invalidates this cache on delivery) — polling is
   // only a slow safety net, and hidden tabs don't poll at all.
   const { data: bottles } = useGetReceivedBottlesQuery(undefined, {
@@ -32,7 +32,7 @@ export default function BottomNav() {
     ...(process.env.NEXT_PUBLIC_KEEPER === 'on'
       ? [{ href: '/harbour', label: 'Harbour', Icon: Sailboat, badge: 0 } as const]
       : []),
-    { href: '/inbox', label: 'Inbox', Icon: Mail, badge: unreadCount },
+    { href: '/shelf', label: 'Shelf', Icon: Milk, badge: unreadCount },
   ] as const
 
   return (

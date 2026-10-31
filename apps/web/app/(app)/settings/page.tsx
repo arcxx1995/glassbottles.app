@@ -562,12 +562,12 @@ function DeleteAccountRow() {
     <Disclosure
       icon={<Trash2 size={16} strokeWidth={1.5} />}
       label="Delete account"
-      meta={'Permanently erase your account and your inbox'} destructive
+      meta={'Permanently erase your account and your shelf'} destructive
       open={open}
       onToggle={() => (open ? close() : setOpen(true))}
     >
       <p className="font-ui text-xs text-sand/50 leading-relaxed">
-        This can&rsquo;t be undone. Your account, profile, inbox and any
+        This can&rsquo;t be undone. Your account, profile, shelf and any
         bottles still drifting are permanently deleted. Bottles that already
         washed ashore stay with the strangers who found them, unlinked from
         your account. Type{' '}

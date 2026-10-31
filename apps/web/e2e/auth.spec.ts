@@ -8,7 +8,8 @@ test('deep link survives sign-in', async ({ page }) => {
   await page.getByPlaceholder('your@email.com').fill(u.email)
   await page.getByPlaceholder('Password').fill(PASSWORD)
   await page.locator('button[type="submit"]').click()
-  await expectPath(page, '/inbox?from=email')
+  // The Inbox became the Shelf: the old link still lands, query intact.
+  await expectPath(page, '/shelf?from=email')
 })
 
 test('signed-in visitor skips landing and auth pages', async ({ page }) => {

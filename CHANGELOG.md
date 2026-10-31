@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — The Shelf (30 Oct, migration 057)
+
+- The Inbox is now the Shelf: bottles on planks in a fisherman's backyard. New ones wiggle and glow; a tap lifts one into a dialog, and that is when it counts as read. `/inbox` redirects to `/shelf`, query intact
+- Only Keepers see dressing. Free viewers get the plain bottle, plus a hint when it was dressed; `get_received_bottles`, `get_today_bottle_status` and `get_future_bottles` withhold `style` on the server. Lapsing turns a shelf plain; rejoining restores it
+- Only Keepers dress: former free pieces moved to the Keeper tier, and coin pieces need Keeper plus the unlock. Anyone still earns coins
+- A Keeper's undressed bottles get a stable sea-dressed glass and seal
+- Letters to yourself sit on the shelf as bottles
+
 ## [Unreleased] — 2026-10 (18–22 Oct)
 
 ### Security & reliability (released 19 Oct, migrations 038–040)

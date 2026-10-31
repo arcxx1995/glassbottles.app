@@ -353,3 +353,73 @@ body {
   }
   .edge-fade-b, .edge-fade-y { -webkit-mask-image: none; mask-image: none; }
 }
+
+/* ─── The Shelf ───────────────────────────────────────────────────────────── */
+/* Planks repeat with the grid's row height, so no JS draws them and empty    */
+/* planks fill the screen. Art: public/shelf/, from scripts/paint-shelf.mjs.  */
+
+.shelf-scene {
+  --lantern: 65% 13%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    url('/shelf/backyard-portrait.webp') center top / cover no-repeat,
+    linear-gradient(to bottom, #050b16 0%, #0a1628 45%, #0e2338 100%);
+}
+@media (min-aspect-ratio: 1 / 1) {
+  .shelf-scene {
+    --lantern: 15% 37%;
+    background-image:
+      url('/shelf/backyard-landscape.webp'),
+      linear-gradient(to bottom, #050b16 0%, #0a1628 45%, #0e2338 100%);
+  }
+}
+.shelf-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--lantern), rgba(255, 190, 110, 0.2), transparent 38%);
+  animation: gb-flicker 7s ease-in-out infinite;
+}
+.shelf-wall {
+  --shelf-row: 9.5rem;
+  --shelf-plank: 1.5rem;
+  position: relative;
+  flex: 1 0 auto;
+  display: grid;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: 1.75rem;
+  padding-top: var(--shelf-plank); /* the tile's plank, repeating upward, caps the shelf */
+  padding-bottom: 6rem; /* planks carry on behind the nav */
+  grid-auto-rows: var(--shelf-row);
+  align-content: start;
+  background:
+    url('/shelf/post.webp') left top / 1rem auto repeat-y,
+    url('/shelf/post.webp') right top / 1rem auto repeat-y,
+    url('/shelf/plank-row.webp') left var(--shelf-plank) / auto var(--shelf-row) repeat;
+}
+.shelf-cell {
+  min-width: 0;
+  /* All history loads: off-screen bottles shouldn't cost a paint. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--shelf-row);
+}
+.gb-wiggle { animation: gb-wiggle 5.5s ease-in-out infinite; }
+@keyframes gb-wiggle {
+  0%, 82%, 100% { transform: rotate(0deg); }
+  85% { transform: rotate(-6deg); }
+  88% { transform: rotate(5deg); }
+  91% { transform: rotate(-4deg); }
+  94% { transform: rotate(3deg); }
+  97% { transform: rotate(-1deg); }
+}
+@keyframes gb-flicker {
+  0%, 100% { opacity: 1; }
+  30% { opacity: 0.86; }
+  34% { opacity: 0.95; }
+  62% { opacity: 0.8; }
+  70% { opacity: 0.97; }
+}

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { admin, makeUser, signIn, expectPath, isolateReceiver, deliverNow } from './helpers'
 
 // The whole loop: A throws → cron matches it to B → B's realtime banner →
-// B opens the inbox and the bottle uncorks + marks itself read → A sees
+// B opens the shelf, taps the bottle, it uncorks + marks itself read → A sees
 // "Your bottle found someone".
 test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
   const a = await makeUser('sender', { timezone: 'UTC' })
@@ -42,9 +42,12 @@ test('a thrown bottle reaches a stranger, end to end', async ({ browser }) => {
   // Realtime broadcast → banner, without a reload.
   await expect(receiver.getByText('A bottle found you')).toBeVisible({ timeout: 15_000 })
   await receiver.getByText('A bottle found you').click()
-  await expectPath(receiver, '/inbox')
+  await expectPath(receiver, '/shelf')
 
-  // Uncorks on view, then reads.
+  // Waits on the shelf until tapped; opening is reading.
+  const { data: waiting } = await admin.from('bottles').select('is_read').eq('sender_id', a.id).single()
+  expect(waiting?.is_read).toBe(false)
+  await receiver.getByRole('button', { name: /^Bottle, unopened/ }).click()
   await expect(receiver.getByText('A bottle washed ashore')).toBeVisible()
   await expect(receiver.getByLabel('Message content')).toContainText(message.split(' ')[0], {
     timeout: 5_000,
@@ -86,7 +89,8 @@ test('reporting asks why, then removes the bottle for good', async ({ page }) =>
 
   await signIn(page, b.email)
   await expectPath(page, '/sea')
-  await page.goto('/inbox')
+  await page.goto('/shelf')
+  await page.getByRole('button', { name: /^Bottle, opened/ }).click()
   await expect(page.getByText(unkind)).toBeVisible()
 
   await page.getByLabel('Report this bottle').click()

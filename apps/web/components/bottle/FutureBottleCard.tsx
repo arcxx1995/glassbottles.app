@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react'
 import { Hourglass } from 'lucide-react'
-import { useGetAtelierQuery, useMarkFutureReadMutation, type FutureBottles } from '@/store/api/bottleApi'
-import { WEATHER_LABEL, resolveLook } from '@/lib/dressing'
+import { useGetAtelierQuery, useGetKeeperQuery, useMarkFutureReadMutation, type FutureBottles } from '@/store/api/bottleApi'
+import { WEATHER_LABEL, bottleLook } from '@/lib/dressing'
+import { BottleSVG, LIFT_TRANSITION } from '@/components/bottle/ThrowAnimation'
 
 // A letter to yourself that washed back (migration 047). Your own words, so
 // no ripple, no report — just the note, on the paper you chose then.
@@ -18,7 +19,8 @@ function ago(iso: string) {
 export default function FutureBottleCard({ bottle }: { bottle: FutureBottles['arrived'][number] }) {
   const { data: pieces } = useGetAtelierQuery()
   const [markRead] = useMarkFutureReadMutation()
-  const look = resolveLook(bottle.style, pieces)
+  const { data: keeper } = useGetKeeperQuery(undefined, { skip: process.env.NEXT_PUBLIC_KEEPER !== 'on' })
+  const look = bottleLook(bottle, pieces, !!keeper?.isKeeper)
 
   useEffect(() => {
     if (!bottle.read_at) void markRead(bottle.id)
@@ -26,9 +28,12 @@ export default function FutureBottleCard({ bottle }: { bottle: FutureBottles['ar
 
   return (
     <article
-      className="relative rounded-card border border-seafoam/20 p-6 mx-4 shadow-card"
+      className="relative rounded-card border border-seafoam/20 p-5"
       style={{ background: look.paper }}
     >
+      <div className="mb-4 flex justify-center" style={{ viewTransitionName: LIFT_TRANSITION }}>
+        <BottleSVG width={64} height={96} corked={false} look={look} />
+      </div>
       <p className="mb-3 flex items-center gap-1.5 font-ui text-[11px] uppercase tracking-widest text-seafoam/70">
         <Hourglass size={12} strokeWidth={1.5} />
         From you · written {ago(bottle.created_at)}

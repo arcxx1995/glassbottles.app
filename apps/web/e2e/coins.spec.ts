@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { admin, makeUser, signIn } from './helpers'
+import { admin, makeKeeper, makeUser, signIn } from './helpers'
 
 // Coins and the whale (migration 049).
 
-test('earned coins unlock a coin piece in the Atelier', async ({ page }) => {
+test('a Keeper unlocks a coin piece with earned coins', async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')
   const u = await makeUser('coins')
+  await makeKeeper(u.id)
   await admin.from('coin_ledger').insert({ user_id: u.id, delta: 20, reason: 'whale', ref: 'seed' })
   await signIn(page, u.email)
   await page.goto('/sea')

@@ -5,7 +5,7 @@ import { admin, makeUser, signIn } from './helpers'
 
 test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')
 
-test('a Keeper seals a letter to themselves; it washes back into the inbox', async ({ page }) => {
+test('a Keeper seals a letter to themselves; it washes back onto the shelf', async ({ page }) => {
   const u = await makeUser('future', { timezone: 'UTC' })
   await admin.from('memberships').insert({
     user_id: u.id, plan: 'yearly', status: 'active',
@@ -26,7 +26,7 @@ test('a Keeper seals a letter to themselves; it washes back into the inbox', asy
   // Today's stranger throw is untouched.
   await expect(page.getByText('Sent today ✓')).toHaveCount(0)
 
-  await page.goto('/inbox')
+  await page.goto('/shelf')
   await expect(page.getByText('1 letter to yourself drifting back')).toBeVisible()
   await expect(page.getByText(words)).toHaveCount(0) // sealed while waiting
 
@@ -35,6 +35,7 @@ test('a Keeper seals a letter to themselves; it washes back into the inbox', asy
   const { error } = await admin.rpc('deliver_future_bottles')
   expect(error).toBeNull()
   await page.reload()
+  await page.getByRole('button', { name: /^Letter to yourself, unopened/ }).click()
   await expect(page.getByText(words)).toBeVisible()
   await expect(page.getByText(/From you · written/)).toBeVisible()
 })

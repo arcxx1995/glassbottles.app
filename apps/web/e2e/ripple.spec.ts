@@ -25,7 +25,8 @@ test('a ripple reaches the sender live, once, and says nothing else', async ({ b
   const receiver = await (await browser.newContext()).newPage()
   await signIn(receiver, b.email)
   await receiver.goto('/sea')
-  await receiver.goto('/inbox')
+  await receiver.goto('/shelf')
+  await receiver.getByRole('button', { name: /^Bottle, opened/ }).click()
   await receiver.getByRole('button', { name: 'This reached me' }).click()
   await expect(receiver.getByText('They’ll know')).toBeVisible()
   await expect(receiver.getByRole('button', { name: 'This reached me' })).toHaveCount(0)
@@ -40,6 +41,7 @@ test('a ripple reaches the sender live, once, and says nothing else', async ({ b
 
   // Once only, survives a reload on the receiver's side too.
   await receiver.reload()
+  await receiver.getByRole('button', { name: /^Bottle, opened/ }).click()
   await expect(receiver.getByText('They’ll know')).toBeVisible()
 })
 

@@ -32,7 +32,7 @@ interface ReceivedBannerProps {
  * invalidation, 5-min poll, navigation) resurfaces it. The toast disappears
  * for good only when the bottle is actually read (is_read flips in the DB).
  *
- * No auto-dismiss. Tap → /inbox (hides for the session); X hides for the
+ * No auto-dismiss. Tap → /shelf (hides for the session); X hides for the
  * session. Both reappear after reload while the bottle stays unread —
  * the banner is only ever shown when it is true.
  *
@@ -45,8 +45,8 @@ export default function ReceivedBanner({
 }: ReceivedBannerProps = {}) {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  // Already looking at the inbox: the banner would only cover it.
-  const onInbox = usePathname() === '/inbox'
+  // Already looking at the shelf: the banner would only cover it.
+  const onShelf = usePathname() === '/shelf'
   const user = useAppSelector(selectUser)
   const dismissedIds = useAppSelector(selectReceivedBannerDismissedIds)
 
@@ -60,7 +60,7 @@ export default function ReceivedBanner({
   const unreadCount = unreadList.length
 
   const isVisible =
-    previewVisible !== undefined ? previewVisible : Boolean(unread) && !onInbox
+    previewVisible !== undefined ? previewVisible : Boolean(unread) && !onShelf
 
   function hide() {
     if (previewVisible !== undefined) {
@@ -70,13 +70,13 @@ export default function ReceivedBanner({
     }
   }
 
-  // The banner's bottle becomes the sealed bottle waiting in the inbox (a
+  // The banner's bottle becomes the sealed bottle waiting on the shelf (a
   // shared view transition). The name is only on the banner for the moment of
   // capture: it's still in the DOM while it exits, and names must be unique.
   const bottleRef = useRef<HTMLSpanElement>(null)
   function handleTap() {
     bottleRef.current?.style.setProperty('view-transition-name', 'arriving-bottle')
-    transitionTo(router, '/inbox', () => {
+    transitionTo(router, '/shelf', () => {
       bottleRef.current?.style.removeProperty('view-transition-name')
       hide()
     })

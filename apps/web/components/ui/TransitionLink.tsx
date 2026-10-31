@@ -4,13 +4,14 @@ import { forwardRef, useEffect, type ComponentProps, type MouseEvent, type Ref }
 import type { Route } from 'next'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { flushSync } from 'react-dom'
 
 // Route changes as a View Transition: the old page cross-fades out, the new
 // one lifts in, and elements sharing a `view-transition-name` (nav pill,
 // bottle) morph between pages. CSS lives in globals.css. Browsers without the
 // API, and reduced motion, get Next's normal instant swap.
 
-type StartVT = (cb: () => Promise<void>) => unknown
+type StartVT = (cb: () => Promise<void>) => { finished: Promise<void> }
 
 let settle: (() => void) | null = null
 
@@ -41,6 +42,17 @@ export function transitionTo(router: ReturnType<typeof useRouter>, href: Route, 
         setTimeout(resolve, 600)
       }),
   )
+}
+
+/** A same-page state change as a view transition (a bottle lifting off the
+ *  shelf). Without the API, or with reduced motion, it just happens. */
+export function viewTransition(update: () => void): Promise<void> {
+  if (!canTransition()) {
+    update()
+    return Promise.resolve()
+  }
+  const start = (document as unknown as { startViewTransition: StartVT }).startViewTransition.bind(document)
+  return start(async () => flushSync(update)).finished
 }
 
 /** Mount once in the shell: tells the pending transition the new route painted. */

@@ -334,15 +334,17 @@ function DressingRow() {
         role="group"
         aria-label="Dress your bottle"
       >
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          disabled={!ready}
-          className={cn(chip(false), 'flex items-center gap-1.5 disabled:opacity-40')}
-        >
-          <BottleSVG width={12} height={18} look={look} />
-          Dress
-        </button>
+        {keeperOn && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            disabled={!ready}
+            className={cn(chip(false), 'flex items-center gap-1.5 disabled:opacity-40')}
+          >
+            <BottleSVG width={12} height={18} look={look} />
+            Dress
+          </button>
+        )}
         {keeperOn && (
           <button
             type="button"

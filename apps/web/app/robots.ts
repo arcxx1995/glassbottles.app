@@ -19,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
         '/preview/',
         '/sea',
         '/harbour',
+        '/shelf',
         '/inbox',
         '/settings',
         '/forgot-password',

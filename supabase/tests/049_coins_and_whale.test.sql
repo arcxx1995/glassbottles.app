@@ -14,6 +14,9 @@ INSERT INTO auth.users (id, email, email_confirmed_at) VALUES
   ('00000000-0000-4000-8000-000000000491', 'coins-b@example.invalid', now());
 UPDATE public.profiles SET timezone = 'UTC'
 WHERE id IN ('00000000-0000-4000-8000-000000000490', '00000000-0000-4000-8000-000000000491');
+-- 057: only Keepers spend coins.
+INSERT INTO public.memberships (user_id, plan, status, access_until)
+VALUES ('00000000-0000-4000-8000-000000000490', 'yearly', 'active', now() + interval '30 days');
 
 -- Six days of tide; the seventh throw (today) is the milestone.
 INSERT INTO public.bottles (sender_id, message, sent_at, day_key)

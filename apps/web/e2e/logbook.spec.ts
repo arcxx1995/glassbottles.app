@@ -27,7 +27,7 @@ async function seed(withMembership: 'active' | 'expired' | null) {
 test('a Keeper reads the Logbook and can save it', async ({ page }) => {
   const me = await seed('active')
   await signIn(page, me.email)
-  await page.goto('/inbox')
+  await page.goto('/shelf')
   await page.getByRole('link', { name: 'Logbook' }).click()
   await expect(page).toHaveURL(/\/logbook$/)
   await expect(page.getByText('the bottle I threw')).toBeVisible()

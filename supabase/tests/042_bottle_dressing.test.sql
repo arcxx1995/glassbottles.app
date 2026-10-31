@@ -20,7 +20,7 @@ VALUES ('00000000-0000-4000-8000-000000000421', 'yearly', 'active', now() + inte
 
 SET LOCAL role authenticated;
 
--- Free user: free pieces, weather and vibe fine; a Keeper piece is refused.
+-- Free user: plain defaults, weather and vibe fine; any other piece is refused (057).
 SELECT set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-000000000420","role":"authenticated"}', true);
 DO $$
@@ -42,11 +42,16 @@ BEGIN
     RAISE EXCEPTION 'BUG: unknown weather accepted';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
-  b := public.send_bottle('free and dressed', '{"glass":"seafoam","ink":"sepia"}', 'foggy', 'wondering');
-  IF b -> 'style' ->> 'glass' <> 'seafoam' OR b ->> 'weather' <> 'foggy' OR b ->> 'current' IS NOT NULL THEN
-    RAISE EXCEPTION 'BUG: free dressing not stored: %', b;
+  BEGIN
+    PERFORM public.send_bottle('hi', '{"glass":"seafoam"}', NULL, NULL);
+    RAISE EXCEPTION 'BUG: a free user threw a formerly free glass';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  b := public.send_bottle('plain', '{"glass":"clear"}', 'foggy', 'wondering');
+  IF b ->> 'weather' <> 'foggy' OR b ->> 'current' IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: free bottle not stored: %', b;
   END IF;
-  RAISE NOTICE 'ok: free pieces allowed, Keeper piece / wrong kind / bad weather refused';
+  RAISE NOTICE 'ok: defaults allowed, other pieces / wrong kind / bad weather refused';
 END;
 $$;
 
@@ -64,8 +69,8 @@ BEGIN
 END;
 $$;
 
--- Lapse + delivery: the membership ends, the bottle keeps its look, and the
--- receiver sees all of it — without learning who sent it.
+-- Lapse + delivery: the stored look survives the sender's lapse. A free receiver
+-- gets the plain bottle and the fact it was dressed (057), never the sender.
 RESET role;
 UPDATE public.memberships SET access_until = now() - interval '1 second';
 UPDATE public.bottles SET receiver_id = '00000000-0000-4000-8000-000000000422', received_at = now()
@@ -78,16 +83,16 @@ DECLARE
   r RECORD;
 BEGIN
   SELECT * INTO r FROM public.get_received_bottles() LIMIT 1;
-  IF r.style ->> 'glass' <> 'amber' OR r.weather <> 'stormy' OR r.vibe <> 'venting' OR r.current <> 'night_owl' THEN
-    RAISE EXCEPTION 'BUG: receiver lost the dressing: % % % %', r.style, r.weather, r.vibe, r.current;
+  IF r.style IS NOT NULL OR NOT r.dressed OR r.weather <> 'stormy' OR r.vibe <> 'venting' OR r.current <> 'night_owl' THEN
+    RAISE EXCEPTION 'BUG: free receiver got: % % % % %', r.style, r.dressed, r.weather, r.vibe, r.current;
   END IF;
-  IF (public.get_today_bottle_status() -> 'receivedBottle' -> 'style' ->> 'paper') <> 'dusk' THEN
-    RAISE EXCEPTION 'BUG: status RPC lost the dressing';
+  IF (public.get_today_bottle_status() -> 'receivedBottle' ->> 'style') IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: status RPC leaked the dressing to a free receiver';
   END IF;
   IF to_jsonb(r)::text ~ '00000000-0000-4000-8000-000000000421' THEN
     RAISE EXCEPTION 'BUG: received bottle leaks the sender';
   END IF;
-  RAISE NOTICE 'ok: lapsed Keeper''s bottle keeps its look; receiver sees dressing, not sender';
+  RAISE NOTICE 'ok: free receiver sees that it was dressed, not how, and not by whom';
 END;
 $$;
 

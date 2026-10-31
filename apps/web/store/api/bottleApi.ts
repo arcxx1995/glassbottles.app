@@ -328,7 +328,7 @@ export const bottleApi = createApi({
         }
         return { data: undefined }
       },
-      // Optimistic: a reported bottle leaves the inbox at once (038 keeps it
+      // Optimistic: a reported bottle leaves the shelf at once (038 keeps it
       // out of get_received_bottles); a failed report puts it back.
       async onQueryStarted({ bottleId }, { dispatch, queryFulfilled }) {
         const patch = dispatch(

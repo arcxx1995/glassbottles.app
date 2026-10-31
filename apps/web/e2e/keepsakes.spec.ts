@@ -14,22 +14,28 @@ test('keeping a bottle adds a Kept view; letting go removes it', async ({ page }
   ])
 
   await signIn(page, b.email)
-  await page.goto('/inbox')
-  await expect(page.getByText('an ordinary tuesday')).toBeVisible()
+  await page.goto('/shelf')
+  const opened = page.getByRole('button', { name: /^Bottle, opened/ })
+  await expect(opened).toHaveCount(2)
   await expect(page.getByRole('button', { name: /^Kept ·/ })).toHaveCount(0)
 
-  const card = page.locator('article', { hasText: 'the one worth keeping' })
-  await card.getByRole('button', { name: 'Keep this bottle' }).click()
-  await page.getByRole('button', { name: 'Kept · 1' }).click()
+  // Newest first: the older one is second.
+  await opened.nth(1).click()
   await expect(page.getByText('the one worth keeping')).toBeVisible()
-  await expect(page.getByText('an ordinary tuesday')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Keep this bottle' }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Kept · 1' }).click()
+  await expect(page.getByRole('button', { name: /^Bottle, opened/ })).toHaveCount(1)
+  await page.getByRole('button', { name: /^Bottle, opened.*kept$/ }).click()
+  await expect(page.getByText('the one worth keeping')).toBeVisible()
 
   // Kept survives a reload (it's on the server, not the device).
   await page.reload()
   await expect(page.getByRole('button', { name: 'Kept · 1' })).toBeVisible()
 
-  await page.locator('article', { hasText: 'the one worth keeping' })
-    .getByRole('button', { name: /Kept — tap to let go/ }).click()
+  await page.getByRole('button', { name: /^Bottle, opened.*kept$/ }).click()
+  await page.getByRole('button', { name: /Kept — tap to let go/ }).click()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: /^Kept ·/ })).toHaveCount(0)
-  await expect(page.getByText('an ordinary tuesday')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Bottle, opened/ })).toHaveCount(2)
 })

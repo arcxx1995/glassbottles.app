@@ -36,10 +36,13 @@ export interface AtelierPiece {
   coin_cost?: number | null
 }
 
-/** Can this person throw this piece? Keepers: every piece. Coin pieces: once
- *  unlocked (`unlocked` holds 'kind:id' refs from get_coins). */
+/** Can this person throw this piece? Only Keepers dress (057). Free pieces are
+ *  just the plain defaults; a coin piece also needs its unlock (`unlocked`
+ *  holds 'kind:id' refs from get_coins). */
 export function canUse(p: AtelierPiece, isKeeper: boolean, unlocked: readonly string[] = []) {
-  return p.tier === 'free' || isKeeper || (p.tier === 'coin' && unlocked.includes(`${p.kind}:${p.id}`))
+  if (p.tier === 'free') return true
+  if (!isKeeper) return false
+  return p.tier === 'keeper' || unlocked.includes(`${p.kind}:${p.id}`)
 }
 
 /** Resolved colours for one bottle. Defaults = the look bottles always had. */
@@ -73,6 +76,31 @@ export function resolveLook(
     paper: find('paper')?.bg ?? DEFAULT_LOOK.paper,
     ink: find('ink')?.color ?? DEFAULT_LOOK.ink,
   }
+}
+
+/** A Keeper's look for a bottle its sender didn't dress: glass and seal picked
+ *  from the bottle's id, so it's the same every visit. Paper and ink stay plain.
+ *  ponytail: adding catalogue pieces reshuffles these looks; store the choice on
+ *  the bottle if that ever matters. */
+export function seaDress(id: string, pieces: AtelierPiece[] | undefined): BottleStyle {
+  if (!pieces) return {}
+  let hash = 0
+  for (const c of id) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
+  const pick = (kind: PieceKind, salt: number) => {
+    const options = pieces.filter((p) => p.kind === kind && p.tier === 'keeper')
+    return options[(hash + salt) % options.length]?.id
+  }
+  return { glass: pick('glass', 0), seal: pick('seal', hash >>> 8) }
+}
+
+/** The one way to colour a bottle on the Shelf. The server only sends `style`
+ *  to Keepers (057), so a free viewer's bottle always resolves plain. */
+export function bottleLook(
+  bottle: { id: string; style?: BottleStyle | null },
+  pieces: AtelierPiece[] | undefined,
+  isKeeper: boolean,
+): BottleLook {
+  return resolveLook(bottle.style ?? (isKeeper ? seaDress(bottle.id, pieces) : null), pieces)
 }
 
 /** Drops pieces this person can't throw (a remembered style after the

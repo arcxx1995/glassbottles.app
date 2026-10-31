@@ -1,14 +1,15 @@
 import { expect, test } from '@playwright/test'
 import { admin, deliverNow, expectPath, isolateReceiver, makeKeeper, makeUser, signIn } from './helpers'
 
-// Bottle dressing (migration 042): weather and vibe are free, Atelier Keeper
-// pieces need Keeper, and the stranger receives the bottle as it was dressed.
+// Bottle dressing (042, 057): weather and vibe are free, every Atelier piece
+// needs Keeper, and only a Keeper who finds it sees the bottle as it was dressed.
 
-test('a Keeper dresses a bottle and the stranger receives it dressed', async ({ browser }) => {
+test('a Keeper dresses a bottle and another Keeper receives it dressed', async ({ browser }) => {
   test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')
   const a = await makeUser('dresser', { timezone: 'UTC' })
   const b = await makeUser('finder', { timezone: 'UTC' })
   await makeKeeper(a.id)
+  await makeKeeper(b.id)
   await admin.from('profiles').update({ current: 'night_owl' }).eq('id', a.id)
 
   const sender = await (await browser.newContext()).newPage()
@@ -33,12 +34,13 @@ test('a Keeper dresses a bottle and the stranger receives it dressed', async ({ 
     .poll(async () => (await admin.from('bottles').select('style, weather, vibe, current').eq('sender_id', a.id).maybeSingle()).data)
     .toEqual({ style: { glass: 'amber', seal: 'gold', paper: 'dusk' }, weather: 'stormy', vibe: 'venting', current: 'night_owl' })
 
-  // The stranger's inbox shows the sky, vibe and current over their paper.
+  // The bottle opens to the sky, vibe and current over the chosen paper.
   const receiver = await (await browser.newContext()).newPage()
   await signIn(receiver, b.email)
   await isolateReceiver(b.id)
   expect(await deliverNow(a.id)).toBeGreaterThanOrEqual(1)
-  await receiver.goto('/inbox')
+  await receiver.goto('/shelf')
+  await receiver.getByRole('button', { name: /^Bottle, unopened/ }).click()
   await expect(receiver.getByLabel('Message content')).toContainText('dressed', { timeout: 10_000 })
   await expect(receiver.getByText('Stormy sky · Just venting · Night Owl')).toBeVisible()
   const paper = await receiver.locator('article').first().evaluate((el) => getComputedStyle(el).backgroundColor)
@@ -53,7 +55,6 @@ test('a free user can try a Keeper piece on, but not throw it', async ({ page })
   await page.getByRole('button', { name: 'Dress', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Dress your bottle' })
 
-  await sheet.getByRole('button', { name: 'Seafoam' }).first().click()
   await expect(sheet.getByRole('button', { name: 'Done' })).toBeVisible()
 
   // Trying on Amber shows the Keeper offer in place of Done.
@@ -62,7 +63,7 @@ test('a free user can try a Keeper piece on, but not throw it', async ({ page })
   await expect(sheet.getByRole('button', { name: /Yearly/ })).toBeVisible()
   await expect(sheet.getByRole('button', { name: 'Done' })).toHaveCount(0)
 
-  // (The server refusing it is supabase/tests/042_bottle_dressing.test.sql.)
+  // (The server refusing it is supabase/tests/057_shelf_keeper_only.test.sql.)
   await page.keyboard.press('Escape')
   await expect(sheet).toHaveCount(0)
 })

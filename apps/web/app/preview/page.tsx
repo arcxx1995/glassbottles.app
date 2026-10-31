@@ -346,7 +346,7 @@ function ReceivedPanel() {
     <Provider store={store}>
       <div className="w-full flex flex-col gap-4">
         <div className="text-center mb-2">
-          <p className="font-display text-xl text-sand">Your inbox</p>
+          <p className="font-display text-xl text-sand">Your shelf</p>
           <p className="font-ui text-xs text-sand/40 mt-1">1 unread bottle</p>
         </div>
         <ReceivedBottle bottle={MOCK_RECEIVED_BOTTLE} />
@@ -369,8 +369,8 @@ function ReceivedBannerPanel() {
         <div className="flex flex-col gap-1">
           <p className="font-display text-xl text-sand">Received toast</p>
           <p className="font-ui text-sm text-sand/50 max-w-[260px] leading-relaxed">
-            Shows while an unread bottle waits in your inbox. Persists until
-            read or dismissed. Tap to go to inbox (real nav).
+            Shows while an unread bottle waits on your shelf. Persists until
+            read or dismissed. Tap to go to the shelf (real nav).
           </p>
         </div>
         <button

@@ -16,7 +16,7 @@ import { hasLiveSubscription } from '@/lib/keeper'
 //   - daily_quotas: deleted (ON DELETE CASCADE),
 //   - bottles they sent that are still adrift: deleted (BEFORE DELETE trigger;
 //     nobody has seen them, and a sender-less bottle could never match),
-//   - bottles they sent that were delivered: kept in the receiver's inbox,
+//   - bottles they sent that were delivered: kept on the receiver's shelf,
 //     sender_id nulled (ON DELETE SET NULL),
 //   - bottles they received: receiver_id nulled — unreadable by anyone.
 // It used to be five separate service-role calls; a failure between them left

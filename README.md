@@ -36,7 +36,7 @@
             │                                           │
             ├──────────────────────────────────────────┤
             │     ⚓             ✉            ⚙          │
-            │   Bottle        Inbox      Settings       │
+            │   Bottle        Shelf      Settings       │
             └──────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ It's a place to say the thing you can't say to the people who know you — *"I f
 5. After ~1 hour, the matcher assigns the bottle to a **random eligible stranger** (someone who hasn't received a bottle on *their* local day). At that moment:
    - the receiver gets an **email** (branded, via Resend) and an in-app notification,
    - **your** bottle vanishes from your sea and you get a quiet *"delivered"* signal,
-   - the message lands in the receiver's **Inbox**.
+   - the message lands on the receiver's **Shelf**.
 6. Tomorrow (measured at *your* local midnight), your daily bottle refills and you can throw again.
 
 You can throw exactly **one bottle per day**, and receive at most **one bottle per day**.
@@ -130,7 +130,7 @@ glassbottles/
 ├─ apps/
 │  ├─ web/                      # the Next.js app
 │  │  ├─ app/
-│  │  │  ├─ (app)/              # authed: home, inbox, settings (+ AppShell, BottomNav)
+│  │  │  ├─ (app)/              # authed: home, shelf, settings (+ AppShell, BottomNav)
 │  │  │  ├─ (auth)/             # sign-in, sign-up, forgot/reset-password
 │  │  │  ├─ auth/callback/      # single PKCE code-exchange landing
 │  │  │  ├─ api/                # bottles/send, account/delete, profile, whatsapp…

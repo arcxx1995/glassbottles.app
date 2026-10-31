@@ -60,6 +60,6 @@ test('scene cost', async ({ page }) => {
   await page.getByText('Sent today ✓').waitFor()
   await page.waitForTimeout(2000)
   await sample(page, 'home sailing')
-  await page.goto('/inbox')
-  await sample(page, 'inbox')
+  await page.goto('/shelf')
+  await sample(page, 'shelf')
 })

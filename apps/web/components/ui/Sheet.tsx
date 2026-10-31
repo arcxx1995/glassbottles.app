@@ -26,16 +26,19 @@ export default function Sheet({
   onClose,
   children,
   className,
+  centered = false,
 }: {
   title: ReactNode
   onClose: () => void
   children: ReactNode
   className?: string
+  /** A centred dialog on every screen, with no drag-to-dismiss. */
+  centered?: boolean
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const controls = useDragControls()
-  const [phone] = useState(() => !window.matchMedia('(min-width: 640px)').matches)
+  const [phone] = useState(() => !centered && !window.matchMedia('(min-width: 640px)').matches)
   const [vh] = useState(() => window.innerHeight)
   const y = useMotionValue(phone ? vh : 0)
   const scrim = useTransform(y, [0, vh * 0.6], [1, 0])
@@ -46,6 +49,8 @@ export default function Sheet({
     const opener = document.activeElement as HTMLElement | null
     closeRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
+      // A sheet can open over another: only the top one listens.
+      if ([...document.querySelectorAll('[role="dialog"]')].at(-1) !== panelRef.current) return
       if (e.key === 'Escape') return onClose()
       if (e.key !== 'Tab' || !panelRef.current) return
       const items = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)]
@@ -74,7 +79,7 @@ export default function Sheet({
   // context and sit under the bottom nav (and a transformed ancestor would
   // break position: fixed). Context, and so AnimatePresence exits, still flow.
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
+    <div className={cn('fixed inset-0 z-[60] flex justify-center sm:items-center', centered ? 'items-center px-4' : 'items-end')}>
       <motion.div
         className="absolute inset-0 bg-ocean-deep/50"
         // Phone: the dim tracks the sheet's position (drag thins it).
@@ -93,7 +98,9 @@ export default function Sheet({
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
           'relative flex w-full max-w-md max-h-[88dvh] flex-col overflow-hidden',
-          'rounded-t-[1.75rem] sm:rounded-3xl glass-strong shadow-2xl',
+          centered ? 'rounded-3xl' : 'rounded-t-[1.75rem] sm:rounded-3xl',
+          'glass-strong shadow-2xl',
+          centered && 'bg-ocean-deep/90',
         )}
         style={phone ? { y } : undefined}
         // Opacity rides along so reduced motion (transforms off) still cross-fades.
@@ -120,12 +127,15 @@ export default function Sheet({
       >
         {/* Grab zone: handle + header. Content below scrolls on its own. */}
         <div
-          className="shrink-0 px-5 pt-2 pb-2 sm:pt-5 touch-none sm:touch-auto cursor-grab active:cursor-grabbing sm:cursor-auto"
+          className={cn(
+            'shrink-0 px-5 pb-2',
+            phone ? 'pt-2 sm:pt-5 touch-none sm:touch-auto cursor-grab active:cursor-grabbing sm:cursor-auto' : 'pt-5',
+          )}
           onPointerDown={(e) => {
             if (phone && !(e.target as HTMLElement).closest('button')) controls.start(e)
           }}
         >
-          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-sand/25 sm:hidden" aria-hidden="true" />
+          {phone && <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-sand/25 sm:hidden" aria-hidden="true" />}
           <div className="flex items-center justify-between">
             <h2 className="font-display text-headline text-sand">{title}</h2>
             <button

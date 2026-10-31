@@ -6,11 +6,14 @@ import type { BottleLook } from '@/lib/dressing'
 
 // ─── Shared bottle SVG ───────────────────────────────────────────────────────
 
+/** The view-transition name a bottle carries while it lifts off the shelf. */
+export const LIFT_TRANSITION = 'lifting-bottle'
+
 interface BottleSVGProps {
   glowing?: boolean
   width?: number
   height?: number
-  /** false draws the bottle open — the inbox animates its own cork off. */
+  /** false draws the bottle open — the shelf's dialog animates its own cork off. */
   corked?: boolean
   /** Atelier dressing (glass tint/edge, wax seal). Omitted = the classic bottle. */
   look?: Pick<BottleLook, 'tint' | 'edge' | 'wax'>

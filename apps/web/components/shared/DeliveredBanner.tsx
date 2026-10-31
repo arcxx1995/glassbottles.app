@@ -55,7 +55,7 @@ export default function DeliveredBanner({
   const { data: status } = useGetTodayBottleStatusQuery(undefined, {
     skip: !user?.id || previewVisible !== undefined,
     // Slow reconcile poll: an ack on device A only reaches device B via a
-    // BottleStatus refetch. /sea polls this query every 30s, but on /inbox or
+    // BottleStatus refetch. /sea polls this query every 30s, but on /shelf or
     // /settings nothing else refetches it — without this, an already-acked
     // "found someone" toast lingered on the second device until navigation.
     // eslint-disable-next-line no-restricted-syntax -- polls a Supabase RPC (queryFn), not a Vercel /api route

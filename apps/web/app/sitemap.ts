@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 
 const SITE_URL = 'https://glassbottles.app'
 
-// Public, indexable routes only — auth-gated screens (/sea, /inbox,
+// Public, indexable routes only — auth-gated screens (/sea, /shelf,
 // /settings) and utility pages (password reset) stay out.
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date()

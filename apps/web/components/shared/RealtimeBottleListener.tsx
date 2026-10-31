@@ -45,7 +45,7 @@ export default function RealtimeBottleListener() {
       channel = supabase
         .channel(`user:${user.id}`, { config: { private: true } })
         .on('broadcast', { event: 'bottle_received' }, () => {
-          // A bottle arrived — refetch inbox + status; ReceivedBanner derives
+          // A bottle arrived — refetch shelf + status; ReceivedBanner derives
           // its visibility from the refetched unread state.
           dispatch(
             bottleApi.util.invalidateTags(['BottleStatus', 'ReceivedBottles'])
@@ -77,8 +77,10 @@ export default function RealtimeBottleListener() {
         })
         .on('broadcast', { event: 'membership' }, () => {
           // The Dodo webhook changed this user's Keeper membership (041);
-          // the Harbour is Keepers-only (056).
-          dispatch(bottleApi.util.invalidateTags(['Membership', 'Harbour']))
+          // the Harbour is Keepers-only (056), and so is seeing dressing (057).
+          dispatch(
+            bottleApi.util.invalidateTags(['Membership', 'Harbour', 'ReceivedBottles', 'BottleStatus', 'Future'])
+          )
         })
         .subscribe()
     }

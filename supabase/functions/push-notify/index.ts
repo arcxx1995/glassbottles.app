@@ -27,7 +27,7 @@ type Payload = { title: string; body: string; url: string }
 const WASHED_ASHORE: Payload = {
   title: 'A bottle washed ashore',
   body: 'A stranger’s words just drifted to you.',
-  url: '/inbox',
+  url: '/shelf',
 }
 const FOUND: Payload = {
   title: 'Your bottle was found',
@@ -43,7 +43,7 @@ const RIPPLE: Payload = {
 const FROM_THE_PAST: Payload = {
   title: 'A bottle from your past washed back',
   body: 'Something you wrote to yourself has arrived.',
-  url: '/inbox',
+  url: '/shelf',
 }
 
 const json = (body: unknown, status = 200) =>

@@ -94,7 +94,7 @@ export default function GuidelinesPage() {
 
       <LegalH2>Reporting</LegalH2>
       <p>
-        Every bottle you receive has a report flag. Reporting removes it from your inbox at once
+        Every bottle you receive has a report flag. Reporting removes it from your shelf at once
         and sends it to a moderator, who can remove it and act on the sender&rsquo;s account. The
         sender is never told who reported them.
       </p>

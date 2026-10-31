@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
   // Allow-listed: never echo a client path into the redirect. 'home' was the
   // Sea's old name.
-  const back = returnTo === 'harbour' ? 'harbour' : returnTo === 'home' || returnTo === 'sea' ? 'sea' : 'settings'
+  const back = returnTo === 'harbour' || returnTo === 'shelf' ? returnTo : returnTo === 'home' || returnTo === 'sea' ? 'sea' : 'settings'
   if (!plan || !KEEPER_PLANS.includes(plan)) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
   }

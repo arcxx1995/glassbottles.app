@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LOOK, allowedStyle, resolveLook, type AtelierPiece } from './dressing'
+import { DEFAULT_LOOK, allowedStyle, bottleLook, canUse, resolveLook, seaDress, type AtelierPiece } from './dressing'
 
 const pieces: AtelierPiece[] = [
   { kind: 'glass', id: 'clear', name: 'Clear', tier: 'free', look: { tint: 't0', edge: 'e0' }, sort: 0 },
-  { kind: 'glass', id: 'seafoam', name: 'Seafoam', tier: 'free', look: { tint: 't1', edge: 'e1' }, sort: 1 },
+  { kind: 'glass', id: 'seafoam', name: 'Seafoam', tier: 'keeper', look: { tint: 't1', edge: 'e1' }, sort: 1 },
   { kind: 'glass', id: 'amber', name: 'Amber', tier: 'keeper', look: { tint: 't2', edge: 'e2' }, sort: 2 },
   { kind: 'seal', id: 'gold', name: 'Gold wax', tier: 'keeper', look: { wax: '#D4A537' }, sort: 2 },
-  { kind: 'ink', id: 'sepia', name: 'Sepia', tier: 'free', look: { color: '#E8C9A0' }, sort: 1 },
+  { kind: 'ink', id: 'sand', name: 'Sand', tier: 'free', look: { color: '#F7E7CE' }, sort: 0 },
+  { kind: 'ink', id: 'sepia', name: 'Sepia', tier: 'keeper', look: { color: '#E8C9A0' }, sort: 1 },
   { kind: 'ink', id: 'lavender', name: 'Lavender', tier: 'coin', look: { color: '#CDB8F5' }, sort: 6, coin_cost: 15 },
 ]
 
@@ -14,16 +15,17 @@ describe('allowedStyle', () => {
   it('keeps Keeper pieces for a Keeper', () => {
     expect(allowedStyle({ glass: 'amber', seal: 'gold' }, pieces, true)).toEqual({ glass: 'amber', seal: 'gold' })
   })
-  it('drops Keeper pieces after a lapse, keeping free ones', () => {
-    expect(allowedStyle({ glass: 'amber', ink: 'sepia' }, pieces, false)).toEqual({ ink: 'sepia' })
+  it('drops every piece after a lapse', () => {
+    expect(allowedStyle({ glass: 'amber', ink: 'sepia' }, pieces, false)).toEqual({})
   })
   it('drops defaults and pieces no longer in the catalog', () => {
     expect(allowedStyle({ glass: 'clear', ink: 'gone' }, pieces, true)).toEqual({})
   })
-  it('allows a coin piece once unlocked, or for a Keeper', () => {
+  it('allows a coin piece only for a Keeper who unlocked it', () => {
     expect(allowedStyle({ ink: 'lavender' }, pieces, false)).toEqual({})
-    expect(allowedStyle({ ink: 'lavender' }, pieces, false, ['ink:lavender'])).toEqual({ ink: 'lavender' })
-    expect(allowedStyle({ ink: 'lavender' }, pieces, true)).toEqual({ ink: 'lavender' })
+    expect(allowedStyle({ ink: 'lavender' }, pieces, false, ['ink:lavender'])).toEqual({})
+    expect(allowedStyle({ ink: 'lavender' }, pieces, true)).toEqual({})
+    expect(allowedStyle({ ink: 'lavender' }, pieces, true, ['ink:lavender'])).toEqual({ ink: 'lavender' })
   })
   it('sends nothing before the catalog loads', () => {
     expect(allowedStyle({ glass: 'seafoam' }, undefined, true)).toEqual({})
@@ -39,5 +41,47 @@ describe('resolveLook', () => {
   })
   it('is the classic bottle for undressed or pre-042 bottles', () => {
     expect(resolveLook(null, pieces)).toBe(DEFAULT_LOOK)
+  })
+})
+
+describe('canUse', () => {
+  const by = (id: string) => pieces.find((p) => p.id === id)!
+  it('gives free users only the plain defaults', () => {
+    expect(canUse(by('clear'), false)).toBe(true)
+    expect(canUse(by('seafoam'), false)).toBe(false)
+    expect(canUse(by('lavender'), false, ['ink:lavender'])).toBe(false)
+  })
+  it('gives Keepers every Keeper piece, and coin pieces once unlocked', () => {
+    expect(canUse(by('amber'), true)).toBe(true)
+    expect(canUse(by('lavender'), true)).toBe(false)
+    expect(canUse(by('lavender'), true, ['ink:lavender'])).toBe(true)
+  })
+})
+
+describe('bottleLook', () => {
+  it('keeps a free viewer plain', () => {
+    expect(bottleLook({ id: 'a-bottle', style: null }, pieces, false)).toBe(DEFAULT_LOOK)
+  })
+  it('shows a Keeper what the sender chose', () => {
+    expect(bottleLook({ id: 'a-bottle', style: { glass: 'seafoam' } }, pieces, true)).toEqual({
+      ...DEFAULT_LOOK,
+      tint: 't1',
+      edge: 'e1',
+    })
+  })
+  it('sea-dresses an undressed bottle for a Keeper, the same every time', () => {
+    const look = bottleLook({ id: 'a-bottle', style: null }, pieces, true)
+    expect(look).toEqual(bottleLook({ id: 'a-bottle', style: null }, pieces, true))
+    expect(look.wax).toBe('#D4A537')
+    expect(look.paper).toBe(DEFAULT_LOOK.paper)
+    expect(look.ink).toBe(DEFAULT_LOOK.ink)
+  })
+  it('never sea-dresses with a coin or free piece', () => {
+    for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      expect(['seafoam', 'amber']).toContain(seaDress(id, pieces).glass)
+    }
+  })
+  it('stays plain before the catalog loads', () => {
+    expect(bottleLook({ id: 'a-bottle', style: null }, undefined, true)).toBe(DEFAULT_LOOK)
   })
 })

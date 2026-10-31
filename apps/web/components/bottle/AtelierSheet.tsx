@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import { cn } from '@/lib/utils'
@@ -19,9 +19,9 @@ import {
 } from '@/lib/dressing'
 
 // The Atelier: dress the bottle a stranger will find. Every piece can be tried
-// on — the preview shows it. A Keeper piece only stays on for Keepers (trying
-// one opens the membership offer under the preview); a coin piece stays on
-// once unlocked with earned coins (049).
+// on — the preview shows it. Only Keepers dress (057): trying a piece opens the
+// membership offer under the preview. A Keeper's coin piece also needs
+// unlocking with earned coins (049).
 
 const KIND_LABEL: Record<PieceKind, string> = {
   glass: 'Glass',
@@ -46,23 +46,16 @@ export default function AtelierSheet({
   /** Called right before leaving for checkout. */
   onBeforeCheckout?: () => void
 }) {
-  const keeperOn = process.env.NEXT_PUBLIC_KEEPER === 'on'
   const { data: coins } = useGetCoinsQuery()
   const [unlock, { isLoading: unlocking }] = useUnlockPieceMutation()
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const unlocked = coins?.unlocked ?? []
   const balance = coins?.balance ?? 0
-  // Keeper pieces only appear while Keeper can actually be bought (or owned);
-  // coin pieces are always earnable.
-  const shown = useMemo(
-    () => pieces.filter((p) => p.tier !== 'keeper' || keeperOn || isKeeper),
-    [pieces, keeperOn, isKeeper],
-  )
   const [draft, setDraft] = useState<BottleStyle>(style)
   const look = resolveLook(draft, pieces)
-  const tried = shown.filter((p) => draft[p.kind] === p.id && !canUse(p, isKeeper, unlocked))
-  const keeperLocked = tried.filter((p) => p.tier === 'keeper')
-  const coinLocked = tried.filter((p) => p.tier === 'coin')
+  const tried = pieces.filter((p) => draft[p.kind] === p.id && !canUse(p, isKeeper, unlocked))
+  const keeperLocked = isKeeper ? [] : tried
+  const coinLocked = isKeeper ? tried : []
 
   return (
     <Sheet title="Dress your bottle" onClose={onClose}>
@@ -91,7 +84,7 @@ export default function AtelierSheet({
               </span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {shown
+              {pieces
                 .filter((p) => p.kind === kind)
                 .map((p) => {
                   const selected = (draft[kind] ?? defaultId(pieces, kind)) === p.id
@@ -102,7 +95,7 @@ export default function AtelierSheet({
                       type="button"
                       onClick={() => setDraft((d) => ({ ...d, [kind]: p.id }))}
                       aria-pressed={selected}
-                      aria-label={`${p.name}${usable ? '' : p.tier === 'keeper' ? ' (Keeper)' : ` (${p.coin_cost} coins)`}`}
+                      aria-label={`${p.name}${usable ? '' : isKeeper ? ` (${p.coin_cost} coins)` : ' (Keeper)'}`}
                       title={p.name}
                       className={cn(
                         'press press-sm relative h-10 w-10 rounded-full border-2 transition-[border-color,transform]',
@@ -110,12 +103,12 @@ export default function AtelierSheet({
                       )}
                     >
                       <Swatch piece={p} />
-                      {!usable && p.tier === 'keeper' && (
+                      {!usable && !isKeeper && (
                         <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full bg-ocean-deep border border-white/15">
                           <Lock size={8} strokeWidth={2} className="text-sand/60" />
                         </span>
                       )}
-                      {!usable && p.tier === 'coin' && (
+                      {!usable && isKeeper && (
                         <span className="absolute -right-2 -bottom-1 rounded-full bg-ocean-deep border border-white/15 px-1 font-mono text-[8px] leading-4 text-sand/70">
                           {p.coin_cost}✦
                         </span>
@@ -154,7 +147,6 @@ export default function AtelierSheet({
             <p className="font-ui text-[11px] text-sand/40 leading-snug">
               Earn coins when a stranger says your bottle reached them (+3), on every seventh
               day of a tide (+5), and by spotting the whale on your sea (+2).
-              {keeperOn && ' Keepers have every piece.'}
             </p>
             {unlockError && <p className="font-ui text-xs text-coral">{unlockError}</p>}
           </div>
@@ -162,7 +154,8 @@ export default function AtelierSheet({
           <div className="mt-2 rounded-2xl border border-seafoam/20 bg-seafoam/5 p-4 flex flex-col gap-3">
             <p className="font-ui text-sm text-sand/80 leading-relaxed">
               {keeperLocked.map((p) => p.name).join(' and ')} {keeperLocked.length > 1 ? 'are' : 'is'} for
-              Keepers. The bottle stays free; Keeper dresses it for the stranger who finds it.
+              Keepers. The bottle stays free. Other Keepers will see it as you dressed it; everyone
+              else finds the plain bottle.
             </p>
             <KeeperPlans
               returnTo="home"

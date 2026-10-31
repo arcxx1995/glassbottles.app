@@ -66,7 +66,7 @@ export async function middleware(request: NextRequest) {
   // getClaims() verifies the access-token JWT LOCALLY against the project's
   // cached JWKS (asymmetric signing keys) — no Auth-server round-trip on the
   // steady state. getUser() here cost a full network call on EVERY navigation
-  // and prefetch to /home,/inbox,/settings; that call blocked the RSC payload,
+  // and prefetch to /home,/shelf,/settings; that call blocked the RSC payload,
   // so Next showed each route's loading.tsx skeleton for its whole duration
   // (the "slow tab + other screen flashes" report). getClaims still refreshes
   // an about-to-expire session and writes the rotated cookies via setAll, so
@@ -124,10 +124,12 @@ export const config = {
      */
     '/sea',
     '/harbour',
+    '/shelf',
     '/inbox',
     '/settings',
     '/sea/:path*',
     '/harbour/:path*',
+    '/shelf/:path*',
     '/inbox/:path*',
     '/settings/:path*',
     '/logbook',

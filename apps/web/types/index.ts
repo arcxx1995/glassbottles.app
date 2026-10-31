@@ -34,6 +34,8 @@ export interface Bottle {
   is_read: boolean
   is_reported: boolean
   is_stale: boolean
+  /** The sender dressed it. `style` itself only reaches Keepers (057). */
+  dressed?: boolean
   day_key: string
   // How it was dressed (migration 042). Absent on pre-042 shapes.
   style?: BottleStyle | null

@@ -15,7 +15,7 @@ export default function NotFound() {
       <div className="flex flex-col gap-2">
         <h2 className="font-display text-title text-sand">Lost at sea</h2>
         <p className="font-ui text-sm text-sand/40 max-w-[220px] mx-auto leading-relaxed">
-          That page drifted away. Maybe it&apos;s in someone&apos;s inbox.
+          That page drifted away. Maybe it&apos;s on someone&apos;s shelf.
         </p>
       </div>
       <Link

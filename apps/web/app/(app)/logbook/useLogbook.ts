@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { BottleStyle, CurrentId, Vibe, Weather } from '@/lib/dressing'
+import type { BottleStyle, CurrentId, Weather } from '@/lib/dressing'
 
 // One read per visit (migration 048) — the Logbook is history, not live.
 
@@ -13,8 +13,8 @@ interface Common {
   weather: Weather | null
 }
 export interface Logbook {
-  sent: (Common & { found: boolean; rippled: boolean; vibe: Vibe | null; current: CurrentId | null })[]
-  received: (Common & { kept: boolean; vibe: Vibe | null; current: CurrentId | null })[]
+  sent: (Common & { found: boolean; rippled: boolean; current: CurrentId | null })[]
+  received: (Common & { kept: boolean; current: CurrentId | null })[]
   future: (Common & { written: string })[]
 }
 

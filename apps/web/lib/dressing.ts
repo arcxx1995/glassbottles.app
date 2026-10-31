@@ -12,15 +12,6 @@ export const WEATHER_LABEL: Record<Weather, string> = {
   sunny: 'Sunny',
 }
 
-export const VIBES = ['venting', 'small_win', 'wondering', 'grateful'] as const
-export type Vibe = (typeof VIBES)[number]
-export const VIBE_LABEL: Record<Vibe, string> = {
-  venting: 'Just venting',
-  small_win: 'A small win',
-  wondering: 'Wondering',
-  grateful: 'Grateful',
-}
-
 export const PIECE_KINDS = ['glass', 'seal', 'paper', 'ink'] as const
 export type PieceKind = (typeof PIECE_KINDS)[number]
 export type BottleStyle = Partial<Record<PieceKind, string>>
@@ -29,20 +20,15 @@ export interface AtelierPiece {
   kind: PieceKind
   id: string
   name: string
-  tier: 'free' | 'coin' | 'keeper'
+  tier: 'free' | 'keeper'
   look: { tint?: string; edge?: string; wax?: string | null; bg?: string; color?: string }
   sort: number
-  /** Coin pieces only (049): what unlocking costs. */
-  coin_cost?: number | null
 }
 
 /** Can this person throw this piece? Only Keepers dress (057). Free pieces are
- *  just the plain defaults; a coin piece also needs its unlock (`unlocked`
- *  holds 'kind:id' refs from get_coins). */
-export function canUse(p: AtelierPiece, isKeeper: boolean, unlocked: readonly string[] = []) {
-  if (p.tier === 'free') return true
-  if (!isKeeper) return false
-  return p.tier === 'keeper' || unlocked.includes(`${p.kind}:${p.id}`)
+ *  just the plain defaults. */
+export function canUse(p: AtelierPiece, isKeeper: boolean) {
+  return p.tier === 'free' || isKeeper
 }
 
 /** Resolved colours for one bottle. Defaults = the look bottles always had. */
@@ -104,19 +90,17 @@ export function bottleLook(
 }
 
 /** Drops pieces this person can't throw (a remembered style after the
- *  membership ended, a coin piece not unlocked) and anything no longer in the
- *  catalog. */
+ *  membership ended) and anything no longer in the catalog. */
 export function allowedStyle(
   style: BottleStyle,
   pieces: AtelierPiece[] | undefined,
   isKeeper: boolean,
-  unlocked: readonly string[] = [],
 ): BottleStyle {
   if (!pieces) return {}
   const out: BottleStyle = {}
   for (const kind of PIECE_KINDS) {
     const p = pieces.find((x) => x.kind === kind && x.id === style[kind])
-    if (p && p.sort > 0 && canUse(p, isKeeper, unlocked)) out[kind] = p.id
+    if (p && p.sort > 0 && canUse(p, isKeeper)) out[kind] = p.id
   }
   return out
 }

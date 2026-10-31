@@ -10,12 +10,12 @@ describe('spark deck', () => {
 
 describe('spark function helpers', () => {
   it('keeps only known context values (the body is user input)', () => {
-    expect(sparkContext({ weather: 'stormy', vibe: 'hack', current: 'night_owl', extra: 1 })).toEqual({
+    expect(sparkContext({ weather: 'stormy', current: 'night_owl', extra: 1 })).toEqual({
       weather: 'stormy',
-      vibe: undefined,
       current: 'night_owl',
     })
-    expect(sparkContext('nonsense')).toEqual({ weather: undefined, vibe: undefined, current: undefined })
+    expect(sparkContext({ weather: 'hack' })).toEqual({ weather: undefined, current: undefined })
+    expect(sparkContext('nonsense')).toEqual({ weather: undefined, current: undefined })
   })
   it('describes the mood without asking anything identifying', () => {
     expect(sparkRequest({ weather: 'foggy', current: 'heavy_water' })).toBe(

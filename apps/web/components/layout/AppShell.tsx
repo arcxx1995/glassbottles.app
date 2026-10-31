@@ -38,7 +38,7 @@ function useCurrentTheme() {
   useEffect(() => () => void delete document.documentElement.dataset.current, [])
 }
 
-// Pages put extras beside the wordmark (the Sea's tides, coins, current) via
+// Pages put extras beside the wordmark (the Sea's tides, current) via
 // <HeaderSlot>, so the wordmark itself never moves between tabs.
 const SlotContext = createContext<HTMLElement | null>(null)
 export function HeaderSlot({ children }: { children: React.ReactNode }) {

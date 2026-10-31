@@ -5,11 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — No coins, no vibes, Moby Dick (31 Oct, migrations 058, 059)
+
+- Coins are gone: no balance, no earning, no unlocking. Moonstone, Pearl wax, Tide pool and Lavender are Keeper pieces, so Keeper unlocks every piece. Tides and ripples stay; they just don't pay
+- Vibe labels are gone from the composer, bottles, the Logbook and spark questions. Weather stays
+- The whale is now Moby Dick: white, named, for everyone, surfacing one day a week. Spotting adds to a lifetime count shown only in the line after you tap. Whales already spotted count
+- Release order: 058 first, then the client, then 059, which drops `coin_ledger`, `get_coins`, `unlock_piece`, `bottles.vibe` and `send_bottle`'s `p_vibe`
+
+---
+
 ## [Unreleased] — The Shelf (30 Oct, migration 057)
 
 - The Inbox is now the Shelf: bottles on planks in a fisherman's backyard. New ones wiggle and glow; a tap lifts one into a dialog, and that is when it counts as read. `/inbox` redirects to `/shelf`, query intact
 - Only Keepers see dressing. Free viewers get the plain bottle, plus a hint when it was dressed; `get_received_bottles`, `get_today_bottle_status` and `get_future_bottles` withhold `style` on the server. Lapsing turns a shelf plain; rejoining restores it
-- Only Keepers dress: former free pieces moved to the Keeper tier, and coin pieces need Keeper plus the unlock. Anyone still earns coins
+- Only Keepers dress: former free pieces moved to the Keeper tier
 - A Keeper's undressed bottles get a stable sea-dressed glass and seal
 - Letters to yourself sit on the shelf as bottles
 

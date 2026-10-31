@@ -78,7 +78,6 @@ function makeMockStore({
         message,
         style: {},
         weather: null,
-        vibe: null,
       },
       ui: {
         isReportModalOpen: false,

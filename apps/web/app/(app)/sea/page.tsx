@@ -9,7 +9,6 @@ import {
   setThrowAnimating,
   setMessage,
   setWeather,
-  setVibe,
   selectSendStatus,
   selectDraftStyle,
   selectMessage,
@@ -21,7 +20,6 @@ import {
   useGetTodayBottleStatusQuery,
   useGetAtelierQuery,
   useGetKeeperQuery,
-  useGetCoinsQuery,
 } from '@/store/api/bottleApi'
 import DailyTimer from '@/components/shared/DailyTimer'
 import MessageEditor, { MAX_CHARS } from '@/components/bottle/MessageEditor'
@@ -69,11 +67,10 @@ export default function HomePage() {
   // Keeper's bottle undressed.
   const keeperKnown =
     process.env.NEXT_PUBLIC_KEEPER !== 'on' || keeper !== undefined || keeperFailed
-  const { data: coins } = useGetCoinsQuery(undefined, { skip: !user?.id })
   const draftStyle = useAppSelector(selectDraftStyle)
   const throwStyle = useMemo(
-    () => allowedStyle(draftStyle, pieces, isKeeper || !keeperKnown, coins?.unlocked),
-    [draftStyle, pieces, isKeeper, keeperKnown, coins?.unlocked],
+    () => allowedStyle(draftStyle, pieces, isKeeper || !keeperKnown),
+    [draftStyle, pieces, isKeeper, keeperKnown],
   )
   const throwLook = useMemo(() => resolveLook(throwStyle, pieces), [throwStyle, pieces])
   const seaTheme = isKeeper && user?.current ? CURRENT_INFO[user.current].sea : undefined
@@ -193,15 +190,14 @@ export default function HomePage() {
     dispatch(setSendStatus('throwing'))
     dispatch(setThrowAnimating(true))
     try {
-      const { message, weather, vibe } = store.getState().bottle
-      await sendBottle({ message, style: throwStyle, weather, vibe }).unwrap()
+      const { message, weather } = store.getState().bottle
+      await sendBottle({ message, style: throwStyle, weather }).unwrap()
       if (looksLikeCrisis(message)) setCareNow(true)
       // Success — clear the draft so the editor isn't pre-filled with the sent
       // message on the next idle screen (debug report bug 8). The dressing
-      // stays; weather and vibe belonged to this bottle.
+      // stays; weather belonged to this bottle.
       dispatch(setMessage(''))
       dispatch(setWeather(null))
-      dispatch(setVibe(null))
     } catch (err) {
       sendFailedRef.current = true
       // 23505 = already sent today (second tab / device). Not a failure — the
@@ -316,15 +312,6 @@ export default function HomePage() {
               title="Days in a row you've thrown a bottle"
             >
               {todayStatus!.tides} tides
-            </span>
-          )}
-          {/* Earn-only coins (049) — spent in the Atelier. */}
-          {(coins?.balance ?? 0) > 0 && (
-            <span
-              className="hidden whitespace-nowrap font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full min-[400px]:inline"
-              title="Coins you've earned — spend them on pieces in Dress"
-            >
-              {coins!.balance} ✦
             </span>
           )}
         </div>

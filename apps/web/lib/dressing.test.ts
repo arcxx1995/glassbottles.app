@@ -8,7 +8,6 @@ const pieces: AtelierPiece[] = [
   { kind: 'seal', id: 'gold', name: 'Gold wax', tier: 'keeper', look: { wax: '#D4A537' }, sort: 2 },
   { kind: 'ink', id: 'sand', name: 'Sand', tier: 'free', look: { color: '#F7E7CE' }, sort: 0 },
   { kind: 'ink', id: 'sepia', name: 'Sepia', tier: 'keeper', look: { color: '#E8C9A0' }, sort: 1 },
-  { kind: 'ink', id: 'lavender', name: 'Lavender', tier: 'coin', look: { color: '#CDB8F5' }, sort: 6, coin_cost: 15 },
 ]
 
 describe('allowedStyle', () => {
@@ -20,12 +19,6 @@ describe('allowedStyle', () => {
   })
   it('drops defaults and pieces no longer in the catalog', () => {
     expect(allowedStyle({ glass: 'clear', ink: 'gone' }, pieces, true)).toEqual({})
-  })
-  it('allows a coin piece only for a Keeper who unlocked it', () => {
-    expect(allowedStyle({ ink: 'lavender' }, pieces, false)).toEqual({})
-    expect(allowedStyle({ ink: 'lavender' }, pieces, false, ['ink:lavender'])).toEqual({})
-    expect(allowedStyle({ ink: 'lavender' }, pieces, true)).toEqual({})
-    expect(allowedStyle({ ink: 'lavender' }, pieces, true, ['ink:lavender'])).toEqual({ ink: 'lavender' })
   })
   it('sends nothing before the catalog loads', () => {
     expect(allowedStyle({ glass: 'seafoam' }, undefined, true)).toEqual({})
@@ -49,12 +42,9 @@ describe('canUse', () => {
   it('gives free users only the plain defaults', () => {
     expect(canUse(by('clear'), false)).toBe(true)
     expect(canUse(by('seafoam'), false)).toBe(false)
-    expect(canUse(by('lavender'), false, ['ink:lavender'])).toBe(false)
   })
-  it('gives Keepers every Keeper piece, and coin pieces once unlocked', () => {
-    expect(canUse(by('amber'), true)).toBe(true)
-    expect(canUse(by('lavender'), true)).toBe(false)
-    expect(canUse(by('lavender'), true, ['ink:lavender'])).toBe(true)
+  it('gives Keepers every piece', () => {
+    for (const p of pieces) expect(canUse(p, true)).toBe(true)
   })
 })
 
@@ -76,7 +66,7 @@ describe('bottleLook', () => {
     expect(look.paper).toBe(DEFAULT_LOOK.paper)
     expect(look.ink).toBe(DEFAULT_LOOK.ink)
   })
-  it('never sea-dresses with a coin or free piece', () => {
+  it('never sea-dresses with a free piece', () => {
     for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) {
       expect(['seafoam', 'amber']).toContain(seaDress(id, pieces).glass)
     }

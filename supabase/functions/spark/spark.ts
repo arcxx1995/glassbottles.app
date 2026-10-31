@@ -2,15 +2,8 @@
 // apps/web/lib/spark.test.ts.
 
 const WEATHERS = ['stormy', 'foggy', 'calm', 'sunny'] as const
-const VIBES = ['venting', 'small_win', 'wondering', 'grateful'] as const
 const CURRENTS = ['night_owl', 'quiet_wins', 'heavy_water', 'busy_minds'] as const
 
-const VIBE_WORDS: Record<(typeof VIBES)[number], string> = {
-  venting: 'needs to let something out',
-  small_win: 'has a small win to share',
-  wondering: 'is wondering about something',
-  grateful: 'is feeling grateful',
-}
 const CURRENT_WORDS: Record<(typeof CURRENTS)[number], string> = {
   night_owl: 'late-night thoughts',
   quiet_wins: 'small good things',
@@ -20,7 +13,6 @@ const CURRENT_WORDS: Record<(typeof CURRENTS)[number], string> = {
 
 export interface SparkContext {
   weather?: (typeof WEATHERS)[number]
-  vibe?: (typeof VIBES)[number]
   current?: (typeof CURRENTS)[number]
 }
 
@@ -31,7 +23,6 @@ export function sparkContext(body: unknown): SparkContext {
     list.includes(v as T) ? (v as T) : undefined
   return {
     weather: pick(b.weather, WEATHERS),
-    vibe: pick(b.vibe, VIBES),
     current: pick(b.current, CURRENTS),
   }
 }
@@ -46,7 +37,6 @@ The question should:
 export function sparkRequest(ctx: SparkContext): string {
   const parts: string[] = []
   if (ctx.weather) parts.push(`Their sky today feels ${ctx.weather}.`)
-  if (ctx.vibe) parts.push(`The writer ${VIBE_WORDS[ctx.vibe]}.`)
   if (ctx.current) parts.push(`They sail the current for ${CURRENT_WORDS[ctx.current]}.`)
   return parts.length ? parts.join(' ') : 'No mood given.'
 }

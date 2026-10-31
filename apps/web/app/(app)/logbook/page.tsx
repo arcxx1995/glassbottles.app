@@ -5,7 +5,7 @@ import { useLogbook } from './useLogbook'
 import { Hourglass, Printer, Sparkles } from 'lucide-react'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
 import { useGetAtelierQuery, useGetKeeperQuery } from '@/store/api/bottleApi'
-import { CURRENT_INFO, VIBE_LABEL, WEATHER_LABEL, resolveLook, type BottleStyle, type CurrentId, type Vibe, type Weather } from '@/lib/dressing'
+import { CURRENT_INFO, WEATHER_LABEL, resolveLook, type BottleStyle, type CurrentId, type Weather } from '@/lib/dressing'
 
 // The Logbook (migration 048): every bottle you threw, every one that found
 // you, and your letters to yourself, by year and month. Keepers (and anyone
@@ -19,7 +19,6 @@ interface Entry {
   at: string
   style?: BottleStyle | null
   weather?: Weather | null
-  vibe?: Vibe | null
   current?: CurrentId | null
   found?: boolean
   rippled?: boolean
@@ -116,7 +115,6 @@ export default function LogbookPage() {
                 const look = resolveLook(e.style, pieces)
                 const tags = [
                   e.weather && `${WEATHER_LABEL[e.weather]} sky`,
-                  e.vibe && VIBE_LABEL[e.vibe],
                   e.current && CURRENT_INFO[e.current].name,
                 ].filter(Boolean)
                 return (

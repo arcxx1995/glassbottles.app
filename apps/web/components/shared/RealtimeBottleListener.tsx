@@ -67,9 +67,8 @@ export default function RealtimeBottleListener() {
           dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
         .on('broadcast', { event: 'bottle_rippled' }, () => {
-          // A stranger said one of your bottles reached them (044) — and it
-          // paid 3 coins (049).
-          dispatch(bottleApi.util.invalidateTags(['BottleStatus', 'Coins']))
+          // A stranger said one of your bottles reached them (044).
+          dispatch(bottleApi.util.invalidateTags(['BottleStatus']))
         })
         .on('broadcast', { event: 'future_arrived' }, () => {
           // A letter to yourself washed back (047).

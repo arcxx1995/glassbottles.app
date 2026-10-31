@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { createClient } from '@/lib/supabase/client'
 import type { Bottle, DailyQuota, ReportReason } from '@/types'
-import type { AtelierPiece, BottleStyle, Vibe, Weather } from '@/lib/dressing'
+import type { AtelierPiece, BottleStyle, Weather } from '@/lib/dressing'
 import { hasAccess } from '@/lib/keeper'
 import type { Harbour, Hull, Paddle } from '@/lib/harbour'
 
@@ -41,14 +41,8 @@ export interface TodayBottleStatus {
   heldBottle?: HeldBottle | null
   /** Own bottles a stranger said reached them, not yet seen (044). */
   ripples?: { id: string; rippled_at: string }[]
-  /** Today's whale window and whether you've spotted it (049). */
-  whale?: { start: string; end: string; spotted: boolean }
-}
-
-/** Earn-only coins (049): balance, and owned coin pieces as 'kind:id'. */
-export interface Coins {
-  balance: number
-  unlocked: string[]
+  /** Moby Dick's window today, if it surfaces, and whether you've spotted it (058). */
+  whale?: { start: string; end: string; spotted: boolean } | null
 }
 
 /** A bottle the safety screen kept ashore — its words come back to rewrite. */
@@ -63,7 +57,6 @@ export interface SendBottleRequest {
   message: string
   style?: BottleStyle
   weather?: Weather | null
-  vibe?: Vibe | null
 }
 
 export interface BottleCountResponse {
@@ -110,7 +103,7 @@ export interface KeeperState {
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Coins', 'Harbour', 'KayakBlocks'],
+  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Harbour', 'KayakBlocks'],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -129,13 +122,12 @@ export const bottleApi = createApi({
     sendBottle: builder.mutation<Bottle, SendBottleRequest>({
       // Single atomic Supabase RPC (migration 024) — replaces the
       // /api/bottles/send Vercel route. One round trip, no Function cold start.
-      queryFn: async ({ message, style, weather, vibe }) => {
+      queryFn: async ({ message, style, weather }) => {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('send_bottle', {
           p_message: message,
           p_style: style && Object.keys(style).length ? style : null,
           p_weather: weather ?? null,
-          p_vibe: vibe ?? null,
         })
         if (error) {
           // Surface the SQLSTATE so the UI can distinguish "already sent" (23505)
@@ -173,8 +165,7 @@ export const bottleApi = createApi({
       },
       // Invalidate both status (quota + sent bottle) and the ambient counter so the
       // "X bottles in the ocean" display refreshes immediately after a successful throw.
-      // A throw can complete a seventh tide (+5 coins, 049).
-      invalidatesTags: ['BottleStatus', 'BottleCount', 'Coins'],
+      invalidatesTags: ['BottleStatus', 'BottleCount'],
     }),
     getReceivedBottles: builder.query<Bottle[], void>({
       queryFn: async () => {
@@ -384,39 +375,17 @@ export const bottleApi = createApi({
       },
     }),
 
-    // Coins (049): read, spend on a coin piece, earn by spotting the whale.
-    getCoins: builder.query<Coins, void>({
-      queryFn: async () => {
-        const supabase = createClient()
-        const { data, error } = await supabase.rpc('get_coins')
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: data as Coins }
-      },
-      providesTags: ['Coins'],
-    }),
-    unlockPiece: builder.mutation<number, { kind: string; id: string }>({
-      queryFn: async ({ kind, id }) => {
-        const supabase = createClient()
-        const { data, error } = await supabase.rpc('unlock_piece', { p_kind: kind, p_id: id })
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: data as number }
-      },
-      invalidatesTags: ['Coins'],
-    }),
-    spotWhale: builder.mutation<boolean, void>({
+    // Moby Dick (058): the lifetime sighting count, or 0 if nothing was spotted.
+    spotWhale: builder.mutation<number, void>({
       queryFn: async () => {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('spot_whale')
         if (error) {
           return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
         }
-        return { data: data as boolean }
+        return { data: data as number }
       },
-      invalidatesTags: ['Coins', 'BottleStatus'],
+      invalidatesTags: ['BottleStatus'],
     }),
 
     // Letters to yourself (047).
@@ -468,7 +437,7 @@ export const bottleApi = createApi({
         const supabase = createClient()
         const { data, error } = await supabase
           .from('atelier_pieces')
-          .select('kind, id, name, tier, look, sort, coin_cost')
+          .select('kind, id, name, tier, look, sort')
           .order('kind')
           .order('sort')
         if (error) {
@@ -624,8 +593,6 @@ export const {
   useGetFutureBottlesQuery,
   useSendFutureBottleMutation,
   useMarkFutureReadMutation,
-  useGetCoinsQuery,
-  useUnlockPieceMutation,
   useSpotWhaleMutation,
   useGetHarbourQuery,
   useClaimHandleMutation,

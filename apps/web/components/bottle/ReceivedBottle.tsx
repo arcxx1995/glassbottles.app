@@ -11,7 +11,7 @@ import {
   useRippleBottleMutation,
   useKeepBottleMutation,
 } from '@/store/api/bottleApi'
-import { CURRENT_INFO, VIBE_LABEL, WEATHER_LABEL, bottleLook } from '@/lib/dressing'
+import { CURRENT_INFO, WEATHER_LABEL, bottleLook } from '@/lib/dressing'
 import { BottleSVG, LIFT_TRANSITION } from '@/components/bottle/ThrowAnimation'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
 import Sheet from '@/components/ui/Sheet'
@@ -55,7 +55,6 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   const look = bottleLook(bottle, pieces, !!keeper?.isKeeper)
   const tags = [
     bottle.weather && `${WEATHER_LABEL[bottle.weather]} sky`,
-    bottle.vibe && VIBE_LABEL[bottle.vibe],
     bottle.current && CURRENT_INFO[bottle.current].name,
   ].filter(Boolean) as string[]
   const reduced = useReducedMotion() ?? false

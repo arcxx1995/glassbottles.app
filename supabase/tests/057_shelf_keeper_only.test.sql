@@ -31,7 +31,7 @@ INSERT INTO public.bottles (id, sender_id, receiver_id, message, sent_at, receiv
    '00000000-0000-4000-8000-000000000572', 'empty', now() - interval '6 days', now() - interval '1 day',
    (now() AT TIME ZONE 'UTC')::date - 6, '{}');
 
--- Every non-default piece is Keeper or coin; only the sort 0 defaults stay free.
+-- Every non-default piece is Keeper; only the sort 0 defaults stay free.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.atelier_pieces WHERE tier = 'free' AND sort > 0)
@@ -67,7 +67,7 @@ BEGIN
 END;
 $$;
 
--- Free user can't dress or spend coins, but plain throws still work.
+-- Free user can't dress, but plain throws still work.
 DO $$
 BEGIN
   BEGIN
@@ -75,17 +75,11 @@ BEGIN
     RAISE EXCEPTION 'BUG: a free user threw a formerly free piece';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
-  BEGIN
-    PERFORM public.unlock_piece('ink', 'lavender');
-    RAISE EXCEPTION 'BUG: a free user spent coins';
-  EXCEPTION WHEN insufficient_privilege THEN NULL;
-  END;
-  RAISE NOTICE 'ok: free user refused pieces and unlocks';
+  RAISE NOTICE 'ok: free user refused pieces';
 END;
 $$;
 
--- Keeper: sees what was sent; an empty style counts as undressed. A coin piece
--- still needs its unlock, and a piece bought earlier stays usable.
+-- Keeper: sees what was sent; an empty style counts as undressed.
 SELECT set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-000000000572","role":"authenticated"}', true);
 DO $$
@@ -100,12 +94,7 @@ BEGIN
   IF r.style IS NOT NULL OR r.dressed THEN
     RAISE EXCEPTION 'BUG: empty style reads % dressed %', r.style, r.dressed;
   END IF;
-  BEGIN
-    PERFORM public.send_bottle('hi', '{"glass":"moonstone"}');
-    RAISE EXCEPTION 'BUG: a Keeper threw a locked coin piece';
-  EXCEPTION WHEN insufficient_privilege THEN NULL;
-  END;
-  RAISE NOTICE 'ok: Keeper sees the sender''s look; coin piece still locked';
+  RAISE NOTICE 'ok: Keeper sees the sender''s look';
 END;
 $$;
 

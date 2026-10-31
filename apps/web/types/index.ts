@@ -1,4 +1,4 @@
-import type { BottleStyle, CurrentId, Vibe, Weather } from '@/lib/dressing'
+import type { BottleStyle, CurrentId, Weather } from '@/lib/dressing'
 
 export interface Profile {
   id: string
@@ -40,7 +40,6 @@ export interface Bottle {
   // How it was dressed (migration 042). Absent on pre-042 shapes.
   style?: BottleStyle | null
   weather?: Weather | null
-  vibe?: Vibe | null
   current?: CurrentId | null
   /** Safety screen verdict (migration 043) — sender's own shapes only. */
   screen?: 'ok' | 'crisis' | 'held' | null

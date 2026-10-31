@@ -20,7 +20,7 @@ VALUES ('00000000-0000-4000-8000-000000000421', 'yearly', 'active', now() + inte
 
 SET LOCAL role authenticated;
 
--- Free user: plain defaults, weather and vibe fine; any other piece is refused (057).
+-- Free user: plain defaults, weather fine; any other piece is refused (057).
 SELECT set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-000000000420","role":"authenticated"}', true);
 DO $$
@@ -28,26 +28,26 @@ DECLARE
   b JSONB;
 BEGIN
   BEGIN
-    PERFORM public.send_bottle('hi', '{"glass":"amber"}', NULL, NULL);
+    PERFORM public.send_bottle('hi', '{"glass":"amber"}');
     RAISE EXCEPTION 'BUG: a free user threw a Keeper glass';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
-    PERFORM public.send_bottle('hi', '{"glass":"gold"}', NULL, NULL);
+    PERFORM public.send_bottle('hi', '{"glass":"gold"}');
     RAISE EXCEPTION 'BUG: a seal id passed as a glass';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
   BEGIN
-    PERFORM public.send_bottle('hi', NULL, 'hurricane', NULL);
+    PERFORM public.send_bottle('hi', NULL, 'hurricane');
     RAISE EXCEPTION 'BUG: unknown weather accepted';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
   BEGIN
-    PERFORM public.send_bottle('hi', '{"glass":"seafoam"}', NULL, NULL);
+    PERFORM public.send_bottle('hi', '{"glass":"seafoam"}');
     RAISE EXCEPTION 'BUG: a free user threw a formerly free glass';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
-  b := public.send_bottle('plain', '{"glass":"clear"}', 'foggy', 'wondering');
+  b := public.send_bottle('plain', '{"glass":"clear"}', 'foggy');
   IF b ->> 'weather' <> 'foggy' OR b ->> 'current' IS NOT NULL THEN
     RAISE EXCEPTION 'BUG: free bottle not stored: %', b;
   END IF;
@@ -60,7 +60,7 @@ SELECT set_config('request.jwt.claims',
   '{"sub":"00000000-0000-4000-8000-000000000421","role":"authenticated"}', true);
 DO $$
 DECLARE
-  b JSONB := public.send_bottle('gold seal', '{"glass":"amber","seal":"gold","paper":"dusk","ink":"pearl"}', 'stormy', 'venting');
+  b JSONB := public.send_bottle('gold seal', '{"glass":"amber","seal":"gold","paper":"dusk","ink":"pearl"}', 'stormy');
 BEGIN
   IF b -> 'style' ->> 'seal' <> 'gold' OR b ->> 'current' <> 'night_owl' THEN
     RAISE EXCEPTION 'BUG: Keeper dressing not stored: %', b;
@@ -83,8 +83,8 @@ DECLARE
   r RECORD;
 BEGIN
   SELECT * INTO r FROM public.get_received_bottles() LIMIT 1;
-  IF r.style IS NOT NULL OR NOT r.dressed OR r.weather <> 'stormy' OR r.vibe <> 'venting' OR r.current <> 'night_owl' THEN
-    RAISE EXCEPTION 'BUG: free receiver got: % % % % %', r.style, r.dressed, r.weather, r.vibe, r.current;
+  IF r.style IS NOT NULL OR NOT r.dressed OR r.weather <> 'stormy' OR r.current <> 'night_owl' THEN
+    RAISE EXCEPTION 'BUG: free receiver got: % % % %', r.style, r.dressed, r.weather, r.current;
   END IF;
   IF (public.get_today_bottle_status() -> 'receivedBottle' ->> 'style') IS NOT NULL THEN
     RAISE EXCEPTION 'BUG: status RPC leaked the dressing to a free receiver';

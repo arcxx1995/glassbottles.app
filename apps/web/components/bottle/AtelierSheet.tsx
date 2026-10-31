@@ -6,7 +6,6 @@ import Sheet from '@/components/ui/Sheet'
 import { cn } from '@/lib/utils'
 import { BottleSVG } from './ThrowAnimation'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
-import { useGetCoinsQuery, useUnlockPieceMutation } from '@/store/api/bottleApi'
 import {
   PIECE_KINDS,
   allowedStyle,
@@ -20,8 +19,7 @@ import {
 
 // The Atelier: dress the bottle a stranger will find. Every piece can be tried
 // on — the preview shows it. Only Keepers dress (057): trying a piece opens the
-// membership offer under the preview. A Keeper's coin piece also needs
-// unlocking with earned coins (049).
+// membership offer under the preview.
 
 const KIND_LABEL: Record<PieceKind, string> = {
   glass: 'Glass',
@@ -46,16 +44,9 @@ export default function AtelierSheet({
   /** Called right before leaving for checkout. */
   onBeforeCheckout?: () => void
 }) {
-  const { data: coins } = useGetCoinsQuery()
-  const [unlock, { isLoading: unlocking }] = useUnlockPieceMutation()
-  const [unlockError, setUnlockError] = useState<string | null>(null)
-  const unlocked = coins?.unlocked ?? []
-  const balance = coins?.balance ?? 0
   const [draft, setDraft] = useState<BottleStyle>(style)
   const look = resolveLook(draft, pieces)
-  const tried = pieces.filter((p) => draft[p.kind] === p.id && !canUse(p, isKeeper, unlocked))
-  const keeperLocked = isKeeper ? [] : tried
-  const coinLocked = isKeeper ? tried : []
+  const keeperLocked = pieces.filter((p) => draft[p.kind] === p.id && !canUse(p, isKeeper))
 
   return (
     <Sheet title="Dress your bottle" onClose={onClose}>
@@ -88,14 +79,14 @@ export default function AtelierSheet({
                 .filter((p) => p.kind === kind)
                 .map((p) => {
                   const selected = (draft[kind] ?? defaultId(pieces, kind)) === p.id
-                  const usable = canUse(p, isKeeper, unlocked)
+                  const usable = canUse(p, isKeeper)
                   return (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => setDraft((d) => ({ ...d, [kind]: p.id }))}
                       aria-pressed={selected}
-                      aria-label={`${p.name}${usable ? '' : isKeeper ? ` (${p.coin_cost} coins)` : ' (Keeper)'}`}
+                      aria-label={`${p.name}${usable ? '' : ' (Keeper)'}`}
                       title={p.name}
                       className={cn(
                         'press press-sm relative h-10 w-10 rounded-full border-2 transition-[border-color,transform]',
@@ -103,14 +94,9 @@ export default function AtelierSheet({
                       )}
                     >
                       <Swatch piece={p} />
-                      {!usable && !isKeeper && (
+                      {!usable && (
                         <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full bg-ocean-deep border border-white/15">
                           <Lock size={8} strokeWidth={2} className="text-sand/60" />
-                        </span>
-                      )}
-                      {!usable && isKeeper && (
-                        <span className="absolute -right-2 -bottom-1 rounded-full bg-ocean-deep border border-white/15 px-1 font-mono text-[8px] leading-4 text-sand/70">
-                          {p.coin_cost}✦
                         </span>
                       )}
                     </button>
@@ -120,37 +106,7 @@ export default function AtelierSheet({
           </section>
         ))}
 
-        {keeperLocked.length === 0 && coinLocked.length > 0 ? (
-          <div className="mt-2 rounded-2xl border border-white/10 p-4 flex flex-col gap-3">
-            <p className="font-ui text-sm text-sand/80 leading-relaxed">
-              {coinLocked.map((p) => p.name).join(' and ')} {coinLocked.length > 1 ? 'are' : 'is'} unlocked
-              with coins you earn. You have {balance} ✦.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {coinLocked.map((p) => (
-                <button
-                  key={p.kind + p.id}
-                  type="button"
-                  disabled={unlocking || balance < (p.coin_cost ?? Infinity)}
-                  onClick={() => {
-                    setUnlockError(null)
-                    unlock({ kind: p.kind, id: p.id })
-                      .unwrap()
-                      .catch(() => setUnlockError('Couldn’t unlock it. Please try again.'))
-                  }}
-                  className="press px-4 py-2 rounded-full bg-seafoam/15 text-seafoam font-ui text-xs font-medium hover:bg-seafoam/25 transition-[background-color,transform] disabled:opacity-40"
-                >
-                  Unlock {p.name} · {p.coin_cost} ✦
-                </button>
-              ))}
-            </div>
-            <p className="font-ui text-[11px] text-sand/40 leading-snug">
-              Earn coins when a stranger says your bottle reached them (+3), on every seventh
-              day of a tide (+5), and by spotting the whale on your sea (+2).
-            </p>
-            {unlockError && <p className="font-ui text-xs text-coral">{unlockError}</p>}
-          </div>
-        ) : keeperLocked.length > 0 ? (
+        {keeperLocked.length > 0 ? (
           <div className="mt-2 rounded-2xl border border-seafoam/20 bg-seafoam/5 p-4 flex flex-col gap-3">
             <p className="font-ui text-sm text-sand/80 leading-relaxed">
               {keeperLocked.map((p) => p.name).join(' and ')} {keeperLocked.length > 1 ? 'are' : 'is'} for
@@ -170,7 +126,7 @@ export default function AtelierSheet({
           <button
             type="button"
             onClick={() => {
-              onSave(allowedStyle(draft, pieces, isKeeper, unlocked))
+              onSave(allowedStyle(draft, pieces, isKeeper))
               onClose()
             }}
             className="press mt-2 w-full py-3.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110"

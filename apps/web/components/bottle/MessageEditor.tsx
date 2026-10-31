@@ -11,17 +11,13 @@ import {
   selectMessage,
   setStyle,
   setWeather,
-  setVibe,
   selectDraftStyle,
   selectDraftWeather,
-  selectDraftVibe,
 } from '@/store/bottleSlice'
-import { useGetAtelierQuery, useGetCoinsQuery, useGetKeeperQuery } from '@/store/api/bottleApi'
+import { useGetAtelierQuery, useGetKeeperQuery } from '@/store/api/bottleApi'
 import { cn } from '@/lib/utils'
 import { spring, springPress } from '@/components/ui/springs'
 import {
-  VIBES,
-  VIBE_LABEL,
   WEATHERS,
   WEATHER_LABEL,
   allowedStyle,
@@ -281,20 +277,18 @@ export default function MessageEditor({
 }
 
 // ─── Dressing row ─────────────────────────────────────────────────────────────
-// One quiet scrollable line under the note: the sky it was thrown under, a
-// vibe label, and the Atelier. All optional; a bare bottle is still a bottle.
+// One quiet scrollable line under the note: the sky it was thrown under and
+// the Atelier. All optional; a bare bottle is still a bottle.
 
 function DressingRow() {
   const dispatch = useAppDispatch()
   const store = useStore<RootState>()
   const style = useAppSelector(selectDraftStyle)
   const weather = useAppSelector(selectDraftWeather)
-  const vibe = useAppSelector(selectDraftVibe)
   const { data: pieces } = useGetAtelierQuery()
   const keeperOn = process.env.NEXT_PUBLIC_KEEPER === 'on'
   const { data: keeper, isError: keeperFailed } = useGetKeeperQuery(undefined, { skip: !keeperOn })
   const isKeeper = !!keeper?.isKeeper
-  const unlocked = useGetCoinsQuery().data?.unlocked ?? []
   // The Atelier needs to know who's a Keeper before it can lock anything.
   const ready = !!pieces && (!keeperOn || keeper !== undefined || keeperFailed)
   const [open, setOpen] = useState(false)
@@ -317,7 +311,7 @@ function DressingRow() {
 
   // What will actually be thrown — a remembered Keeper piece after a lapse
   // falls back to the free look.
-  const look = resolveLook(allowedStyle(style, pieces, isKeeper || !ready, unlocked), pieces)
+  const look = resolveLook(allowedStyle(style, pieces, isKeeper || !ready), pieces)
 
   const chip = (on: boolean) =>
     cn(
@@ -373,18 +367,6 @@ function DressingRow() {
             </button>
           )
         })}
-        <span className="mx-1 h-4 w-px shrink-0 bg-white/10" aria-hidden />
-        {VIBES.map((v) => (
-          <button
-            key={v}
-            type="button"
-            aria-pressed={vibe === v}
-            onClick={() => dispatch(setVibe(vibe === v ? null : v))}
-            className={chip(vibe === v)}
-          >
-            {VIBE_LABEL[v]}
-          </button>
-        ))}
       </div>
 
       {sealedFor && (
@@ -400,13 +382,12 @@ function DressingRow() {
             {futureOpen && ready && (
               <FutureSheet
                 message={store.getState().bottle.message}
-                style={allowedStyle(style, pieces, isKeeper, unlocked)}
+                style={allowedStyle(style, pieces, isKeeper)}
                 weather={weather}
                 isKeeper={isKeeper}
                 onSent={(deliverOn) => {
                   dispatch(setMessage(''))
                   dispatch(setWeather(null))
-                  dispatch(setVibe(null))
                   setSealedFor(deliverOn)
                 }}
                 onClose={() => setFutureOpen(false)}
@@ -453,10 +434,10 @@ function useSpark() {
       return
     }
     setLoading(true)
-    const { weather, vibe } = store.getState().bottle
+    const { weather } = store.getState().bottle
     const current = selectUser(store.getState())?.current ?? undefined
     const { data, error } = await createClient()
-      .functions.invoke('spark', { body: { weather, vibe, current } })
+      .functions.invoke('spark', { body: { weather, current } })
       .catch(() => ({ data: null, error: true }))
     setLoading(false)
     const q = (data as { question?: string | null; left?: number } | null)?.question

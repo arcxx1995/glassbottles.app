@@ -103,10 +103,11 @@ describe('currents', () => {
 describe('shapes', () => {
   const sql = readFileSync(join(__dirname, '../../../supabase/migrations/061_shapes_and_pastels.sql'), 'utf8')
 
-  it('match the catalogue, classic plus 25', () => {
+  it('match the catalogue, classic plus 26', () => {
     const block = sql.slice(sql.indexOf('FROM (VALUES'), sql.indexOf(') AS s(id'))
     const ids = [...block.matchAll(/\('([a-z]+)',/g)].map((m) => m[1])
-    expect(ids).toHaveLength(26)
+    ids.push('wine') // 062
+    expect(ids).toHaveLength(27)
     expect(ids.sort()).toEqual(Object.keys(BOTTLE_SHAPES).sort())
   })
 

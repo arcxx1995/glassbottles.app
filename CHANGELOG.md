@@ -11,7 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Four new currents: First Snow, Soft Rain, First Light and Amber Fall. For Keepers, every current now changes the whole scene: sky, water, ships, lighthouse, clouds and its own weather
 - The Harbour follows the current: its colours and weather come from the current, and its brightness from the viewer's hour. Open sea keeps the old lighting
 - Fixed: a Harbour colour change destroyed the WebGL context, leaving only the flat gradient
-- The Atelier is now Shape, Glass and Seal. 25 Keeper shapes plus the free classic, and 36 pastels for glass and seal. Paper and ink are gone: every note uses the standard paper
+- The Atelier is now Shape, Glass and Seal. 26 Keeper shapes plus the free classic, and 36 pastels for glass and seal. Paper and ink are gone: every note uses the standard paper
 - Old colours leave the picker but bottles wearing them keep them. Sea-dressed bottles always stay the classic shape
 - Release order: 060 and 061 first (both additive), then the client, then redeploy `spark`
 

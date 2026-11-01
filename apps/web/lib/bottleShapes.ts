@@ -141,6 +141,13 @@ export const BOTTLE_SHAPES: Record<string, BottleShape> = {
     details: ['M26 24 H54', 'M34 58 L20 112 M46 58 L60 112 M40 58 V112'],
     note: { x: 30, y: 72, w: 20, h: 32 },
   },
+  wine: {
+    neck: 'M30 16 L30 46 L50 46 L50 16 Z',
+    body: 'M30 46 C28 54 20 56 20 66 L20 110 Q20 114 24 114 L56 114 Q60 114 60 110 L60 66 C60 56 52 54 50 46 Z',
+    details: ['M30 28 H50'],
+    shine: ['M25 66 V104'],
+    note: { x: 29, y: 68, w: 22, h: 34 },
+  },
 
   // ── Faces and keepsakes ────────────────────────────────────────────────────
   face: {

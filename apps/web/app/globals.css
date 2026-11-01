@@ -45,6 +45,10 @@
 :root[data-current="quiet_wins"]  { --c-seafoam: 245 201 138; --c-ocean-deep: 20 31 42;  --c-ocean-mid: 27 42 55; }
 :root[data-current="heavy_water"] { --c-seafoam: 175 195 209; --c-ocean-deep: 17 23 29;  --c-ocean-mid: 24 32 40; }
 :root[data-current="busy_minds"]  { --c-seafoam: 255 158 199; --c-ocean-deep: 10 34 56;  --c-ocean-mid: 15 47 71; }
+:root[data-current="first_snow"]  { --c-seafoam: 242 248 255; --c-ocean-deep: 31 51 70;  --c-ocean-mid: 45 71 93; }
+:root[data-current="soft_rain"]   { --c-seafoam: 191 227 232; --c-ocean-deep: 20 31 36;  --c-ocean-mid: 30 47 53; }
+:root[data-current="first_light"] { --c-seafoam: 255 217 199; --c-ocean-deep: 31 29 51;  --c-ocean-mid: 47 42 65; }
+:root[data-current="amber_fall"]  { --c-seafoam: 255 197 107; --c-ocean-deep: 28 19 14;  --c-ocean-mid: 42 30 21; }
 
 /* ─── Base reset ──────────────────────────────────────────────────────────── */
 
@@ -238,6 +242,20 @@ body {
   to { stroke-dashoffset: -1; }
 }
 
+/* A current's weather (components/shared/WeatherLayer.tsx). */
+@keyframes gb-fall {
+  from { transform: translate3d(0, -12vh, 0) rotate(var(--gb-tilt)); }
+  to { transform: translate3d(var(--gb-drift), 112vh, 0) rotate(calc(var(--gb-tilt) + var(--gb-spin))); }
+}
+@keyframes gb-float {
+  from { transform: translate3d(0, 0, 0); opacity: var(--gb-a); }
+  to { transform: translate3d(var(--gb-drift), -18px, 0); opacity: calc(var(--gb-a) * 0.45); }
+}
+@keyframes gb-glimmer {
+  from { opacity: var(--gb-a); }
+  to { opacity: calc(var(--gb-a) * 0.25); }
+}
+
 /* One switch for every CSS loop in the app, including Tailwind's pulse/spin
    and the skeleton shimmer (motion's own animations follow MotionConfig).
    Press feedback stays — it's a scale on the element under the finger, not
@@ -265,6 +283,14 @@ body {
       0 8px 32px rgba(0,0,0,0.28);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     backdrop-filter: blur(24px) saturate(180%);
+  }
+  /* A bright horizon would wash out text on clear glass, so these seas get a
+     dark base behind it. */
+  :root[data-current="quiet_wins"] .glass,
+  :root[data-current="first_snow"] .glass,
+  :root[data-current="first_light"] .glass,
+  :root[data-current="amber_fall"] .glass {
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)), rgb(var(--c-ocean-deep) / 0.6);
   }
   .glass-strong {
     background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));

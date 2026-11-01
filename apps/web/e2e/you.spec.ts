@@ -9,9 +9,9 @@ test('the Sea sets your current; the You menu opens Settings and logs out', asyn
   await signIn(page, u.email)
   await page.goto('/sea')
 
-  // The current pill (top right of the Sea) → pick one.
+  // The Your current button (top right of the Sea) → pick one in its dialog.
   await page.getByRole('button', { name: /Your current: Open sea/ }).click()
-  await page.getByRole('menu', { name: 'Your current' }).getByRole('menuitemradio', { name: /Night Owl/ }).click()
+  await page.getByRole('dialog', { name: 'Your current' }).getByRole('button', { name: /Night Owl/ }).click()
   await expect
     .poll(async () => (await admin.from('profiles').select('current').eq('id', u.id).single()).data?.current)
     .toBe('night_owl')

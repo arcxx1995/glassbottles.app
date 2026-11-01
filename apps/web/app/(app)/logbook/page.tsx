@@ -4,8 +4,8 @@ import { useMemo } from 'react'
 import { useLogbook } from './useLogbook'
 import { Hourglass, Printer, Sparkles } from 'lucide-react'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
-import { useGetAtelierQuery, useGetKeeperQuery } from '@/store/api/bottleApi'
-import { CURRENT_INFO, WEATHER_LABEL, resolveLook, type BottleStyle, type CurrentId, type Weather } from '@/lib/dressing'
+import { useGetKeeperQuery } from '@/store/api/bottleApi'
+import { CURRENT_INFO, NOTE_INK, NOTE_PAPER, WEATHER_LABEL, type CurrentId, type Weather } from '@/lib/dressing'
 
 // The Logbook (migration 048): every bottle you threw, every one that found
 // you, and your letters to yourself, by year and month. Keepers (and anyone
@@ -17,7 +17,6 @@ interface Entry {
   kind: Kind
   message: string
   at: string
-  style?: BottleStyle | null
   weather?: Weather | null
   current?: CurrentId | null
   found?: boolean
@@ -35,7 +34,6 @@ const KIND_LABEL: Record<Kind, string> = {
 export default function LogbookPage() {
   const { data: keeper } = useGetKeeperQuery()
   const { data: log, isLoading, error } = useLogbook()
-  const { data: pieces } = useGetAtelierQuery()
 
   const years = useMemo(() => {
     if (!log) return []
@@ -112,7 +110,6 @@ export default function LogbookPage() {
             <h2 className="font-display text-xl text-sand/80 mb-3 print:text-black">{year}</h2>
             <div className="flex flex-col gap-3">
               {entries.map((e, i) => {
-                const look = resolveLook(e.style, pieces)
                 const tags = [
                   e.weather && `${WEATHER_LABEL[e.weather]} sky`,
                   e.current && CURRENT_INFO[e.current].name,
@@ -121,7 +118,7 @@ export default function LogbookPage() {
                   <article
                     key={i}
                     className="rounded-2xl border border-white/10 p-4 break-inside-avoid bg-[var(--paper)] print:bg-transparent print:border-black/20"
-                    style={{ ['--paper' as string]: look.paper, ['--ink' as string]: look.ink }}
+                    style={{ ['--paper' as string]: NOTE_PAPER, ['--ink' as string]: NOTE_INK }}
                   >
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-[11px] uppercase tracking-widest text-sand/40 mb-2 print:text-black/60">
                       {e.kind === 'future' && <Hourglass size={11} strokeWidth={1.5} />}

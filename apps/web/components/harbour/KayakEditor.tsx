@@ -16,7 +16,8 @@ import {
   type MyKayak,
   type Paddle,
 } from '@/lib/harbour'
-import { useClaimHandleMutation, useSaveKayakMutation, useUpdateBioMutation } from '@/store/api/bottleApi'
+import { useClaimHandleMutation, useGetKeeperQuery, useSaveKayakMutation, useUpdateBioMutation } from '@/store/api/bottleApi'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
 import KayakArt from './KayakArt'
 
 // Launch a kayak, or change one: claim a handle (first time only — handles
@@ -36,6 +37,8 @@ const errorText = (err: unknown) => {
 }
 
 export default function KayakEditor({ mine, onClose }: { mine: MyKayak | null; onClose: () => void }) {
+  const { data: keeper } = useGetKeeperQuery(undefined, { skip: process.env.NEXT_PUBLIC_KEEPER !== 'on' })
+  const water = useCurrentSea(keeper?.isKeeper ?? false)?.water ?? { deep: '#06628A', shallow: '#22C3CF' }
   const [handle, setHandle] = useState('')
   const [bio, setBio] = useState(mine?.bio ?? '')
   const [hull, setHull] = useState<Hull>(mine?.hull ?? 'yellow')
@@ -75,7 +78,10 @@ export default function KayakEditor({ mine, onClose }: { mine: MyKayak | null; o
   return (
     <Sheet title={mine?.launched ? 'Your kayak' : 'Launch your kayak'} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-5">
-        <div className="relative -mx-2 flex h-36 items-center justify-center overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_30%_30%,#22C3CF,#06628A)]">
+        <div
+          className="relative -mx-2 flex h-36 items-center justify-center overflow-hidden rounded-3xl"
+          style={{ background: `radial-gradient(120% 120% at 30% 30%, ${water.shallow}, ${water.deep})` }}
+        >
           <KayakArt hull={hull} paddle={paddle} className="h-[140%] rotate-90" />
         </div>
 

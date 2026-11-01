@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { admin, makeKeeper, makeUser, signIn } from './helpers'
 
 // The Shelf: bottles on planks, a tap opens one. Seeing dressing is Keeper-only
 // (057); the server's half of that is 057_shelf_keeper_only.test.sql.
 
-const DUSK = 'rgb(36, 30, 58)'
-const PLAIN_PAPER = 'rgb(13, 33, 55)'
+const expectShape = (dialog: Locator, shape: string) =>
+  expect(dialog.locator('article svg[data-shape]')).toHaveAttribute('data-shape', shape)
 
 async function deliver(senderId: string, receiverId: string, message: string, style?: object, isRead = false) {
   const { error } = await admin.from('bottles').insert({
@@ -105,7 +105,7 @@ test('reduced motion: a new bottle glows but does not wiggle', async ({ page }) 
 test.describe('with Keeper on', () => {
   test.skip(process.env.NEXT_PUBLIC_KEEPER !== 'on', 'Keeper is off in this build')
 
-  const dress = { glass: 'amber', seal: 'gold', paper: 'dusk' }
+  const dress = { shape: 'fish', glass: 'rose_soft', seal: 'mint_deep' }
 
   test('a free viewer gets the plain bottle and a hint that opens the plans', async ({ page }) => {
     const a = await makeUser('shelf-free-a')
@@ -116,8 +116,7 @@ test.describe('with Keeper on', () => {
     await page.getByRole('button', { name: opened }).click()
 
     const dialog = page.getByRole('dialog', { name: 'A bottle washed ashore' })
-    const paper = await dialog.locator('article').evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(paper).toBe(PLAIN_PAPER)
+    await expectShape(dialog, 'classic')
 
     await dialog.getByRole('button', { name: /This bottle was dressed/ }).click()
     const plans = page.getByRole('dialog', { name: 'Become a Keeper' })
@@ -158,8 +157,8 @@ test.describe('with Keeper on', () => {
       await bottles.nth(i).click()
       const dialog = page.getByRole('dialog', { name: 'A bottle washed ashore' })
       const message = (await dialog.getByLabel('Message content').innerText()).trim()
-      const paper = await dialog.locator('article').evaluate((el) => getComputedStyle(el).backgroundColor)
-      expect(paper).toBe(message === 'dressed for you' ? DUSK : PLAIN_PAPER)
+      // Sea-dressed bottles get colours, never a shape.
+      await expectShape(dialog, message === 'dressed for you' ? 'fish' : 'classic')
       await expect(dialog.getByRole('button', { name: /This bottle was dressed/ })).toHaveCount(0)
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
@@ -189,7 +188,6 @@ test.describe('with Keeper on', () => {
     await page.goto('/shelf')
     await page.getByRole('button', { name: opened }).click()
     const dialog = page.getByRole('dialog', { name: 'A bottle washed ashore' })
-    const paper = await dialog.locator('article').evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(paper).toBe(PLAIN_PAPER)
+    await expectShape(dialog, 'classic')
   })
 })

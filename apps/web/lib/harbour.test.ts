@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { HULLS, PADDLES, lightAt, ringLayout } from './harbour'
+import { CURRENTS, CURRENT_INFO } from './dressing'
+import { HULLS, LIGHTS, PADDLES, currentLight, hex, lightAt, ringLayout, type Light } from './harbour'
 
 // The palettes live twice: here and in 056's CHECKs on public.kayaks.
 const sql = readFileSync(join(__dirname, '../../../supabase/migrations/056_harbour.sql'), 'utf8')
@@ -43,5 +44,29 @@ describe('ringLayout', () => {
 describe('lightAt', () => {
   it('follows the hour', () => {
     expect([4, 5, 9, 17, 20].map(lightAt)).toEqual(['night', 'dawn', 'day', 'dusk', 'night'])
+  })
+})
+
+describe('currentLight', () => {
+  const brightness = (h: string) => hex(h).reduce((a, b) => a + b, 0)
+  const lights = Object.keys(LIGHTS) as Light[]
+
+  it('gives valid colours for every current at every hour', () => {
+    for (const c of CURRENTS) {
+      for (const l of lights) {
+        const w = currentLight(CURRENT_INFO[c].sea, l)
+        for (const v of [w.deep, w.shallow, w.caustic, w.glint]) expect(v, `${c} ${l}`).toMatch(/^#[0-9a-f]{6}$/i)
+      }
+    }
+  })
+
+  it('takes colour from the current and brightness from the hour', () => {
+    for (const c of CURRENTS) {
+      const sea = CURRENT_INFO[c].sea
+      expect(currentLight(sea, 'day').shallow.toLowerCase()).toBe(sea.water.shallow.toLowerCase())
+      expect(brightness(currentLight(sea, 'night').shallow)).toBeLessThan(brightness(currentLight(sea, 'dusk').shallow))
+      expect(brightness(currentLight(sea, 'dusk').shallow)).toBeLessThan(brightness(currentLight(sea, 'day').shallow))
+      expect(currentLight(sea, 'night').glintAmt).toBe(LIGHTS.night.glintAmt)
+    }
   })
 })

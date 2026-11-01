@@ -99,7 +99,7 @@ $$;
 -- The catalog is readable, not writable.
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM public.atelier_pieces WHERE sort = 0) <> 4 THEN
+  IF (SELECT count(*) FROM public.atelier_pieces WHERE sort = 0) <> 5 THEN
     RAISE EXCEPTION 'BUG: each kind needs exactly one default (sort 0) piece';
   END IF;
   BEGIN

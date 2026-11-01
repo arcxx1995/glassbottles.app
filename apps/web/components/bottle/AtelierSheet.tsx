@@ -18,14 +18,13 @@ import {
 } from '@/lib/dressing'
 
 // The Atelier: dress the bottle a stranger will find. Every piece can be tried
-// on — the preview shows it. Only Keepers dress (057): trying a piece opens the
-// membership offer under the preview.
+// on: the preview shows it. Only Keepers dress (057): trying a piece opens the
+// membership offer under the tabs.
 
 const KIND_LABEL: Record<PieceKind, string> = {
+  shape: 'Shape',
   glass: 'Glass',
   seal: 'Seal',
-  paper: 'Paper',
-  ink: 'Ink',
 }
 
 export default function AtelierSheet({
@@ -44,102 +43,133 @@ export default function AtelierSheet({
   /** Called right before leaving for checkout. */
   onBeforeCheckout?: () => void
 }) {
-  const [draft, setDraft] = useState<BottleStyle>(style)
+  // A remembered draft may hold retired pieces; keep what's still on offer,
+  // including anything a free user was trying on before checkout.
+  const [draft, setDraft] = useState<BottleStyle>(() => allowedStyle(style, pieces, true))
+  const [tab, setTab] = useState<PieceKind>('shape')
   const look = resolveLook(draft, pieces)
   const keeperLocked = pieces.filter((p) => draft[p.kind] === p.id && !canUse(p, isKeeper))
+  const shown = pieces.filter((p) => p.kind === tab && !p.retired)
+  const selectedId = (kind: PieceKind) => draft[kind] ?? pieces.find((p) => p.kind === kind && p.sort === 0)?.id
+  const pick = (p: AtelierPiece) => setDraft((d) => ({ ...d, [p.kind]: p.id }))
+  const caption = PIECE_KINDS.map((kind) => pieces.find((p) => p.kind === kind && p.id === selectedId(kind))?.name)
+    .filter(Boolean)
+    .join(' · ')
+
+  const pieceButton = (p: AtelierPiece, className: string, art: React.ReactNode) => {
+    const usable = canUse(p, isKeeper)
+    return (
+      <button
+        key={p.id}
+        type="button"
+        onClick={() => pick(p)}
+        aria-pressed={selectedId(p.kind) === p.id}
+        aria-label={`${p.name}${usable ? '' : ' (Keeper)'}`}
+        title={p.name}
+        className={cn(
+          'press press-sm relative border-2 transition-[border-color,transform]',
+          selectedId(p.kind) === p.id ? 'border-seafoam' : 'border-white/10 hover:border-white/30',
+          className,
+        )}
+      >
+        {art}
+        {!usable && (
+          <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border border-white/15 bg-ocean-deep">
+            <Lock size={8} strokeWidth={2} className="text-sand/60" />
+          </span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <Sheet title="Dress your bottle" onClose={onClose}>
-        {/* Preview: the bottle, and the note as the stranger will read it */}
-        <div className="flex items-center gap-4 mb-5">
-          <div className="shrink-0">
-            <BottleSVG width={64} height={96} glowing look={look} />
-          </div>
-          <div
-            className="flex-1 rounded-2xl border border-white/10 px-4 py-3 transition-colors duration-300"
-            style={{ background: look.paper }}
-          >
-            <p className="font-display text-base leading-relaxed transition-colors duration-300" style={{ color: look.ink }}>
-              Whoever finds this — I hope today is gentle with you.
-            </p>
-          </div>
-        </div>
+      {/* Preview: the bottle as the stranger will find it */}
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <BottleSVG width={72} height={108} glowing look={look} />
+        <p className="font-ui text-xs text-sand/60">{caption}</p>
+      </div>
 
+      <div role="tablist" aria-label="What to dress" className="mb-3 flex gap-1 rounded-full bg-white/[0.06] p-1">
         {PIECE_KINDS.map((kind) => (
-          <section key={kind} className="mb-4">
-            <p className="font-ui text-[10px] text-sand/45 uppercase tracking-widest mb-2">
-              {KIND_LABEL[kind]}
-              <span className="normal-case tracking-normal text-sand/50">
-                {' · '}
-                {pieces.find((p) => p.kind === kind && p.id === (draft[kind] ?? defaultId(pieces, kind)))?.name}
-              </span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {pieces
-                .filter((p) => p.kind === kind)
-                .map((p) => {
-                  const selected = (draft[kind] ?? defaultId(pieces, kind)) === p.id
-                  const usable = canUse(p, isKeeper)
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setDraft((d) => ({ ...d, [kind]: p.id }))}
-                      aria-pressed={selected}
-                      aria-label={`${p.name}${usable ? '' : ' (Keeper)'}`}
-                      title={p.name}
-                      className={cn(
-                        'press press-sm relative h-10 w-10 rounded-full border-2 transition-[border-color,transform]',
-                        selected ? 'border-seafoam' : 'border-white/10 hover:border-white/30',
-                      )}
-                    >
-                      <Swatch piece={p} />
-                      {!usable && (
-                        <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full bg-ocean-deep border border-white/15">
-                          <Lock size={8} strokeWidth={2} className="text-sand/60" />
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-            </div>
-          </section>
+          <button
+            key={kind}
+            type="button"
+            role="tab"
+            aria-selected={tab === kind}
+            onClick={() => setTab(kind)}
+            className={cn(
+              'press flex-1 rounded-full py-1.5 font-ui text-sm transition-[background-color,color,transform]',
+              tab === kind ? 'bg-seafoam text-ocean-deep' : 'text-sand/70 hover:text-sand',
+            )}
+          >
+            {KIND_LABEL[kind]}
+          </button>
         ))}
+      </div>
 
-        {keeperLocked.length > 0 ? (
-          <div className="mt-2 rounded-2xl border border-seafoam/20 bg-seafoam/5 p-4 flex flex-col gap-3">
-            <p className="font-ui text-sm text-sand/80 leading-relaxed">
-              {keeperLocked.map((p) => p.name).join(' and ')} {keeperLocked.length > 1 ? 'are' : 'is'} for
-              Keepers. The bottle stays free. Other Keepers will see it as you dressed it; everyone
-              else finds the plain bottle.
-            </p>
-            <KeeperPlans
-              returnTo="home"
-              onBeforeCheckout={() => {
-                // Keep the tried-on look: it applies once the membership lands.
-                saveStyle(draft)
-                onBeforeCheckout?.()
-              }}
-            />
+      {/* Scrolls on its own, so the preview and Done stay in view. */}
+      <div role="tabpanel" aria-label={KIND_LABEL[tab]} className="no-scrollbar mb-4 max-h-[34dvh] overflow-y-auto p-1">
+        {tab === 'shape' ? (
+          <div className="grid grid-cols-5 gap-2">
+            {shown.map((p) =>
+              pieceButton(
+                p,
+                'flex items-center justify-center rounded-xl py-1.5',
+                <BottleSVG width={36} height={54} look={{ ...look, shape: p.id }} />,
+              ),
+            )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => {
-              onSave(allowedStyle(draft, pieces, isKeeper))
-              onClose()
-            }}
-            className="press mt-2 w-full py-3.5 rounded-full shadow-seafoam bg-seafoam text-ocean-deep font-ui font-semibold text-sm hover:brightness-110"
-          >
-            Done
-          </button>
+          <>
+            {/* The plain piece, then two hues to a row: pale, soft and deep of each. */}
+            {shown
+              .filter((p) => p.sort === 0)
+              .map((p) => (
+                <div key={p.id} className="mb-2 flex items-center gap-2">
+                  {pieceButton(p, 'h-10 w-10 rounded-full', <Swatch piece={p} />)}
+                  <span className="font-ui text-xs text-sand/60">{p.name}</span>
+                </div>
+              ))}
+            <div className="grid grid-cols-6 justify-items-center gap-y-2">
+              {shown
+                .filter((p) => p.sort > 0)
+                .map((p) => pieceButton(p, 'h-10 w-10 rounded-full', <Swatch piece={p} />))}
+            </div>
+          </>
         )}
+      </div>
+
+      {keeperLocked.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-seafoam/20 bg-seafoam/5 p-4">
+          <p className="font-ui text-sm leading-relaxed text-sand/80">
+            {new Intl.ListFormat('en').format(keeperLocked.map((p) => p.name))}{' '}
+            {keeperLocked.length > 1 ? 'are' : 'is'} for Keepers. The bottle stays free. Other Keepers will see
+            it as you dressed it; everyone else finds the plain bottle.
+          </p>
+          <KeeperPlans
+            returnTo="home"
+            onBeforeCheckout={() => {
+              // Keep the tried-on look: it applies once the membership lands.
+              saveStyle(draft)
+              onBeforeCheckout?.()
+            }}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            onSave(allowedStyle(draft, pieces, isKeeper))
+            onClose()
+          }}
+          className="press w-full rounded-full bg-seafoam py-3.5 font-ui text-sm font-semibold text-ocean-deep shadow-seafoam hover:brightness-110"
+        >
+          Done
+        </button>
+      )}
     </Sheet>
   )
-}
-
-function defaultId(pieces: AtelierPiece[], kind: PieceKind) {
-  return pieces.find((p) => p.kind === kind && p.sort === 0)?.id
 }
 
 function Swatch({ piece }: { piece: AtelierPiece }) {
@@ -147,10 +177,6 @@ function Swatch({ piece }: { piece: AtelierPiece }) {
   const fill =
     piece.kind === 'glass'
       ? `linear-gradient(135deg, ${look.edge}, ${look.tint}), rgb(var(--c-ocean-mid))`
-      : piece.kind === 'seal'
-        ? (look.wax ?? '#C4A882')
-        : piece.kind === 'paper'
-          ? look.bg
-          : look.color
+      : (look.wax ?? '#C4A882')
   return <span className="absolute inset-1 rounded-full" style={{ background: fill }} />
 }

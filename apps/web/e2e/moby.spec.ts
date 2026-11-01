@@ -12,14 +12,15 @@ test('a Keeper throws a former coin piece with no unlock', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Dress', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Dress your bottle' })
-  await sheet.getByRole('button', { name: 'Lavender', exact: true }).click()
+  await sheet.getByRole('tab', { name: 'Glass' }).click()
+  await sheet.getByRole('button', { name: 'Pale lilac', exact: true }).click()
   await sheet.getByRole('button', { name: 'Done' }).click()
 
-  await page.getByLabel('Message to place in your bottle').fill('in lavender ink')
+  await page.getByLabel('Message to place in your bottle').fill('in pale lilac')
   await page.getByRole('button', { name: /Seal & Throw/ }).click()
   await expect
     .poll(async () => (await admin.from('bottles').select('style').eq('sender_id', u.id).maybeSingle()).data?.style)
-    .toEqual({ ink: 'lavender' })
+    .toEqual({ glass: 'lilac_pale' })
 })
 
 /** Places today's window around now; the server-side window is tested in SQL. */

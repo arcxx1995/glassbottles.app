@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import { useReducedMotion } from 'motion/react'
-import type { Light } from '@/lib/harbour'
+import { LIGHTS, currentLight, hex, type Light, type WaterLight } from '@/lib/harbour'
 import type { SeaTheme } from '@/lib/dressing'
 
 // The Harbour's water, seen from straight above: a sandy-bottomed lagoon with
@@ -12,19 +12,6 @@ import type { SeaTheme } from '@/lib/dressing'
 //
 // ponytail: rendered at ~0.6× device pixels — water is soft, and it keeps
 // phones cool. No WebGL → the CSS gradient underneath is the water.
-
-type Rgb = [number, number, number]
-const hex = (h: string): Rgb => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as Rgb
-/** a → b by t, as #rrggbb (the CSS fallback gradient needs strings too). */
-const mix = (a: string, b: string, t: number) =>
-  '#' + hex(a).map((v, i) => Math.round((v + (hex(b)[i] - v) * t) * 255).toString(16).padStart(2, '0')).join('')
-
-export const LIGHTS: Record<Light, { deep: string; shallow: string; caustic: string; glint: string; causticAmt: number; glintAmt: number }> = {
-  dawn: { deep: '#0F4E66', shallow: '#4AA9B0', caustic: '#FFE3C2', glint: '#FFD2A8', causticAmt: 0.55, glintAmt: 0.8 },
-  day: { deep: '#06628A', shallow: '#22C3CF', caustic: '#F4FFFF', glint: '#FFFFFF', causticAmt: 0.85, glintAmt: 1 },
-  dusk: { deep: '#173A5E', shallow: '#3C8798', caustic: '#FFC48A', glint: '#FFB070', causticAmt: 0.5, glintAmt: 0.85 },
-  night: { deep: '#030F1C', shallow: '#0B2C43', caustic: '#7FB4E0', glint: '#C9DDF2', causticAmt: 0.22, glintAmt: 0.3 },
-}
 
 const VERT = `attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`
 
@@ -88,20 +75,15 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`
 
-// A Keeper's current tints the lagoon toward its sea, keeping the hour's light.
+// A Keeper's current sets the lagoon's colours; the hour sets their brightness.
 export default function HarbourWater({ light, zoom = 1, tint }: { light: Light; zoom?: number; tint?: SeaTheme }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduced = useReducedMotion() ?? false
-  const L = useMemo(() => {
-    const base = LIGHTS[light]
-    if (!tint) return base
-    return {
-      ...base,
-      deep: mix(base.deep, tint.bands[4], 0.35),
-      shallow: mix(base.shallow, tint.bands[0], 0.35),
-      caustic: mix(base.caustic, tint.foam, 0.2),
-    }
-  }, [light, tint])
+  const L = useMemo(() => (tint ? currentLight(tint, light) : LIGHTS[light]), [light, tint])
+  /** Pushes colours into the running shader. Null until set up, or if WebGL failed. */
+  const paint = useRef<((l: WaterLight, zoom: number) => void) | null>(null)
+  const latest = useRef({ L, zoom })
+  latest.current = { L, zoom }
 
   useEffect(() => {
     const canvas = ref.current
@@ -138,15 +120,26 @@ export default function HarbourWater({ light, zoom = 1, tint }: { light: Light; 
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
 
     const u = (name: string) => gl.getUniformLocation(prog, name)
-    gl.uniform3fv(u('uDeep'), hex(L.deep))
-    gl.uniform3fv(u('uShallow'), hex(L.shallow))
-    gl.uniform3fv(u('uCaustic'), hex(L.caustic))
-    gl.uniform3fv(u('uGlint'), hex(L.glint))
-    gl.uniform1f(u('uCausticAmt'), L.causticAmt)
-    gl.uniform1f(u('uGlintAmt'), L.glintAmt)
-    gl.uniform1f(u('uZoom'), zoom)
     const uRes = u('uRes')
     const uTime = u('uTime')
+
+    const start = performance.now()
+    const draw = (now: number) => {
+      gl.uniform1f(uTime, 40 + (now - start) / 1000)
+      gl.drawArrays(gl.TRIANGLES, 0, 3)
+    }
+
+    paint.current = (l, z) => {
+      gl.uniform3fv(u('uDeep'), hex(l.deep))
+      gl.uniform3fv(u('uShallow'), hex(l.shallow))
+      gl.uniform3fv(u('uCaustic'), hex(l.caustic))
+      gl.uniform3fv(u('uGlint'), hex(l.glint))
+      gl.uniform1f(u('uCausticAmt'), l.causticAmt)
+      gl.uniform1f(u('uGlintAmt'), l.glintAmt)
+      gl.uniform1f(u('uZoom'), z)
+      // Under reduced motion nothing else would redraw.
+      if (reduced) draw(performance.now())
+    }
 
     const resize = () => {
       const scale = Math.min(window.devicePixelRatio || 1, 2) * 0.6
@@ -154,25 +147,35 @@ export default function HarbourWater({ light, zoom = 1, tint }: { light: Light; 
       canvas.height = Math.round(canvas.clientHeight * scale)
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.uniform2f(uRes, canvas.width, canvas.height)
+      // Resizing clears the canvas.
+      if (reduced) draw(performance.now())
     }
     resize()
     window.addEventListener('resize', resize)
+    paint.current(latest.current.L, latest.current.zoom)
 
     let raf = 0
-    const start = performance.now()
     const frame = (now: number) => {
-      gl.uniform1f(uTime, 40 + (now - start) / 1000)
-      gl.drawArrays(gl.TRIANGLES, 0, 3)
-      if (!reduced) raf = requestAnimationFrame(frame)
+      draw(now)
+      raf = requestAnimationFrame(frame)
     }
-    raf = requestAnimationFrame(frame)
+    if (!reduced) raf = requestAnimationFrame(frame)
     return () => {
       cancelAnimationFrame(raf)
+      paint.current = null
       window.removeEventListener('resize', resize)
       canvas.removeEventListener('webglcontextlost', lost)
-      gl.getExtension('WEBGL_lose_context')?.loseContext()
+      // Don't call loseContext() here: this same canvas gets the same context
+      // back on a re-run (reduced motion flipping, Strict Mode), and a lost one
+      // stays lost, leaving only the CSS gradient. The browser frees it with
+      // the canvas.
     }
-  }, [L, zoom, reduced])
+  }, [reduced])
+
+  // Colours change without touching the context.
+  useEffect(() => {
+    paint.current?.(L, zoom)
+  }, [L, zoom])
 
   return (
     <div

@@ -22,7 +22,7 @@ export const FAQ_ITEMS = [
     q: 'Does it cost anything?',
     a:
       process.env.NEXT_PUBLIC_KEEPER === 'on'
-        ? 'The bottle is free, always — one message, one stranger, every day. Keeper is an optional membership for beautiful extras, like styled glass and wax seals, and every bottle on your shelf dressed.'
+        ? 'The bottle is free, always — one message, one stranger, every day. Keeper is an optional membership for beautiful extras, like bottle shapes, pastel glass and wax seals, and every bottle on your shelf dressed.'
         : 'No. One message, one stranger, every day — free, always.',
   },
 ] as const

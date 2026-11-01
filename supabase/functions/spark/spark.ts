@@ -2,13 +2,26 @@
 // apps/web/lib/spark.test.ts.
 
 const WEATHERS = ['stormy', 'foggy', 'calm', 'sunny'] as const
-const CURRENTS = ['night_owl', 'quiet_wins', 'heavy_water', 'busy_minds'] as const
+const CURRENTS = [
+  'night_owl',
+  'quiet_wins',
+  'heavy_water',
+  'busy_minds',
+  'first_snow',
+  'soft_rain',
+  'first_light',
+  'amber_fall',
+] as const
 
 const CURRENT_WORDS: Record<(typeof CURRENTS)[number], string> = {
   night_owl: 'late-night thoughts',
   quiet_wins: 'small good things',
   heavy_water: 'grief and hard days',
   busy_minds: 'racing thoughts',
+  first_snow: 'slow, quiet days',
+  soft_rain: 'letting it out',
+  first_light: 'starting over',
+  amber_fall: 'letting go',
 }
 
 export interface SparkContext {

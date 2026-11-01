@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { BottleStyle, CurrentId, Weather } from '@/lib/dressing'
+import type { CurrentId, Weather } from '@/lib/dressing'
 
 // One read per visit (migration 048) — the Logbook is history, not live.
 
 interface Common {
   message: string
   at: string
-  style: BottleStyle | null
   weather: Weather | null
 }
 export interface Logbook {

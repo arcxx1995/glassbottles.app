@@ -1,4 +1,5 @@
-import type { BottleLook } from '@/lib/dressing'
+import { DEFAULT_LOOK, type BottleLook } from '@/lib/dressing'
+import { BOTTLE_SHAPES, DEFAULT_NECK, DEFAULT_NOTE, shapeId } from '@/lib/bottleShapes'
 
 // The shared bottle artwork. The old default-export <ThrowAnimation> screen was
 // dead code (the live throw is TetheredBottle's arc into SailingSea) and was
@@ -15,8 +16,8 @@ interface BottleSVGProps {
   height?: number
   /** false draws the bottle open — the shelf's dialog animates its own cork off. */
   corked?: boolean
-  /** Atelier dressing (glass tint/edge, wax seal). Omitted = the classic bottle. */
-  look?: Pick<BottleLook, 'tint' | 'edge' | 'wax'>
+  /** Atelier dressing (shape, glass tint/edge, wax seal). Omitted = the classic bottle. */
+  look?: BottleLook
 }
 
 export function BottleSVG({
@@ -26,12 +27,21 @@ export function BottleSVG({
   corked = true,
   look,
 }: BottleSVGProps) {
-  const edge = look?.edge ?? 'rgba(255,255,255,0.18)'
+  const id = shapeId(look?.shape)
+  const shape = BOTTLE_SHAPES[id]
+  const note = shape.note ?? DEFAULT_NOTE
+  const noteLines = [10, 16, 22].map((at) => note.y + (at / 32) * note.h)
+  const inset = (note.w * 5) / 24
+  // Clear glass is too faint to show a shape off the classic silhouette.
+  const clear = !look?.edge || look.edge === DEFAULT_LOOK.edge
+  const edge = clear ? (id === 'classic' ? DEFAULT_LOOK.edge : 'rgba(255,255,255,0.42)') : look.edge
   return (
     <svg
       viewBox="0 0 80 120"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      data-shape={id}
+      strokeLinejoin="round"
       style={{
         width,
         height,
@@ -56,46 +66,44 @@ export function BottleSVG({
       )}
 
       {/* Neck */}
-      <path
-        d="M30 16 L27 34 L53 34 L50 16 Z"
-        fill="rgba(255,255,255,0.10)"
-        stroke={edge}
-        strokeWidth="1"
-      />
+      <path d={shape.neck ?? DEFAULT_NECK} fill="rgba(255,255,255,0.10)" stroke={edge} strokeWidth="1" />
 
       {/* Body */}
-      <path
-        d="M19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 Z"
-        fill="rgba(255,255,255,0.07)"
-        stroke={edge}
-        strokeWidth="1.5"
-      />
+      <path d={shape.body} fill="rgba(255,255,255,0.07)" stroke={edge} strokeWidth="1.5" />
 
       {/* Shine / refraction */}
-      <path
-        d="M20 42 Q17 58 17 72"
-        stroke="rgba(255,255,255,0.22)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M26 36 Q23 46 23 56"
-        stroke="rgba(255,255,255,0.10)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      {shape.shine?.map((d, i) => (
+        <path
+          key={d}
+          d={d}
+          stroke={i === 0 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.10)'}
+          strokeWidth={i === 0 ? 2.5 : 1.5}
+          strokeLinecap="round"
+        />
+      ))}
 
       {/* Message scroll */}
-      <rect x="28" y="52" width="24" height="32" rx="3" fill="rgba(247,231,206,0.13)" />
-      <line x1="33" y1="62" x2="47" y2="62" stroke="rgba(247,231,206,0.22)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="33" y1="68" x2="47" y2="68" stroke="rgba(247,231,206,0.22)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="33" y1="74" x2="42" y2="74" stroke="rgba(247,231,206,0.22)" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x={note.x} y={note.y} width={note.w} height={note.h} rx="3" fill="rgba(247,231,206,0.13)" />
+      {noteLines.map((y, i) => (
+        <line
+          key={y}
+          x1={note.x + inset}
+          y1={y}
+          x2={note.x + note.w - inset * (i === 2 ? 2 : 1)}
+          y2={y}
+          stroke="rgba(247,231,206,0.22)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      ))}
 
       {/* Glass tint — seafoam by default */}
-      <path
-        d="M19 34 Q11 52 11 72 Q11 104 40 108 Q69 104 69 72 Q69 52 61 34 Z"
-        fill={look?.tint ?? 'rgba(78,205,196,0.04)'}
-      />
+      <path d={shape.body} fill={look?.tint ?? DEFAULT_LOOK.tint} />
+
+      {/* Fins, petals, faces */}
+      {shape.details?.map((d) => (
+        <path key={d} d={d} stroke={edge} strokeOpacity="0.75" strokeWidth="1.1" strokeLinecap="round" />
+      ))}
     </svg>
   )
 }

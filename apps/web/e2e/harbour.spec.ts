@@ -89,3 +89,16 @@ test('today’s ring: visit a kayak, report one, block another', async ({ page }
   const { data } = await admin.from('kayak_reports').select('reason').eq('target_id', a.id)
   expect(data).toEqual([{ reason: 'spam' }])
 })
+
+test('a Keeper’s current paints the Harbour and the water keeps running', async ({ page }) => {
+  const u = await makeUser('harbour-current')
+  await makeKeeper(u.id)
+  await admin.from('profiles').update({ current: 'first_snow' }).eq('id', u.id)
+  await signIn(page, u.email)
+  await page.goto('/harbour')
+  await expect(page.locator('[data-weather="snow"]')).toBeAttached()
+  // A colour change used to kill the WebGL context, leaving only the gradient.
+  const canvas = page.locator('canvas')
+  await expect(canvas).toBeVisible()
+  expect(await canvas.evaluate((c: HTMLCanvasElement) => c.getContext('webgl')?.isContextLost())).toBe(false)
+})

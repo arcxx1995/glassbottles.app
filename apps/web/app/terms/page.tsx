@@ -55,8 +55,8 @@ export default function TermsPage() {
               for as long as glassbottles runs.
             </li>
             <li>
-              When a membership ends, what you made stays: bottles you already sent keep their
-              look. Only new Keeper extras stop.
+              When a membership ends, your bottles stay, but they turn plain on your shelf and new
+              Keeper extras stop. Rejoining brings the looks back.
             </li>
             <li>Deleting your account cancels any renewing membership.</li>
             <li>

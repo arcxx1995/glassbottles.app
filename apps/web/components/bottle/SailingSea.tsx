@@ -10,6 +10,7 @@ import {
 import { BottleSVG } from './ThrowAnimation'
 import { useGetAtelierQuery } from '@/store/api/bottleApi'
 import { resolveLook, type BottleStyle, type SeaTheme } from '@/lib/dressing'
+import WeatherLayer from '@/components/shared/WeatherLayer'
 import { easeOut } from '@/components/ui/springs'
 
 export interface SailingBottleItem {
@@ -158,7 +159,7 @@ function WaveBand({
 // Only on a Keeper's own sea, never shown to anyone else. The lamp grows with
 // each month of membership; after a lapse it stays, dimmed, beam off.
 
-function Lighthouse({ glow, lit, reduced }: { glow: number; lit: boolean; reduced: boolean }) {
+function Lighthouse({ glow, lit, reduced, tint }: { glow: number; lit: boolean; reduced: boolean; tint?: string }) {
   return (
     <div
       className="absolute"
@@ -175,7 +176,7 @@ function Lighthouse({ glow, lit, reduced }: { glow: number; lit: boolean; reduce
           }}
         />
       )}
-      <svg width="26" height="46" viewBox="0 0 26 46" fill="none">
+      <svg width="26" height="46" viewBox="0 0 26 46" fill="none" style={{ filter: tint }}>
         <circle cx="13" cy="7" r={lit ? 7 : 4} fill={`rgba(255,236,170,${lit ? 0.35 * glow : 0.08})`} />
         <rect x="9" y="3" width="8" height="7" rx="1.5" fill={lit ? `rgba(255,236,170,${0.5 + 0.5 * glow})` : '#3A4A57'} />
         <path d="M8 3 L13 0 L18 3 Z" fill="#0E2433" />
@@ -195,7 +196,9 @@ function Ship({
   delay,
   dir,
   reduced,
+  tint,
 }: {
+  tint?: string
   topPct: number
   scale: number
   opacity: number
@@ -218,6 +221,7 @@ function Ship({
         top: `${topPct}%`,
         left: 0,
         opacity,
+        filter: tint,
         ['--gb-from' as string]: from,
         ['--gb-to' as string]: to,
         // backwards: hold at `from` (off-screen) through the start delay.
@@ -302,12 +306,12 @@ const CLOUD_BLOBS = [
   { left: 82, top: 15, w: 220, h: 90, o: 0.82 },
 ] as const
 
-function StormClouds({ reduced }: { reduced: boolean }) {
+function StormClouds({ reduced, tint, lightning = true }: { reduced: boolean; tint?: string; lightning?: boolean }) {
   const flash = useAnimationControls()
   const [origin, setOrigin] = useState({ x: 50, y: 11 })
 
   useEffect(() => {
-    if (reduced) return
+    if (reduced || !lightning) return
     let active = true
     async function loop() {
       while (active) {
@@ -330,7 +334,7 @@ function StormClouds({ reduced }: { reduced: boolean }) {
     return () => {
       active = false
     }
-  }, [flash, reduced])
+  }, [flash, reduced, lightning])
 
   return (
     <>
@@ -362,7 +366,7 @@ function StormClouds({ reduced }: { reduced: boolean }) {
               transform: 'translateX(-50%) translateZ(0)',
               background:
                 'radial-gradient(50% 50% at 50% 50%, rgba(20,40,58,0.95) 0%, rgba(13,30,46,0.6) 45%, rgba(10,22,40,0) 72%)',
-              filter: 'blur(10px)',
+              filter: tint ? `blur(10px) ${tint}` : 'blur(10px)',
             }}
           />
         ))}
@@ -580,14 +584,14 @@ export default memo(function SailingSea({
           sea. */}
       {!backdropOnly && (
         <>
-          <Ship topPct={45.5} scale={0.62} opacity={0.6} dur={260} delay={0} dir={1} reduced={reduced} />
-          <Ship topPct={45.5} scale={0.72} opacity={0.68} dur={260} delay={87} dir={-1} reduced={reduced} />
-          <Ship topPct={45.5} scale={0.82} opacity={0.75} dur={260} delay={173} dir={1} reduced={reduced} />
+          <Ship topPct={45.5} scale={0.62} opacity={0.6} dur={260} delay={0} dir={1} reduced={reduced} tint={theme?.objects} />
+          <Ship topPct={45.5} scale={0.72} opacity={0.68} dur={260} delay={87} dir={-1} reduced={reduced} tint={theme?.objects} />
+          <Ship topPct={45.5} scale={0.82} opacity={0.75} dur={260} delay={173} dir={1} reduced={reduced} tint={theme?.objects} />
         </>
       )}
 
       {!backdropOnly && lighthouse && (
-        <Lighthouse glow={lighthouse.glow} lit={lighthouse.lit} reduced={reduced} />
+        <Lighthouse glow={lighthouse.glow} lit={lighthouse.lit} reduced={reduced} tint={theme?.objects} />
       )}
 
       {/* Turbulent sea bands */}
@@ -596,7 +600,10 @@ export default memo(function SailingSea({
       ))}
 
       {/* Storm clouds throbbing with flash over the scene */}
-      {!backdropOnly && <StormClouds reduced={reduced} />}
+      {!backdropOnly && <StormClouds reduced={reduced} tint={theme?.objects} lightning={theme?.storm ?? true} />}
+
+      {/* The current's weather: stars keep to the sky above the horizon. */}
+      {!backdropOnly && theme && <WeatherLayer weather={theme.weather} sky={36} />}
 
       {/* Floating bottles dipped in the water */}
       <AnimatePresence>

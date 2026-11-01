@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — Eight currents, shaped bottles (31 Oct, migrations 060, 061)
+
+- "Your current" is a small button on the Sea that opens a dialog of mini seas
+- Four new currents: First Snow, Soft Rain, First Light and Amber Fall. For Keepers, every current now changes the whole scene: sky, water, ships, lighthouse, clouds and its own weather
+- The Harbour follows the current: its colours and weather come from the current, and its brightness from the viewer's hour. Open sea keeps the old lighting
+- Fixed: a Harbour colour change destroyed the WebGL context, leaving only the flat gradient
+- The Atelier is now Shape, Glass and Seal. 25 Keeper shapes plus the free classic, and 36 pastels for glass and seal. Paper and ink are gone: every note uses the standard paper
+- Old colours leave the picker but bottles wearing them keep them. Sea-dressed bottles always stay the classic shape
+- Release order: 060 and 061 first (both additive), then the client, then redeploy `spark`
+
+---
+
 ## [Unreleased] — No coins, no vibes, Moby Dick (31 Oct, migrations 058, 059)
 
 - Coins are gone: no balance, no earning, no unlocking. Moonstone, Pearl wax, Tide pool and Lavender are Keeper pieces, so Keeper unlocks every piece. Tides and ripples stay; they just don't pay

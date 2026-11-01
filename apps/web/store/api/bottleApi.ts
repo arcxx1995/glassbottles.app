@@ -437,7 +437,7 @@ export const bottleApi = createApi({
         const supabase = createClient()
         const { data, error } = await supabase
           .from('atelier_pieces')
-          .select('kind, id, name, tier, look, sort')
+          .select('kind, id, name, tier, look, sort, retired')
           .order('kind')
           .order('sort')
         if (error) {

@@ -38,7 +38,8 @@ import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
 import { feel } from '@/lib/feel'
 import { spring, springFlick } from '@/components/ui/springs'
-import { CURRENT_INFO, allowedStyle, resolveLook } from '@/lib/dressing'
+import { allowedStyle, resolveLook } from '@/lib/dressing'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
 
 export default function HomePage() {
   const dispatch = useAppDispatch()
@@ -73,7 +74,7 @@ export default function HomePage() {
     [draftStyle, pieces, isKeeper, keeperKnown],
   )
   const throwLook = useMemo(() => resolveLook(throwStyle, pieces), [throwStyle, pieces])
-  const seaTheme = isKeeper && user?.current ? CURRENT_INFO[user.current].sea : undefined
+  const seaTheme = useCurrentSea(isKeeper)
   // Keeper lighthouse (Step 10): brighter with every month kept; dimmed, not
   // removed, after a lapse. Anyone who has never been a Keeper sees none.
   const membership = keeper?.membership

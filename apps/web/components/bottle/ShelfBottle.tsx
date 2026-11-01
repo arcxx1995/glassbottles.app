@@ -3,7 +3,7 @@
 import { memo, useRef } from 'react'
 import { Bookmark, Hourglass } from 'lucide-react'
 import { BottleSVG } from '@/components/bottle/ThrowAnimation'
-import { bottleLook, type AtelierPiece, type BottleStyle } from '@/lib/dressing'
+import { NOTE_PAPER, bottleLook, type AtelierPiece, type BottleStyle } from '@/lib/dressing'
 import { cn } from '@/lib/utils'
 
 export interface ShelfItem {
@@ -71,7 +71,7 @@ function ShelfBottle({
               <span
                 aria-hidden
                 className="absolute bottom-0 -right-3 h-2.5 w-4 rotate-6 rounded-full border border-sand/50"
-                style={{ background: look.paper }}
+                style={{ background: NOTE_PAPER }}
               />
             </>
           )}

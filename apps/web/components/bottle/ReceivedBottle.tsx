@@ -11,7 +11,7 @@ import {
   useRippleBottleMutation,
   useKeepBottleMutation,
 } from '@/store/api/bottleApi'
-import { CURRENT_INFO, WEATHER_LABEL, bottleLook } from '@/lib/dressing'
+import { CURRENT_INFO, NOTE_INK, NOTE_PAPER, WEATHER_LABEL, bottleLook } from '@/lib/dressing'
 import { BottleSVG, LIFT_TRANSITION } from '@/components/bottle/ThrowAnimation'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
 import Sheet from '@/components/ui/Sheet'
@@ -108,7 +108,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   return (
     <article
       className="relative rounded-card border border-border-subtle p-5"
-      style={{ background: look.paper }}
+      style={{ background: NOTE_PAPER }}
     >
       {/* Keepsake (045): free, unlimited, the receiver's alone. */}
       {stage === 'open' && (
@@ -171,7 +171,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
               )}
               <p
                 className="font-display text-lg leading-relaxed"
-                style={{ color: look.ink }}
+                style={{ color: NOTE_INK }}
                 aria-label="Message content"
                 onClick={lines.length > 0 ? () => setSkipReveal(true) : undefined}
               >

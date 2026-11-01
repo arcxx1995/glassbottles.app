@@ -35,7 +35,7 @@ INSERT INTO public.bottles (id, sender_id, receiver_id, message, sent_at, receiv
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.atelier_pieces WHERE tier = 'free' AND sort > 0)
-     OR (SELECT count(*) FROM public.atelier_pieces WHERE tier = 'free') <> 4 THEN
+     OR (SELECT count(*) FROM public.atelier_pieces WHERE tier = 'free') <> 5 THEN
     RAISE EXCEPTION 'BUG: free pieces beyond the defaults remain';
   END IF;
   RAISE NOTICE 'ok: catalogue tiers';

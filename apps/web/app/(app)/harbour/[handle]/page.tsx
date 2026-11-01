@@ -13,7 +13,8 @@ import { TransitionLink } from '@/components/ui/TransitionLink'
 import { spring } from '@/components/ui/springs'
 import { useBlockKayakMutation, useGetHarbourQuery, useReportKayakMutation } from '@/store/api/bottleApi'
 import { lightAt, type Light } from '@/lib/harbour'
-import { useCurrentSea } from '@/components/harbour/useCurrentSea'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
+import WeatherLayer from '@/components/shared/WeatherLayer'
 import type { ReportReason } from '@/types'
 
 // Inside a kayak: the same kayak from the ring, close up and upright (the
@@ -62,6 +63,7 @@ export default function KayakPage({ params }: { params: { handle: string } }) {
   return (
     <div className="relative h-full overflow-hidden">
       <HarbourWater light={light} zoom={2.6} tint={tint} />
+      {tint && <WeatherLayer weather={tint.weather} />}
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-16">
         <TransitionLink

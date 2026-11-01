@@ -251,10 +251,14 @@ sender_name = "glassbottles"
 
 # Branded auth emails — rendered by Supabase (Go templates) and delivered via
 # the Resend SMTP block above. See docs/superpowers/specs/2026-06-16-branded-auth-emails-design.md.
-# NOTE: config.toml drives LOCAL (supabase start) + applies to the linked
-# project on `supabase config push`. For production these must also be pushed
-# (or set under Dashboard → Authentication → Email Templates) or real users get
-# the default unstyled emails.
+# NOTE: config.toml drives LOCAL (supabase start) only. NEVER run
+# `supabase config push` against prod: it applies without a prompt and
+# overwrites prod auth with these local values (site_url, redirect URLs, SMTP
+# port, rate limits). It broke prod sign-in on 2026-10-24. To update prod
+# templates: `node supabase/templates/build.ts`, then PATCH only the
+# mailer_templates_*_content / mailer_subjects_* fields via the Management API
+# (/v1/projects/{ref}/config/auth), or paste them into Dashboard →
+# Authentication → Email Templates.
 [auth.email.template.confirmation]
 subject = "Confirm your glassbottles account"
 content_path = "./supabase/templates/confirmation.html"

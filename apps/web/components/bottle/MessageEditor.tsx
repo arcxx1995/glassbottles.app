@@ -35,6 +35,7 @@ import { createClient } from '@/lib/supabase/client'
 import { nextSpark } from '@/lib/sparks'
 import { selectUser } from '@/store/authSlice'
 import CrisisSupport from './CrisisSupport'
+import { HELD_COPY, checkMessage, type CheckResult } from '@/lib/messageCheck'
 
 const WEATHER_ICON: Record<Weather, typeof Sun> = {
   stormy: CloudLightning,
@@ -47,37 +48,7 @@ export const MAX_CHARS = 1000
 const MAX_TEXTAREA_HEIGHT = 168
 const CHECK_DEBOUNCE_MS = 800
 
-/** Why a bottle can't be thrown, by screen reason (check-message / 051). */
-export const HELD_COPY: Record<string, string> = {
-  blocked: 'It contains language that isn’t allowed here.',
-  sexual: 'Sexual content isn’t allowed here.',
-  minor: 'Sexual content isn’t allowed here.',
-  contact: 'Bottles stay anonymous: no contact details, handles or links.',
-  harm: 'It reads as hurtful or threatening toward someone.',
-  spam: 'It looks like advertising or spam.',
-  review: 'It needs a closer look before it can sail.',
-  account_suspended: 'Your account is suspended for breaking our guidelines.',
-  age_unconfirmed: 'Please confirm you’re 18 or older first.',
-}
-
-type CheckResult = { verdict: 'ok' | 'held' | 'crisis' | 'unknown'; reason?: string }
-
-// Verdicts by draft text, so a pause and the throw don't ask twice.
-const checked = new Map<string, CheckResult>()
-
-/** The live filter: the safety screen's verdict on a draft (check-message,
- *  migration 052). Fail-closed: only 'ok' throws; 'unknown' (screen
- *  unreachable) is never cached, so the next tap asks again. */
-async function checkMessage(text: string): Promise<CheckResult> {
-  const hit = checked.get(text)
-  if (hit) return hit
-  const { data, error } = await createClient().functions.invoke<CheckResult>('check-message', {
-    body: { text },
-  })
-  if (error || !data?.verdict) return { verdict: 'unknown' }
-  if (data.verdict !== 'unknown') checked.set(text, data)
-  return data
-}
+export { HELD_COPY }
 
 interface MessageEditorProps {
   onReady?: () => void

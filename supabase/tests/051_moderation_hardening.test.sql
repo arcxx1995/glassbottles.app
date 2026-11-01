@@ -260,90 +260,10 @@ BEGIN
 END $$;
 
 SELECT set_config('request.jwt.claims', '', true); -- server-side from here
--- ── Bios: blocklisted, screened, held bio cleared (posts etc. dropped in 055)
+-- Bios went in 063. The same rules for Kayak notes and comments, and admin
+-- removal and suspension, are checked in 063_kayak_voyages.test.sql.
 UPDATE public.profiles SET suspended_at = NULL
 WHERE id IN ('00000000-0000-4000-8000-000000000510', '00000000-0000-4000-8000-000000000511');
-INSERT INTO public.social_profiles (user_id, handle) VALUES
-  ('00000000-0000-4000-8000-000000000510', 'mod_a'),
-  ('00000000-0000-4000-8000-000000000511', 'mod_b'),
-  ('00000000-0000-4000-8000-000000000512', 'mod_c'),
-  ('00000000-0000-4000-8000-000000000513', 'mod_d');
-UPDATE public.profiles SET age_confirmed_at = now() WHERE id = '00000000-0000-4000-8000-000000000512';
-
-SET LOCAL role authenticated;
-SELECT set_config('request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000510","role":"authenticated"}', true);
-DO $$
-BEGIN
-  BEGIN
-    UPDATE public.social_profiles SET bio = 'kys' WHERE user_id = auth.uid();
-    RAISE EXCEPTION 'BUG: blocklisted bio accepted';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  UPDATE public.social_profiles SET bio = 'hello, harbour' WHERE user_id = auth.uid();
-  RAISE NOTICE 'ok: bio blocklist';
-END $$;
-RESET role;
-SELECT set_config('request.jwt.claims', '', true);
-
-DO $$
-DECLARE
-  a UUID := '00000000-0000-4000-8000-000000000510';
-  c UUID := '00000000-0000-4000-8000-000000000512';
-BEGIN
-  -- A pending bio counts an attempt; an exhausted one is held for review.
-  UPDATE public.social_profiles SET created_at = now() - interval '10 minutes' WHERE user_id = a;
-  PERFORM public.rescreen_pending();
-  IF (SELECT screen_attempts FROM public.social_profiles WHERE user_id = a) <> 1 THEN
-    RAISE EXCEPTION 'BUG: bio rescreen did not count an attempt';
-  END IF;
-  UPDATE public.social_profiles SET bio = 'never screened' WHERE user_id = c;
-  UPDATE public.social_profiles SET screen_attempts = 6 WHERE user_id = c;
-  PERFORM public.rescreen_pending();
-  IF (SELECT bio_screen FROM public.social_profiles WHERE user_id = c) <> 'held'
-     OR NOT EXISTS (SELECT 1 FROM public.moderation_queue WHERE kind = 'profile' AND target_id = c) THEN
-    RAISE EXCEPTION 'BUG: exhausted bio not held for review';
-  END IF;
-
-  -- A held bio is cleared.
-  UPDATE public.social_profiles SET bio = 'something rude' WHERE user_id = '00000000-0000-4000-8000-000000000511';
-  PERFORM public.apply_social_screen('social_profiles', '00000000-0000-4000-8000-000000000511', 'held', 'harm');
-  IF (SELECT bio FROM public.social_profiles WHERE user_id = '00000000-0000-4000-8000-000000000511') IS NOT NULL THEN
-    RAISE EXCEPTION 'BUG: a held bio was not cleared';
-  END IF;
-  BEGIN
-    PERFORM public.apply_social_screen('posts', a, 'ok');
-    RAISE EXCEPTION 'BUG: apply_social_screen accepted a dropped table';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM LIKE 'BUG:%' THEN RAISE; END IF;
-  END;
-  RAISE NOTICE 'ok: bio rescreen, held bio cleared';
-END $$;
-
--- Admin "suspend" removes the bio and suspends its owner.
-DO $$
-DECLARE
-  qid UUID;
-  c UUID := '00000000-0000-4000-8000-000000000512';
-  d UUID := '00000000-0000-4000-8000-000000000513';
-BEGIN
-  PERFORM set_config('request.jwt.claims', '', true);
-  UPDATE public.social_profiles SET bio = 'borderline', bio_screen = 'ok' WHERE user_id = c;
-  PERFORM public.enqueue_moderation('profile', c, 'report', 'other', TRUE);
-  SELECT id INTO qid FROM public.moderation_queue
-  WHERE kind = 'profile' AND target_id = c AND resolved_at IS NULL;
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', d, 'role', 'authenticated')::text, true);
-  SET LOCAL role authenticated;
-  IF public.admin_moderate(qid, 'suspend') <> 'suspended' THEN
-    RAISE EXCEPTION 'BUG: admin suspend failed';
-  END IF;
-  RESET role;
-  IF (SELECT bio FROM public.social_profiles WHERE user_id = c) IS NOT NULL
-     OR (SELECT suspended_at FROM public.profiles WHERE id = c) IS NULL THEN
-    RAISE EXCEPTION 'BUG: suspend did not clear the bio and suspend its owner';
-  END IF;
-  RAISE NOTICE 'ok: admin suspend removes + suspends';
-END $$;
 
 -- Grants: the new tables are invisible to clients.
 SET LOCAL role authenticated;

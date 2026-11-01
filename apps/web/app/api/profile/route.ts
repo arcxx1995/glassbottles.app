@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CURRENTS } from '@/lib/dressing'
+import { createServiceClient } from '@/lib/supabase/service'
+import { cityFromHeader } from '@/lib/city'
 
 // GET /api/profile
 // Returns the authenticated user's profile.
@@ -53,6 +55,21 @@ export async function PATCH(req: NextRequest) {
 
   if (typeof body !== 'object' || body === null) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  // The city comes only from Vercel's header, never the request body, and only
+  // Keepers' is kept: nobody else's is ever shown. The column isn't client-writable (038).
+  if ((body as { refresh_city?: unknown }).refresh_city === true) {
+    const { data: member } = await supabase.from('memberships').select('access_until').eq('user_id', user.id).maybeSingle()
+    const city = cityFromHeader(req.headers.get('x-vercel-ip-city'))
+    if (city && member && new Date(member.access_until) > new Date()) {
+      const { error } = await createServiceClient()
+        .from('profiles')
+        .update({ city, city_updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+      if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true })
   }
 
   const { timezone, email_notifications, current } = body as {

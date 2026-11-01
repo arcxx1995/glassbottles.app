@@ -1,62 +1,121 @@
 import type { SeaTheme } from './dressing'
+import type { KayakLook } from './kayakLook'
 
-// The Harbour (migration 056). Palettes mirror the CHECKs on public.kayaks;
-// widen both together.
-export const HULLS = ['yellow', 'white', 'coral', 'teal', 'navy', 'lime'] as const
-export const PADDLES = ['red', 'black', 'white', 'yellow', 'blue'] as const
-export type Hull = (typeof HULLS)[number]
-export type Paddle = (typeof PADDLES)[number]
+// The Harbour (migration 063): what get_harbour and friends answer, where things
+// float, and what the water looks like.
 
-/** One kayak in today's ring. */
-export interface Kayak {
-  slot: number
-  handle: string
-  bio: string | null
-  hull: Hull
-  paddle: Paddle
-  mine: boolean
+export type VoyageState = 'screening' | 'sailing' | 'visiting' | 'returning' | 'home'
+
+/** One of your own Kayaks. */
+export interface MyKayak {
+  id: string
+  look: KayakLook
+  aboard: number
+  state: VoyageState
+  /** Only while it's visiting, and only if that member's city is known. */
+  city: string | null
+  new_comments: number
 }
 
-/** The caller's own kayak, whether or not it's in today's ring. */
-export interface MyKayak {
-  handle: string
-  bio: string | null
-  /** Handle + bio screen: null = pending, 'held' = kept out of the harbour. */
-  screen: 'ok' | 'crisis' | 'held' | null
-  hull: Hull | null
-  paddle: Paddle | null
-  parked: boolean
-  launched: boolean
-  afloat: boolean
-  in_ring: boolean
+/** Someone else's Kayak, in your harbour. Never says whose. */
+export interface Visitor {
+  visit_id: string
+  look: KayakLook
+  aboard: number
+}
+
+/** A note or comment the screen held: the writer sees why and can rewrite. */
+export interface KayakNotice {
+  kind: 'note' | 'comment'
+  id: string
+  reason: string | null
+  body: string
+  at: string
+  kayak_id?: string
 }
 
 export interface Harbour {
   keeper: boolean
-  /** UTC day the twelve belong to (YYYY-MM-DD). */
-  day: string
-  kayaks: Kayak[]
-  /** Null until a handle is claimed. */
-  mine: MyKayak | null
+  gems: { remaining: number; stock: number; refill_at: string | null }
+  treasure: number
+  kayaks: MyKayak[]
+  visitors: Visitor[]
+  notices: KayakNotice[]
 }
 
-export const HULL_COLOR: Record<Hull, string> = {
-  yellow: '#F5C518',
-  white: '#ECF1F2',
-  coral: '#F2735C',
-  teal: '#1FA99B',
-  navy: '#24426E',
-  lime: '#A9D43C',
-}
-export const PADDLE_COLOR: Record<Paddle, string> = {
-  red: '#D93A2B',
-  black: '#1C1E22',
-  white: '#F3F3F1',
-  yellow: '#F5C518',
-  blue: '#2F6FD6',
+export interface GemRef {
+  id: string
+  engine: number
+  seed: number
 }
 
-export const HANDLE_RE = /^[a-z0-9_]{3,20}$/
+export interface GuestbookEntry {
+  id: string
+  body: string
+  at: string
+}
+
+export interface KayakVisit {
+  id: string
+  arrived_at: string
+  leaves_at: string
+  look: KayakLook
+  note: string
+  guestbook: GuestbookEntry[]
+  gems: GemRef[]
+}
+
+export interface VoyageLog {
+  id: string
+  state: VoyageState
+  started_at: string
+  ended_at: string | null
+  end_reason: string | null
+  notes: { id: string; body: string; at: string; comments: GuestbookEntry[] }[]
+}
+
+export interface KayakDetail {
+  id: string
+  look: KayakLook
+  state: VoyageState
+  city: string | null
+  edits_left: number | null
+  edit_pending: boolean
+  note: string | null
+  gems: GemRef[]
+  log: VoyageLog[]
+}
+
+export interface TreasureItem extends GemRef {
+  state: 'kept' | 'reserved'
+  kept_at: string | null
+  comment: string | null
+}
+
+export const MAX_KAYAKS = 3
+export const MAX_GEMS = 30
+export const NOTE_MAX = 280
+export const COMMENT_MIN = 10
+export const COMMENT_MAX = 280
+
+/** Said on the Harbour, for one of your Kayaks. */
+export function kayakStatus(k: Pick<MyKayak, 'state' | 'city'>): string {
+  switch (k.state) {
+    case 'screening':
+      return 'Checking your note before it sails'
+    case 'visiting':
+      return k.city ? `Your Kayak is somewhere near ${k.city}` : 'Your Kayak is sailing'
+    case 'sailing':
+      return 'Your Kayak is sailing'
+    case 'returning':
+      return 'Your Kayak is sailing home'
+    default:
+      return 'Tied to the mast'
+  }
+}
+
+/** At the mast, or about to leave it. */
+export const atMast = (k: Pick<MyKayak, 'state'>) => k.state === 'home' || k.state === 'screening'
 
 /** Deterministic 0..1 from a seed: the same kayak bobs the same way every visit. */
 export function seeded(seed: number) {
@@ -68,31 +127,32 @@ export interface Mooring {
   /** Centre, as a fraction of the square stage. */
   x: number
   y: number
-  /** Degrees clockwise from bow-up; bows point at the centre. */
+  /** Degrees clockwise from bow-up. */
   rotate: number
   /** Kayak length as a fraction of the stage. */
   length: number
 }
 
-/** Kayaks rafted in a loose ring, bows inward, like petals. A few jitters
- *  per slot keep it from looking machine-placed. */
-export function ringLayout(n: number): Mooring[] {
-  if (n <= 0) return []
-  const length = n <= 4 ? 0.38 : n <= 8 ? 0.33 : 0.3
-  if (n === 1) return [{ x: 0.5, y: 0.5, rotate: -12, length }]
-  const width = length * 0.27
-  // Room for every hull side by side at mid-length, and a gap between bows.
-  const r = Math.max(length / 2 + 0.035, (n * width * 1.4) / (2 * Math.PI))
-  return Array.from({ length: n }, (_, i) => {
-    const a = (2 * Math.PI * i) / n - Math.PI / 2 + (seeded(i + 1) - 0.5) * (Math.PI / n) * 0.35
-    const rr = r + (seeded(i + 31) - 0.5) * 0.02
-    return {
-      x: 0.5 + rr * Math.cos(a),
-      y: 0.5 + rr * Math.sin(a),
-      rotate: (a * 180) / Math.PI - 90 + (seeded(i + 57) - 0.5) * 14,
-      length,
-    }
-  })
+export const MAST = { x: 0.5, y: 0.34 }
+const SPOTS: [number, number][] = [[0.24, 0.27], [0.76, 0.27], [0.5, 0.66]]
+const VISITING: Mooring[] = [
+  { x: 0.2, y: 0.74, rotate: -14, length: 0.27 },
+  { x: 0.8, y: 0.74, rotate: 16, length: 0.27 },
+  { x: 0.5, y: 0.87, rotate: 82, length: 0.24 },
+]
+
+/** Where the owner's Kayaks tie up, bows toward the mast. */
+export function mastMooring(i: number): Mooring {
+  const [x, y] = SPOTS[i % SPOTS.length]
+  return { x, y, rotate: (Math.atan2(MAST.x - x, y - MAST.y) * 180) / Math.PI, length: 0.27 }
+}
+
+export const visitorMooring = (i: number): Mooring => VISITING[i % VISITING.length]
+
+/** The bow's position, where the rope ties on. */
+export function bowOf(m: Mooring): { x: number; y: number } {
+  const rad = (m.rotate * Math.PI) / 180
+  return { x: m.x + Math.sin(rad) * m.length * 0.46, y: m.y - Math.cos(rad) * m.length * 0.46 }
 }
 
 export type Light = 'dawn' | 'day' | 'dusk' | 'night'

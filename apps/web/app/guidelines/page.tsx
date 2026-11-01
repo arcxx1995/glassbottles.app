@@ -46,8 +46,8 @@ export default function GuidelinesPage() {
         </li>
         <li>
           <strong className="text-sand/85">Contact details and meet-ups:</strong> phone numbers,
-          emails, social handles, links, or ways to talk off the app. Bottles stay anonymous both
-          ways.
+          emails, social handles, links, or ways to talk off the app. Bottles and Kayaks stay
+          anonymous both ways.
         </li>
         <li>
           <strong className="text-sand/85">Spam and scams:</strong> ads, promotion, chain messages,

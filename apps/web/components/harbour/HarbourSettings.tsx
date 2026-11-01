@@ -1,25 +1,30 @@
 'use client'
 
-import { useBlockKayakMutation } from '@/store/api/bottleApi'
+import { useState } from 'react'
+import { useUnblockAllKayaksMutation } from '@/store/api/bottleApi'
 
-// Settings → Blocked in the Harbour (056): each handle one tap from unblocked.
-export default function HarbourSettings({ blocked }: { blocked: string[] }) {
-  const [block, { isLoading }] = useBlockKayakMutation()
+// Settings → Kayaks you've blocked (063). Owners have no names to list, so
+// undoing is all or nothing.
+export default function HarbourSettings() {
+  const [unblock, { isLoading }] = useUnblockAllKayaksMutation()
+  const [done, setDone] = useState<number | null>(null)
   return (
-    <div className="divide-y divide-white/[0.06]">
-      {blocked.map((h) => (
-        <div key={h} className="flex items-center justify-between gap-3 px-4 py-3">
-          <span className="font-ui text-sm text-sand/80">@{h}</span>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => block({ handle: h, block: false })}
-            className="press rounded-full bg-white/10 px-3 py-1 font-ui text-xs text-sand/80 disabled:opacity-50"
-          >
-            Unblock
-          </button>
-        </div>
-      ))}
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <span className="font-ui text-sm text-sand/70">
+        {done === null
+          ? 'Kayaks from people you’ve blocked stay away from your harbour.'
+          : done === 0
+            ? 'You haven’t blocked anyone.'
+            : `Unblocked ${done}.`}
+      </span>
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={async () => setDone(await unblock().unwrap())}
+        className="press shrink-0 rounded-full bg-white/10 px-3 py-1 font-ui text-xs text-sand/80 disabled:opacity-50"
+      >
+        Unblock all
+      </button>
     </div>
   )
 }

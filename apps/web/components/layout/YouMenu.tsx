@@ -6,30 +6,18 @@ import { AnimatePresence, motion } from 'motion/react'
 import { LogOut, Sailboat, Settings, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/signOut'
-import { useAppSelector } from '@/store'
-import { selectUser } from '@/store/authSlice'
-import { useGetHarbourQuery } from '@/store/api/bottleApi'
 import { spring, springMove } from '@/components/ui/springs'
-import KayakEditor from '@/components/harbour/KayakEditor'
 
 const KEEPER_ON = process.env.NEXT_PUBLIC_KEEPER === 'on'
 
-// The nav's last tab: a small menu rising from it — your handle, your kayak,
-// Settings, and log out. (Your current lives on the Sea: CurrentPicker.)
+// The nav's last tab: a small menu rising from it — your treasure room, Settings,
+// and log out. (Your current lives on the Sea: CurrentPicker.)
 export default function YouMenu() {
   const pathname = usePathname()
   const router = useRouter()
-  const user = useAppSelector(selectUser)
   const [open, setOpen] = useState(false)
-  const [opened, setOpened] = useState(false)
-  const [sheet, setSheet] = useState<null | 'kayak'>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const firstItem = useRef<HTMLButtonElement>(null)
-
-  // The handle and kayak come from the Harbour read (056); fetched the first
-  // time the menu opens, not on every page.
-  const { data: harbour, isFetching } = useGetHarbourQuery(undefined, { skip: !KEEPER_ON || !opened || !user?.id })
-  const mine = harbour?.mine ?? null
 
   useEffect(() => setOpen(false), [pathname])
   useEffect(() => {
@@ -62,10 +50,7 @@ export default function YouMenu() {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => {
-          setOpened(true)
-          setOpen((v) => !v)
-        }}
+        onClick={() => setOpen((v) => !v)}
         className={cn(
           'press relative flex flex-1 flex-col items-center gap-1 rounded-full py-2 transition-[color,transform] duration-200',
           active ? 'text-seafoam' : 'text-sand/40 hover:text-sand/70',
@@ -98,21 +83,15 @@ export default function YouMenu() {
             className="absolute bottom-[calc(100%+0.9rem)] right-0 w-60 rounded-3xl border border-white/10 bg-ocean-mid/[0.97] p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
           >
             {KEEPER_ON && (
-              <p className="truncate px-3 pb-1.5 pt-2 font-ui text-xs text-sand/50">
-                {mine ? `@${mine.handle}` : isFetching && !harbour ? '…' : 'No kayak launched yet'}
-              </p>
-            )}
-            {KEEPER_ON && (
               <button
                 ref={firstItem}
                 type="button"
                 role="menuitem"
-                disabled={!harbour}
-                className={cn(item, 'disabled:opacity-50')}
-                onClick={pick(() => (harbour?.keeper ? setSheet('kayak') : router.push('/harbour')))}
+                className={item}
+                onClick={pick(() => router.push('/harbour/treasure'))}
               >
                 <Sailboat size={17} strokeWidth={1.5} className="text-seafoam" aria-hidden="true" />
-                Your kayak
+                Treasure room
               </button>
             )}
             <button
@@ -139,9 +118,6 @@ export default function YouMenu() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {sheet === 'kayak' && <KayakEditor mine={mine} onClose={() => setSheet(null)} />}
-      </AnimatePresence>
     </div>
   )
 }

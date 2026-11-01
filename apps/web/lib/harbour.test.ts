@@ -1,43 +1,39 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { CURRENTS, CURRENT_INFO } from './dressing'
-import { HULLS, LIGHTS, PADDLES, currentLight, hex, lightAt, ringLayout, type Light } from './harbour'
+import { LIGHTS, MAST, atMast, bowOf, currentLight, hex, kayakStatus, lightAt, mastMooring, visitorMooring, type Light } from './harbour'
 
-// The palettes live twice: here and in 056's CHECKs on public.kayaks.
-const sql = readFileSync(join(__dirname, '../../../supabase/migrations/056_harbour.sql'), 'utf8')
-const checkList = (col: string) =>
-  [...sql.match(new RegExp(`CHECK \\(${col} IN \\(([^)]*)\\)`))![1].matchAll(/'([a-z]+)'/g)].map((m) => m[1])
+describe('kayakStatus', () => {
+  it('names the city only while visiting', () => {
+    expect(kayakStatus({ state: 'visiting', city: 'Lisbon' })).toBe('Your Kayak is somewhere near Lisbon')
+    expect(kayakStatus({ state: 'visiting', city: null })).toBe('Your Kayak is sailing')
+    expect(kayakStatus({ state: 'sailing', city: 'Lisbon' })).toBe('Your Kayak is sailing')
+    expect(kayakStatus({ state: 'returning', city: null })).toBe('Your Kayak is sailing home')
+    expect(kayakStatus({ state: 'home', city: null })).toBe('Tied to the mast')
+  })
 
-describe('kayak palettes', () => {
-  it('match the database', () => {
-    expect(checkList('hull')).toEqual([...HULLS])
-    expect(checkList('paddle')).toEqual([...PADDLES])
+  it('counts screening as still at the mast', () => {
+    expect(atMast({ state: 'screening' })).toBe(true)
+    expect(atMast({ state: 'home' })).toBe(true)
+    expect(atMast({ state: 'sailing' })).toBe(false)
   })
 })
 
-describe('ringLayout', () => {
-  it.each([1, 2, 5, 12])('keeps %i kayaks on the stage, bows to the centre', (n) => {
-    const ring = ringLayout(n)
-    expect(ring).toHaveLength(n)
-    for (const k of ring) {
-      // Whole hull inside the stage.
-      expect(Math.min(k.x, k.y) - k.length / 2).toBeGreaterThanOrEqual(0)
-      expect(Math.max(k.x, k.y) + k.length / 2).toBeLessThanOrEqual(1)
-      if (n > 1) {
-        // Bow direction (rotate 0 = up) points roughly at the centre.
-        const rad = (k.rotate * Math.PI) / 180
-        const bow = { x: Math.sin(rad), y: -Math.cos(rad) }
-        const toCentre = { x: 0.5 - k.x, y: 0.5 - k.y }
-        expect(bow.x * toCentre.x + bow.y * toCentre.y).toBeGreaterThan(0)
+describe('moorings', () => {
+  it.each([0, 1, 2])('Kayak %i ties up on the stage, bow nearer the mast than its stern', (i) => {
+    const m = mastMooring(i)
+    expect(Math.min(m.x, m.y) - m.length * 0.34).toBeGreaterThanOrEqual(0)
+    expect(Math.max(m.x, m.y) + m.length * 0.34).toBeLessThanOrEqual(1)
+    const bow = bowOf(m)
+    const dist = (p: { x: number; y: number }) => Math.hypot(p.x - MAST.x, p.y - MAST.y)
+    expect(dist(bow)).toBeLessThan(dist(m))
+  })
+
+  it('never puts a visitor on top of a tied-up Kayak', () => {
+    for (const a of [0, 1, 2].map(mastMooring)) {
+      for (const b of [0, 1, 2].map(visitorMooring)) {
+        expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(0.16)
       }
     }
-  })
-  it('never lets two hulls sit on top of each other', () => {
-    const ring = ringLayout(12)
-    for (let i = 0; i < ring.length; i++)
-      for (let j = i + 1; j < ring.length; j++)
-        expect(Math.hypot(ring[i].x - ring[j].x, ring[i].y - ring[j].y)).toBeGreaterThan(ring[0].length * 0.25)
   })
 })
 

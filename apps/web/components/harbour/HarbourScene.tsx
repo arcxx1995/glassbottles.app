@@ -1,108 +1,145 @@
 'use client'
 
-import type { Route } from 'next'
+import { type Route } from 'next'
 import { motion, useReducedMotion } from 'motion/react'
 import { TransitionLink } from '@/components/ui/TransitionLink'
-import { cn } from '@/lib/utils'
-import { ringLayout, seeded, type Hull, type Kayak, type Mooring, type MyKayak, type Paddle } from '@/lib/harbour'
+import { MAST, atMast, bowOf, mastMooring, seeded, visitorMooring, type MyKayak, type Mooring, type Visitor } from '@/lib/harbour'
+import type { KayakLook } from '@/lib/kayakLook'
 import KayakArt, { KayakShadow } from './KayakArt'
 
-// The harbour from above: today's kayaks rafted in a ring over the water.
-// Each kayak is its own positioned element (not one big SVG) so a tapped
-// kayak can morph into its interior through a view transition.
+// The harbour from above: a mast in the water, your Kayaks roped to it when
+// they're home, and up to 3 visitors floating free. The same scene for everyone;
+// a free member's mast just has nothing tied to it. Each Kayak is its own
+// positioned element so a tapped one can morph through a view transition.
 
-const ASPECT = 200 / 300 // KayakArt's viewBox
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
-
-/** Your own kayak, when it isn't in today's twelve: moored off to one side. */
-const OWN: Mooring = { x: 0.87, y: 0.88, rotate: -38, length: 0.2 }
-
-/** Decorative ring for the preview non-Keepers see. */
-const GHOSTS: { hull: Hull; paddle: Paddle }[] = [
-  { hull: 'yellow', paddle: 'red' },
-  { hull: 'white', paddle: 'red' },
-  { hull: 'yellow', paddle: 'red' },
-  { hull: 'coral', paddle: 'black' },
-  { hull: 'yellow', paddle: 'red' },
-  { hull: 'teal', paddle: 'white' },
-  { hull: 'white', paddle: 'red' },
-]
+const ASPECT = 260 / 316 // drawKayak's viewBox
 
 export default function HarbourScene({
   kayaks,
-  mine,
-  night,
-  ghost = false,
+  visitors,
+  treasure,
 }: {
-  kayaks: Kayak[]
-  mine: MyKayak | null
-  night: boolean
-  /** Preview: decorative kayaks, no names, nothing to tap. */
-  ghost?: boolean
+  kayaks: MyKayak[]
+  visitors: Visitor[]
+  treasure: number
 }) {
-  const items = ghost
-    ? GHOSTS.map((g, i) => ({ slot: i + 1, handle: '', bio: null, mine: false, ...g }))
-    : kayaks
-  const ring = ringLayout(items.length)
-  const ownAshore = !ghost && mine?.launched && !mine.in_ring && mine.hull && mine.paddle
-
+  const home = kayaks.filter(atMast)
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div
-        className={cn('relative aspect-square', ghost && 'opacity-60 saturate-[0.85]')}
-        style={{ width: 'min(100vw, calc(100svh - 9rem), 820px)' }}
-      >
-        {items.map((k, i) => (
+    <div className="absolute inset-x-0 top-20 flex justify-center">
+      {/* Room below for the status cards and the nav; on a phone the width decides. */}
+      <div className="relative aspect-square" style={{ width: 'min(100vw, calc(100svh - 19rem), 820px)' }}>
+        <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {home.map((k, i) => {
+            const bow = bowOf(mastMooring(i))
+            return (
+              <path
+                key={k.id}
+                d={`M${MAST.x * 100} ${MAST.y * 100}Q${((MAST.x + bow.x) / 2) * 100} ${((MAST.y + bow.y) / 2) * 100 + 3} ${bow.x * 100} ${bow.y * 100}`}
+                fill="none"
+                stroke="#E8D9B5"
+                strokeWidth=".5"
+                strokeDasharray="1 .3"
+              />
+            )
+          })}
+        </svg>
+        <Mast tied={home.length > 0} />
+
+        {home.map((k, i) => (
           <Moored
-            key={k.handle || i}
-            at={ring[i]}
-            seed={k.slot}
-            hull={k.hull}
-            paddle={k.paddle}
-            night={night}
-            handle={ghost ? null : k.handle}
-            label={ghost ? null : k.mine ? 'you' : `@${k.handle}`}
-            outward={items.length > 1}
+            key={k.id}
+            at={mastMooring(i)}
+            seed={i + 1}
+            look={k.look}
+            aboard={k.aboard}
+            href={`/harbour/kayak/${k.id}`}
+            ariaLabel={`Your Kayak ${i + 1}`}
+            name={`kayak-${k.id}`}
+            badge={k.new_comments}
           />
         ))}
-        {ownAshore && (
+        {visitors.map((v, i) => (
           <Moored
-            at={OWN}
-            seed={99}
-            hull={mine.hull!}
-            paddle={mine.paddle!}
-            night={night}
-            handle={mine.handle}
-            label={mine.afloat ? 'you · not in today’s ring' : 'you · ashore'}
-            dim={!mine.afloat}
+            key={v.visit_id}
+            at={visitorMooring(i)}
+            seed={i + 11}
+            look={v.look}
+            aboard={v.aboard}
+            href={`/harbour/visit/${v.visit_id}`}
+            ariaLabel="A visiting Kayak"
+            name={`visit-${v.visit_id}`}
+            label="A visitor"
           />
-        )}
+        ))}
+
+        <TransitionLink
+          href={'/harbour/treasure' as Route}
+          aria-label={treasure > 0 ? `Your treasure room, ${treasure} ${treasure === 1 ? 'item' : 'items'}` : 'Your treasure room'}
+          className="press absolute left-[86%] top-[6%] flex -translate-x-1/2 flex-col items-center rounded-2xl p-1 outline-none focus-visible:ring-2 focus-visible:ring-sand/70"
+        >
+          <Chest />
+          <span className="mt-0.5 rounded-full bg-black/25 px-2 py-0.5 font-ui text-[10px] text-white/90 backdrop-blur-sm">
+            {treasure > 0 ? treasure : 'Treasure'}
+          </span>
+        </TransitionLink>
       </div>
     </div>
+  )
+}
+
+function Mast({ tied }: { tied: boolean }) {
+  return (
+    <div
+      className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+      style={{ left: `${MAST.x * 100}%`, top: `${MAST.y * 100}%`, width: '13%' }}
+    >
+      {/* Seen from straight above: a weathered post, a ring of rope, and a ripple where it meets the water. */}
+      <svg viewBox="0 0 60 60" className="block w-full drop-shadow-[3px_5px_4px_rgba(0,30,50,0.45)]" aria-hidden="true">
+        <circle cx="30" cy="30" r="27" fill="none" stroke="#fff" strokeOpacity=".28" strokeWidth="1.5" />
+        <circle cx="30" cy="30" r="20" fill="none" stroke="#fff" strokeOpacity=".18" strokeWidth="1" />
+        <circle cx="30" cy="30" r="13.5" fill="#6d5233" />
+        <circle cx="30" cy="30" r="13.5" fill="none" stroke="#3f2d17" strokeWidth="1.4" />
+        <circle cx="30" cy="30" r="9" fill="none" stroke="#574126" strokeWidth=".8" />
+        <circle cx="30" cy="30" r="5" fill="none" stroke="#574126" strokeWidth=".8" />
+        <circle cx="26" cy="26" r="1.6" fill="#a58a60" />
+        <circle cx="30" cy="30" r="15.5" fill="none" stroke="#E8D9B5" strokeWidth="2.6" strokeDasharray="2.4 .6" strokeOpacity={tied ? 1 : 0.65} />
+      </svg>
+    </div>
+  )
+}
+
+function Chest() {
+  return (
+    <svg viewBox="0 0 44 36" className="h-9 w-11 drop-shadow-[2px_4px_3px_rgba(0,30,50,0.45)]" aria-hidden="true">
+      <rect x="3" y="4" width="38" height="28" rx="3" fill="#7c5730" />
+      <rect x="3" y="4" width="38" height="28" rx="3" fill="none" stroke="#472f16" strokeWidth="1.4" />
+      <path d="M3 14H41M15 4V32M29 4V32" stroke="#472f16" strokeWidth="1" />
+      <path d="M3 8H41M3 28H41" stroke="#c9a15b" strokeWidth="2" />
+      <rect x="18.5" y="11" width="7" height="8" rx="1.4" fill="#e3bb6c" stroke="#7b5a1f" />
+    </svg>
   )
 }
 
 function Moored({
   at,
   seed,
-  hull,
-  paddle,
-  night,
-  handle,
+  look,
+  aboard,
+  href,
+  ariaLabel,
+  name,
   label,
-  outward = false,
-  dim = false,
+  badge = 0,
 }: {
   at: Mooring
   seed: number
-  hull: Hull
-  paddle: Paddle
-  night: boolean
-  handle: string | null
-  label: string | null
-  /** Label off the stern, away from the ring's centre; else below the kayak. */
-  outward?: boolean
-  dim?: boolean
+  look: KayakLook
+  aboard: number
+  href: string
+  ariaLabel: string
+  name: string
+  label?: string
+  badge?: number
 }) {
   const reduced = useReducedMotion() ?? false
   const box = {
@@ -114,57 +151,42 @@ function Moored({
   // Light falls from the top-left, so shadows drift down-right on the seabed.
   const shadow = { ...box, left: `${(at.x + at.length * 0.07) * 100}%`, top: `${(at.y + at.length * 0.1) * 100}%` }
   // One transform, centring first: the CSS `rotate` property would apply
-  // before Tailwind's translate and swing every kayak off its mooring.
+  // before Tailwind's translate and swing every Kayak off its mooring.
   const place = `translate(-50%, -50%) rotate(${at.rotate}deg)`
-  const rad = (at.rotate * Math.PI) / 180
-  const dir = outward ? { x: -Math.sin(rad), y: Math.cos(rad) } : { x: 0, y: 1 }
-  const off = at.length / 2 + 0.05
-  const bob = reduced
-    ? undefined
-    : {
-        rotate: [0, 1.4, -1.1, 0],
-        x: [0, 1.6, -1.2, 0],
-        y: [0, -1.4, 1.1, 0],
-      }
+  const bob = reduced ? undefined : { rotate: [0, 1.4, -1.1, 0], x: [0, 1.6, -1.2, 0], y: [0, -1.4, 1.1, 0] }
   const duration = 7 + seeded(seed) * 5
-
-  const art = (
-    <motion.div
-      className="h-full w-full"
-      animate={bob}
-      transition={{ duration, repeat: Infinity, ease: 'easeInOut', delay: -seeded(seed + 7) * duration }}
-    >
-      <KayakArt hull={hull} paddle={paddle} lantern={night} className="h-full w-full drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
-    </motion.div>
-  )
 
   return (
     <>
       <div className="pointer-events-none absolute blur-[5px]" style={{ ...shadow, transform: place }}>
-        <KayakShadow className="h-full w-full" />
+        <KayakShadow look={look} className="h-full w-full" />
       </div>
-      {handle ? (
-        <TransitionLink
-          href={`/harbour/${handle}` as Route}
-          aria-label={label === 'you' || label?.startsWith('you') ? 'Your kayak' : `Kayak ${label}`}
-          className={cn(
-            'press absolute rounded-[40%] outline-none focus-visible:ring-2 focus-visible:ring-sand/70',
-            dim && 'opacity-55 grayscale-[0.3]',
-          )}
-          style={{ ...box, transform: place, viewTransitionName: `kayak-${handle}` }}
+      <TransitionLink
+        href={href as Route}
+        aria-label={ariaLabel}
+        className="press absolute rounded-[40%] outline-none focus-visible:ring-2 focus-visible:ring-sand/70"
+        style={{ ...box, transform: place, viewTransitionName: name }}
+      >
+        <motion.div
+          className="h-full w-full"
+          animate={bob}
+          transition={{ duration, repeat: Infinity, ease: 'easeInOut', delay: -seeded(seed + 7) * duration }}
         >
-          {art}
-        </TransitionLink>
-      ) : (
-        <div className="absolute" style={{ ...box, transform: place }}>
-          {art}
-        </div>
+          <KayakArt look={look} aboard={aboard} className="h-full w-full" />
+        </motion.div>
+      </TransitionLink>
+      {badge > 0 && (
+        <span
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-seafoam px-1.5 py-0.5 font-ui text-[10px] font-semibold text-ocean-deep"
+          style={{ left: `${(at.x + 0.06) * 100}%`, top: `${(at.y - 0.09) * 100}%` }}
+        >
+          {badge}
+        </span>
       )}
       {label && (
         <span
           className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/25 px-2 py-0.5 font-ui text-[10px] font-medium tracking-wide text-white/90 backdrop-blur-sm sm:text-[11px]"
-          // Kept off the stage's edges: on a phone the stage is the screen.
-          style={{ left: `${clamp(at.x + dir.x * off, 0.16, 0.84) * 100}%`, top: `${(at.y + dir.y * off) * 100}%` }}
+          style={{ left: `${at.x * 100}%`, top: `${Math.min(at.y + at.length * 0.54, 0.97) * 100}%` }}
         >
           {label}
         </span>

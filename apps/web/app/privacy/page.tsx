@@ -14,7 +14,7 @@ const CONTACT = 'hello@glassbottles.app'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="24 October 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="1 November 2026">
       <p>
         glassbottles (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;the service&rdquo;) is an
         anonymous message-in-a-bottle app. We keep the amount of personal data we collect to
@@ -40,6 +40,23 @@ export default function PrivacyPolicyPage() {
         deliver your daily bottle at the right moment) and, if you enable them, push-notification
         subscription details.
       </p>
+      {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
+        <>
+          <p>
+            <strong className="text-sand/85">Kayak notes and comments.</strong> If you&rsquo;re a
+            Keeper, the note on your Kayak is shown to the Keepers it visits, and a comment you
+            leave is shown to the Kayak&rsquo;s owner and to Keepers it visits next. Neither shows
+            your name. Both go through the same automated safety check as bottles.
+          </p>
+          <p>
+            <strong className="text-sand/85">Your approximate city.</strong> If you&rsquo;re a
+            Keeper, we work out your city from your IP address and keep it on your profile. While
+            someone&rsquo;s Kayak is visiting you, its owner sees &ldquo;somewhere near&rdquo; that
+            city, and never who you are. It can be wrong if you use a VPN. We don&rsquo;t ask for
+            your device&rsquo;s precise location.
+          </p>
+        </>
+      )}
       <p>
         <strong className="text-sand/85">Usage analytics.</strong> We use Vercel Analytics and
         Speed Insights to understand aggregate traffic and performance. These do not use cookies

@@ -84,6 +84,26 @@ export default function AuthProvider({
         })
     }
 
+    // The city a Kayak's owner sees while it visits you (063). The route reads it
+    // from Vercel's IP header, for Keepers only. A single call a week per device,
+    // so this isn't polling; failure just tries again next load.
+    // ponytail: a new Keeper may wait up to a week for a city; the line just says
+    // "sailing" until then. Clear the key on checkout return if that ever matters.
+    const syncCity = () => {
+      const KEY = 'gb-city-checked-at'
+      const last = Number(localStorage.getItem(KEY) ?? 0)
+      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return
+      void fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_city: true }),
+      })
+        .then((res) => {
+          if (res.ok) localStorage.setItem(KEY, String(Date.now()))
+        })
+        .catch(() => {})
+    }
+
     // ── 1. Bootstrap: restore session from cookie (no network round-trip) ────
     // getSession() reads the cookie synchronously — instant restore on reload.
     // Server-side security is covered by middleware calling getUser() on every
@@ -122,6 +142,7 @@ export default function AuthProvider({
       if (profile) {
         dispatch(setUser(profile))
         syncTimezone(profile)
+        syncCity()
       }
     })()
 
@@ -154,6 +175,7 @@ export default function AuthProvider({
         if (profile) {
           dispatch(setUser(profile))
           syncTimezone(profile)
+          syncCity()
         }
       }
     })

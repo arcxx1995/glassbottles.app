@@ -28,7 +28,7 @@ export default function BottomNav() {
   const unreadCount = bottles?.filter((b) => !b.is_read).length ?? 0
   const NAV_ITEMS = [
     { href: '/sea', label: 'Sea', Icon: Anchor, badge: 0 },
-    // The Harbour is Keepers-only (056); hidden while Keeper is off.
+    // Hidden while Keeper is off: Kayaks need a membership to build (063).
     ...(process.env.NEXT_PUBLIC_KEEPER === 'on'
       ? [{ href: '/harbour', label: 'Harbour', Icon: Sailboat, badge: 0 } as const]
       : []),

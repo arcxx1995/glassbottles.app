@@ -58,6 +58,15 @@ export default function TermsPage() {
               When a membership ends, your bottles stay, but they turn plain on your shelf and new
               Keeper extras stop. Rejoining brings the looks back.
             </li>
+            <li>
+              Kayaks and their gems are part of Keeper. Gems have no monetary value and can&rsquo;t
+              be bought, sold or traded. The monthly allowance doesn&rsquo;t roll over; a free trial
+              has a smaller one.
+            </li>
+            <li>
+              Three days after a membership ends, Kayaks at sea sail home and must be launched
+              again. Gems you&rsquo;ve kept stay in your treasure room.
+            </li>
             <li>Deleting your account cancels any renewing membership.</li>
             <li>
               If a charge looks wrong, email us and we&rsquo;ll put it right; refunds are issued

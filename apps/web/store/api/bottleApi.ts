@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Bottle, DailyQuota, ReportReason } from '@/types'
 import type { AtelierPiece, BottleStyle, Weather } from '@/lib/dressing'
 import { hasAccess } from '@/lib/keeper'
-import type { Harbour, Hull, Paddle } from '@/lib/harbour'
+import type { GemRef, Harbour, KayakDetail, KayakVisit, TreasureItem } from '@/lib/harbour'
+import type { KayakLook } from '@/lib/kayakLook'
 
 /** Lightweight shape for floating bottles — only what the sea renders.
  *  No message/receiver fields leak; just id (key) and day_key (date label). */
@@ -100,10 +101,17 @@ export interface KeeperState {
   foundingSpotsLeft: number
 }
 
+/** Every Kayak call: one Supabase RPC, with its error message as the error. */
+async function kayakRpc<T>(fn: string, args?: Record<string, unknown>) {
+  const { data, error } = await createClient().rpc(fn, args)
+  if (error) return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
+  return { data: data as T }
+}
+
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Harbour', 'KayakBlocks'],
+  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Harbour', 'Kayak', 'Visit', 'Treasure'],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -477,99 +485,78 @@ export const bottleApi = createApi({
       providesTags: ['Membership'],
     }),
 
-    // The Harbour (056). Supabase-direct RPCs; the twelve change once a UTC
-    // day, so nothing here polls. Errors carry the RPC's message
-    // ('keeper_only', 'no_handle', 'content_not_allowed', ...).
+    // The Harbour (063). Supabase-direct RPCs, refreshed by the 'kayak_update'
+    // broadcast, so nothing here polls. Errors carry the RPC's message
+    // ('keeper_only', 'at_sea', 'content_not_allowed', ...).
     getHarbour: builder.query<Harbour, void>({
-      queryFn: async () => {
-        const supabase = createClient()
-        const { data, error } = await supabase.rpc('get_harbour')
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: data as Harbour }
-      },
+      queryFn: () => kayakRpc<Harbour>('get_harbour'),
       providesTags: ['Harbour'],
     }),
-    // A handle is a row in social_profiles (050): written directly under RLS,
-    // with the blocklist guard (051) and the screen (056) behind it.
-    claimHandle: builder.mutation<void, { handle: string; bio?: string }>({
-      queryFn: async ({ handle, bio }) => {
-        const supabase = createClient()
-        const { data: auth } = await supabase.auth.getSession()
-        const uid = auth.session?.user.id
-        if (!uid) return { error: { status: 'CUSTOM_ERROR' as const, error: 'not authenticated' } }
-        const { error } = await supabase
-          .from('social_profiles')
-          .insert({ user_id: uid, handle: handle.toLowerCase(), bio: bio?.trim() || null })
-        if (error) {
-          const taken = error.code === '23505'
-          return { error: { status: 'CUSTOM_ERROR' as const, error: taken ? 'handle_taken' : error.message } }
-        }
-        return { data: undefined }
-      },
+    getKayak: builder.query<KayakDetail, string>({
+      queryFn: (id) => kayakRpc<KayakDetail>('get_kayak', { p_id: id }),
+      providesTags: ['Kayak'],
+    }),
+    getVisit: builder.query<KayakVisit, string>({
+      queryFn: (id) => kayakRpc<KayakVisit>('get_visit', { p_visit: id }),
+      providesTags: ['Visit'],
+    }),
+    getTreasure: builder.query<TreasureItem[], void>({
+      queryFn: () => kayakRpc<TreasureItem[]>('get_treasure'),
+      providesTags: ['Treasure'],
+    }),
+    saveKayakLook: builder.mutation<string, { id: string | null; look: KayakLook }>({
+      queryFn: ({ id, look }) => kayakRpc<string>('save_kayak_look', { p_id: id, p_look: look }),
+      invalidatesTags: ['Harbour', 'Kayak'],
+    }),
+    deleteKayak: builder.mutation<boolean, string>({
+      queryFn: (id) => kayakRpc<boolean>('delete_kayak', { p_id: id }),
       invalidatesTags: ['Harbour'],
     }),
-    updateBio: builder.mutation<void, string>({
-      queryFn: async (bio) => {
-        const supabase = createClient()
-        const { data: auth } = await supabase.auth.getSession()
-        const uid = auth.session?.user.id
-        if (!uid) return { error: { status: 'CUSTOM_ERROR' as const, error: 'not authenticated' } }
-        const { error } = await supabase
-          .from('social_profiles')
-          .update({ bio: bio.trim() || null })
-          .eq('user_id', uid)
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: undefined }
-      },
+    loadGems: builder.mutation<GemRef[], { kayak: string; count: number }>({
+      queryFn: ({ kayak, count }) => kayakRpc<GemRef[]>('load_gems', { p_kayak: kayak, p_count: count }),
+      invalidatesTags: ['Harbour', 'Kayak'],
+    }),
+    unloadGem: builder.mutation<boolean, { kayak: string; gem: string }>({
+      queryFn: ({ kayak, gem }) => kayakRpc<boolean>('unload_gem', { p_kayak: kayak, p_gem: gem }),
+      invalidatesTags: ['Harbour', 'Kayak'],
+    }),
+    launchKayak: builder.mutation<string, { kayak: string; note: string }>({
+      queryFn: ({ kayak, note }) => kayakRpc<string>('launch_kayak', { p_kayak: kayak, p_note: note }),
+      invalidatesTags: ['Harbour', 'Kayak'],
+    }),
+    editNote: builder.mutation<boolean, { kayak: string; note: string }>({
+      queryFn: ({ kayak, note }) => kayakRpc<boolean>('edit_note', { p_kayak: kayak, p_note: note }),
+      invalidatesTags: ['Kayak'],
+    }),
+    recallKayak: builder.mutation<boolean, string>({
+      queryFn: (kayak) => kayakRpc<boolean>('recall_kayak', { p_kayak: kayak }),
+      invalidatesTags: ['Harbour', 'Kayak'],
+    }),
+    leaveComment: builder.mutation<boolean, { visit: string; gem: string; body: string }>({
+      queryFn: ({ visit, gem, body }) => kayakRpc<boolean>('leave_comment', { p_visit: visit, p_gem: gem, p_body: body }),
+      invalidatesTags: ['Harbour', 'Treasure'],
+    }),
+    waveOn: builder.mutation<boolean, string>({
+      queryFn: (visit) => kayakRpc<boolean>('wave_on', { p_visit: visit }),
       invalidatesTags: ['Harbour'],
     }),
-    saveKayak: builder.mutation<void, { hull: Hull; paddle: Paddle; parked: boolean }>({
-      queryFn: async ({ hull, paddle, parked }) => {
-        const supabase = createClient()
-        const { error } = await supabase.rpc('save_kayak', { p_hull: hull, p_paddle: paddle, p_parked: parked })
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: undefined }
-      },
+    reportNote: builder.mutation<boolean, { visit: string; reason: ReportReason }>({
+      queryFn: ({ visit, reason }) => kayakRpc<boolean>('report_note', { p_visit: visit, p_reason: reason }),
       invalidatesTags: ['Harbour'],
     }),
-    getKayakBlocks: builder.query<string[], void>({
-      queryFn: async () => {
-        const supabase = createClient()
-        const { data, error } = await supabase.rpc('get_kayak_blocks')
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: data as string[] }
-      },
-      providesTags: ['KayakBlocks'],
+    reportComment: builder.mutation<boolean, { comment: string; reason: ReportReason }>({
+      queryFn: ({ comment, reason }) => kayakRpc<boolean>('report_comment', { p_comment: comment, p_reason: reason }),
+      invalidatesTags: ['Visit', 'Kayak'],
     }),
-    blockKayak: builder.mutation<void, { handle: string; block: boolean }>({
-      queryFn: async ({ handle, block }) => {
-        const supabase = createClient()
-        const { error } = await supabase.rpc('block_kayak', { p_handle: handle, p_block: block })
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: undefined }
-      },
-      invalidatesTags: ['Harbour', 'KayakBlocks'],
+    blockVisit: builder.mutation<boolean, string>({
+      queryFn: (visit) => kayakRpc<boolean>('block_visit', { p_visit: visit }),
+      invalidatesTags: ['Harbour'],
     }),
-    // A report also hides that kayak from you at once (056).
-    reportKayak: builder.mutation<void, { handle: string; reason: ReportReason }>({
-      queryFn: async ({ handle, reason }) => {
-        const supabase = createClient()
-        const { error } = await supabase.rpc('report_kayak', { p_handle: handle, p_reason: reason })
-        if (error) {
-          return { error: { status: 'CUSTOM_ERROR' as const, error: error.message } }
-        }
-        return { data: undefined }
-      },
+    unblockAllKayaks: builder.mutation<number, void>({
+      queryFn: () => kayakRpc<number>('unblock_all_kayaks'),
+    }),
+    ackKayakNotice: builder.mutation<boolean, { kind: 'note' | 'comment'; id: string }>({
+      queryFn: ({ kind, id }) => kayakRpc<boolean>('ack_kayak_notice', { p_kind: kind, p_id: id }),
       invalidatesTags: ['Harbour'],
     }),
   }),
@@ -595,10 +582,21 @@ export const {
   useMarkFutureReadMutation,
   useSpotWhaleMutation,
   useGetHarbourQuery,
-  useClaimHandleMutation,
-  useUpdateBioMutation,
-  useSaveKayakMutation,
-  useGetKayakBlocksQuery,
-  useBlockKayakMutation,
-  useReportKayakMutation,
+  useGetKayakQuery,
+  useGetVisitQuery,
+  useGetTreasureQuery,
+  useSaveKayakLookMutation,
+  useDeleteKayakMutation,
+  useLoadGemsMutation,
+  useUnloadGemMutation,
+  useLaunchKayakMutation,
+  useEditNoteMutation,
+  useRecallKayakMutation,
+  useLeaveCommentMutation,
+  useWaveOnMutation,
+  useReportNoteMutation,
+  useReportCommentMutation,
+  useBlockVisitMutation,
+  useUnblockAllKayaksMutation,
+  useAckKayakNoticeMutation,
 } = bottleApi

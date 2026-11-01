@@ -74,9 +74,13 @@ export default function RealtimeBottleListener() {
           // A letter to yourself washed back (047).
           dispatch(bottleApi.util.invalidateTags(['Future']))
         })
+        .on('broadcast', { event: 'kayak_update' }, () => {
+          // A Kayak moved, or a note or comment got its verdict (063).
+          dispatch(bottleApi.util.invalidateTags(['Harbour', 'Kayak', 'Visit', 'Treasure']))
+        })
         .on('broadcast', { event: 'membership' }, () => {
-          // The Dodo webhook changed this user's Keeper membership (041);
-          // the Harbour is Keepers-only (056), and so is seeing dressing (057).
+          // The Dodo webhook changed this user's Keeper membership (041). Kayaks
+          // need one (063), and so does seeing dressing (057).
           dispatch(
             bottleApi.util.invalidateTags(['Membership', 'Harbour', 'ReceivedBottles', 'BottleStatus', 'Future'])
           )

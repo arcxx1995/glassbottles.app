@@ -23,7 +23,6 @@ import type { Profile } from '@/types'
 import KeeperCard from '@/components/keeper/KeeperCard'
 import { signOut } from '@/lib/signOut'
 import HarbourSettings from '@/components/harbour/HarbourSettings'
-import { useGetKayakBlocksQuery } from '@/store/api/bottleApi'
 import { disablePush, enablePush, getPushState, type PushState } from '@/lib/push'
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
@@ -669,10 +668,6 @@ export default function SettingsPage() {
     }
   }
 
-  const { data: blocked = [] } = useGetKayakBlocksQuery(undefined, {
-    skip: process.env.NEXT_PUBLIC_KEEPER !== 'on',
-  })
-
   async function handleSignOut() {
     await signOut((path) => router.replace(path))
   }
@@ -733,11 +728,11 @@ export default function SettingsPage() {
             </div>
           </motion.section>
         )}
-        {blocked.length > 0 && (
+        {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
           <motion.section {...staggerItem(4)}>
-            <SectionLabel>Blocked in the Harbour</SectionLabel>
+            <SectionLabel>Kayaks you&rsquo;ve blocked</SectionLabel>
             <div className={CARD}>
-              <HarbourSettings blocked={blocked} />
+              <HarbourSettings />
             </div>
           </motion.section>
         )}

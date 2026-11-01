@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 interface QueueItem {
   id: string
-  kind: 'bottle' | 'profile' | 'user'
+  kind: 'bottle' | 'kayak_note' | 'kayak_comment' | 'user'
   source: 'screen' | 'report' | 'suspension'
   reason: string | null
   reports: number

@@ -31,6 +31,8 @@ export interface KayakNotice {
   reason: string | null
   body: string
   at: string
+  /** A moderator hasn't decided yet. */
+  waiting: boolean
   kayak_id?: string
 }
 

@@ -57,7 +57,7 @@ export default function HarbourPage() {
         </div>
       </header>
 
-      <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-5 pb-6">
+      <div className="absolute inset-x-0 bottom-0 z-10 flex max-h-[60%] flex-col items-center gap-2 overflow-y-auto px-5 pb-6">
         {isError ? (
           <Card>
             <p className="font-ui text-sm text-sand/80">The harbour didn&rsquo;t load.</p>
@@ -152,9 +152,9 @@ function Notice({ notice }: { notice: KayakNotice }) {
   return (
     <Card>
       <p className="font-ui text-xs leading-relaxed text-sand/75">
-        {notice.reason === 'review' || notice.reason === 'minor'
+        {notice.waiting
           ? notice.kind === 'note'
-            ? 'Your note is waiting for a closer look, so it didn’t go out.'
+            ? 'Your note is waiting for a closer look, so it hasn’t gone out.'
             : 'Your comment is waiting for a closer look. Your gem stays on its way until then.'
           : notice.kind === 'note'
             ? 'Your note didn’t pass our check, so it didn’t go out.'

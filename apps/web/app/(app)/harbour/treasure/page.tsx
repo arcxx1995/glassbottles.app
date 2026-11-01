@@ -7,7 +7,9 @@ import HarbourWater from '@/components/harbour/HarbourWater'
 import { TransitionLink } from '@/components/ui/TransitionLink'
 import { gemName } from '@/lib/gems/engine'
 import { lightAt, type Light } from '@/lib/harbour'
-import { useGetTreasureQuery } from '@/store/api/bottleApi'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
+import WeatherLayer from '@/components/shared/WeatherLayer'
+import { useGetHarbourQuery, useGetTreasureQuery } from '@/store/api/bottleApi'
 
 // The treasure room (063): every gem you've kept, and what you wrote for it.
 // Yours for good, whether or not you're still a Keeper.
@@ -15,13 +17,16 @@ import { useGetTreasureQuery } from '@/store/api/bottleApi'
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
 export default function TreasurePage() {
-  const { data, isLoading, isError, refetch } = useGetTreasureQuery()
+  const { data, isLoading, isError, refetch } = useGetTreasureQuery(undefined, { refetchOnMountOrArgChange: true })
+  const { data: harbour } = useGetHarbourQuery()
+  const tint = useCurrentSea(harbour?.keeper ?? false)
   const [light, setLight] = useState<Light>('day')
   useEffect(() => setLight(lightAt(new Date().getHours())), [])
 
   return (
     <div className="relative h-full overflow-hidden">
-      <HarbourWater light={light} zoom={2.6} />
+      <HarbourWater light={light} zoom={2.6} tint={tint} />
+      {tint && <WeatherLayer weather={tint.weather} />}
       <div className="absolute inset-0 overflow-y-auto px-4 pb-32 pt-16">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           <TransitionLink

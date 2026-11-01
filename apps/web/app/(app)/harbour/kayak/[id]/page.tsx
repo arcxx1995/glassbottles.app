@@ -22,6 +22,7 @@ import {
   PADDLE_STYLES,
   PATTERNS,
   VESSELS,
+  lookKey,
   type DeckItem,
   type DeckSlot,
   type KayakLook,
@@ -39,6 +40,8 @@ import {
   useSaveKayakLookMutation,
   useUnloadGemMutation,
 } from '@/store/api/bottleApi'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
+import WeatherLayer from '@/components/shared/WeatherLayer'
 import type { ReportReason } from '@/types'
 
 // One of your Kayaks (063). At the mast: dress it, fill it with gems, write its
@@ -80,7 +83,10 @@ const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day:
 
 export default function KayakPage({ params }: { params: { id: string } }) {
   const isNew = params.id === 'new'
-  const { data, isLoading, isError } = useGetKayakQuery(params.id, { skip: isNew })
+  // Always asked afresh: it moves on its own, and reading it clears its marker.
+  const { data, isLoading, isError } = useGetKayakQuery(params.id, { skip: isNew, refetchOnMountOrArgChange: true })
+  const { data: harbour } = useGetHarbourQuery()
+  const tint = useCurrentSea(harbour?.keeper ?? false)
   const [light, setLight] = useState<Light>('day')
   useEffect(() => setLight(lightAt(new Date().getHours())), [])
 
@@ -88,7 +94,8 @@ export default function KayakPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="relative h-full overflow-hidden">
-      <HarbourWater light={light} zoom={2.6} />
+      <HarbourWater light={light} zoom={2.6} tint={tint} />
+      {tint && <WeatherLayer weather={tint.weather} />}
       <div className="absolute inset-0 overflow-y-auto px-4 pb-32 pt-16">
         <div className="mx-auto flex max-w-lg flex-col gap-4">
           <TransitionLink
@@ -132,7 +139,7 @@ function AtMast({ id, kayak }: { id: string | null; kayak: KayakDetail | null })
 
   const keeper = harbour?.keeper ?? false
   const gems = kayak?.gems ?? []
-  const dirty = !id || JSON.stringify(look) !== JSON.stringify({ ...DEFAULT_LOOK, ...kayak?.look })
+  const dirty = !id || lookKey(look) !== lookKey(kayak?.look)
   const available = (harbour?.gems.remaining ?? 0) + (harbour?.gems.stock ?? 0)
   const room = MAX_GEMS - gems.length
   const canLoad = Math.min(room, available)
@@ -330,7 +337,7 @@ function AtMast({ id, kayak }: { id: string | null; kayak: KayakDetail | null })
 
       {!keeper && harbour && (
         <p className="rounded-2xl bg-black/25 px-4 py-3 text-center font-ui text-xs text-white/85 backdrop-blur-md">
-          Your Keeper membership has ended. Renew to launch this Kayak again.
+          {id ? 'Your Keeper membership has ended. Renew to launch this Kayak again.' : 'Kayaks are for Keepers. You can join from the Harbour.'}
         </p>
       )}
       {error && (
@@ -525,6 +532,7 @@ const REPORT_REASONS: [ReportReason, string][] = [
 function Log({ kayak }: { kayak: KayakDetail }) {
   const [report] = useReportCommentMutation()
   const [reporting, setReporting] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
   return (
     <section className="flex flex-col gap-4 rounded-3xl glass-strong p-4">
       <h2 className="font-display text-lg text-sand">Its log</h2>
@@ -568,8 +576,13 @@ function Log({ kayak }: { kayak: KayakDetail }) {
                     key={reason}
                     type="button"
                     onClick={async () => {
-                      await report({ comment: reporting, reason })
-                      setReporting(null)
+                      setFailed(false)
+                      try {
+                        if (!(await report({ comment: reporting, reason }).unwrap())) throw new Error()
+                        setReporting(null)
+                      } catch {
+                        setFailed(true)
+                      }
                     }}
                     className="press rounded-full bg-coral/15 px-3 py-1.5 font-ui text-xs font-medium text-coral"
                   >
@@ -577,6 +590,11 @@ function Log({ kayak }: { kayak: KayakDetail }) {
                   </button>
                 ))}
               </div>
+              {failed && (
+                <p role="alert" className="font-ui text-xs text-coral">
+                  That report didn&rsquo;t go through. Try again.
+                </p>
+              )}
             </div>
           </Sheet>
         )}

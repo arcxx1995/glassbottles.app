@@ -28,6 +28,9 @@ export async function checkMessage(text: string): Promise<CheckResult> {
   if (hit) return hit
   const { data, error } = await createClient().functions.invoke<CheckResult>('check-message', {
     body: { text },
+    // A check that never answers counts as no answer, rather than leaving Send
+    // waiting forever. Generous: the model alone can take several seconds.
+    timeout: 20_000,
   })
   if (error || !data?.verdict) return { verdict: 'unknown' }
   if (data.verdict !== 'unknown') checked.set(text, data)

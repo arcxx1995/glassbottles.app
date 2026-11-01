@@ -85,21 +85,21 @@ export default function AuthProvider({
     }
 
     // The city a Kayak's owner sees while it visits you (063). The route reads it
-    // from Vercel's IP header, for Keepers only. A single call a week per device,
-    // so this isn't polling; failure just tries again next load.
-    // ponytail: a new Keeper may wait up to a week for a city; the line just says
-    // "sailing" until then. Clear the key on checkout return if that ever matters.
-    const syncCity = () => {
-      const KEY = 'gb-city-checked-at'
-      const last = Number(localStorage.getItem(KEY) ?? 0)
-      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return
+    // from Vercel's IP header, for Keepers only, so a new Keeper shouldn't wait
+    // long: weekly once stored, daily until then. Per account, per device. These
+    // are single calls, not polling; failure just tries again next load.
+    const syncCity = (profile: Profile) => {
+      const key = `gb-city-next-check:${profile.id}`
+      if (Date.now() < Number(localStorage.getItem(key) ?? 0)) return
       void fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_city: true }),
       })
-        .then((res) => {
-          if (res.ok) localStorage.setItem(KEY, String(Date.now()))
+        .then(async (res) => {
+          if (!res.ok) return
+          const { stored } = (await res.json()) as { stored?: boolean }
+          localStorage.setItem(key, String(Date.now() + (stored ? 7 : 1) * 24 * 60 * 60 * 1000))
         })
         .catch(() => {})
     }
@@ -142,7 +142,7 @@ export default function AuthProvider({
       if (profile) {
         dispatch(setUser(profile))
         syncTimezone(profile)
-        syncCity()
+        syncCity(profile)
       }
     })()
 
@@ -175,7 +175,7 @@ export default function AuthProvider({
         if (profile) {
           dispatch(setUser(profile))
           syncTimezone(profile)
-          syncCity()
+          syncCity(profile)
         }
       }
     })

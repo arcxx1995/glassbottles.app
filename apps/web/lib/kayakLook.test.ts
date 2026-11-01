@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { drawKayak } from './kayakArt'
-import { COLORS, DECK_ITEMS, DEFAULT_LOOK, PADDLE_STYLES, PATTERNS, VESSELS } from './kayakLook'
+import { COLORS, DECK_ITEMS, DEFAULT_LOOK, PADDLE_STYLES, PATTERNS, VESSELS, lookKey } from './kayakLook'
 
 const sql = readFileSync(resolve(__dirname, '../../../supabase/migrations/063_kayak_voyages.sql'), 'utf8')
 const check = sql.slice(sql.indexOf('FUNCTION public.check_kayak_look'), sql.indexOf('-- ─── owner RPCs'))
@@ -19,6 +19,17 @@ describe('the look lists match check_kayak_look', () => {
   it('patterns', () => expect(listAfter("COALESCE(p_look ->> 'pattern'")).toEqual([...PATTERNS].sort()))
   it('paddles', () => expect(listAfter("(p_look ->> 'paddle') NOT")).toEqual([...PADDLE_STYLES].sort()))
   it('deck items', () => expect(listAfter('v_item NOT')).toEqual([...DECK_ITEMS].sort()))
+})
+
+describe('lookKey', () => {
+  it('ignores key order and empty slots, as the database reorders both', () => {
+    expect(lookKey({ deck: { stern: 'cat', bow: 'flag' } })).toBe(lookKey({ deck: { bow: 'flag', mid: null, stern: 'cat' } }))
+    expect(lookKey({ pattern: 'none' })).toBe(lookKey({}))
+  })
+  it('tells different looks apart', () => {
+    expect(lookKey({ color: 'rose_pale' })).not.toBe(lookKey({ color: 'rose_soft' }))
+    expect(lookKey({ deck: { bow: 'cat' } })).not.toBe(lookKey({ deck: { mid: 'cat' } }))
+  })
 })
 
 describe('drawKayak', () => {

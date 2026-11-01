@@ -50,3 +50,9 @@ export const DEFAULT_LOOK: KayakLook = {
   paddle: 'double_blade',
   deck: {},
 }
+
+/** Two looks that draw the same compare equal, whatever order the keys came back in. */
+export function lookKey(look: Partial<KayakLook> | null | undefined): string {
+  const l = { ...DEFAULT_LOOK, ...look }
+  return JSON.stringify([l.vessel, l.color, l.pattern ?? 'none', l.paddle, DECK_SLOTS.map((s) => l.deck?.[s] ?? null)])
+}

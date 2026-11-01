@@ -16,12 +16,15 @@ import { COMMENT_MAX, COMMENT_MIN, lightAt, type Light } from '@/lib/harbour'
 import { cn } from '@/lib/utils'
 import {
   useBlockVisitMutation,
+  useGetHarbourQuery,
   useGetVisitQuery,
   useLeaveCommentMutation,
   useReportCommentMutation,
   useReportNoteMutation,
   useWaveOnMutation,
 } from '@/store/api/bottleApi'
+import { useCurrentSea } from '@/components/shared/useCurrentSea'
+import WeatherLayer from '@/components/shared/WeatherLayer'
 import type { ReportReason } from '@/types'
 
 // A Kayak in your harbour (063): its note, its guestbook and its gems. One gem
@@ -64,7 +67,10 @@ function ReportReasons({ onPick }: { onPick: (r: ReportReason) => void }) {
 
 export default function VisitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const { data, isLoading, isError } = useGetVisitQuery(params.id)
+  // Always asked afresh: it may have sailed on since this was cached.
+  const { data, isLoading, isError } = useGetVisitQuery(params.id, { refetchOnMountOrArgChange: true })
+  const { data: harbour } = useGetHarbourQuery()
+  const tint = useCurrentSea(harbour?.keeper ?? false)
   const [light, setLight] = useState<Light>('day')
   useEffect(() => setLight(lightAt(new Date().getHours())), [])
 
@@ -111,7 +117,8 @@ export default function VisitPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="relative h-full overflow-hidden">
-      <HarbourWater light={light} zoom={2.6} />
+      <HarbourWater light={light} zoom={2.6} tint={tint} />
+      {tint && <WeatherLayer weather={tint.weather} />}
       <div className="absolute inset-0 overflow-y-auto px-4 pb-32 pt-16">
         <div className="mx-auto flex max-w-lg flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -121,7 +128,7 @@ export default function VisitPage({ params }: { params: { id: string } }) {
             >
               <ChevronLeft size={16} aria-hidden="true" /> Harbour
             </TransitionLink>
-            {data && (
+            {data && !isError && (
               <button
                 type="button"
                 onClick={() => setSheet('actions')}
@@ -142,7 +149,7 @@ export default function VisitPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {data && !isLoading && (
+          {data && !isLoading && !isError && (
             <>
               <div className="flex justify-center" style={{ viewTransitionName: `visit-${params.id}` }}>
                 <KayakArt look={data.look} aboard={data.gems.length} className="h-60 w-48 drop-shadow-[0_8px_18px_rgba(0,20,30,0.45)]" />
@@ -273,10 +280,20 @@ export default function VisitPage({ params }: { params: { id: string } }) {
               <p className="font-ui text-xs text-sand/60">It disappears for everyone while a moderator looks.</p>
               <ReportReasons
                 onPick={async (reason) => {
-                  await reportComment({ comment: sheet.comment, reason })
-                  setSheet(null)
+                  setError(null)
+                  try {
+                    if (!(await reportComment({ comment: sheet.comment, reason }).unwrap())) throw new Error()
+                    setSheet(null)
+                  } catch {
+                    setError('That report didn’t go through. Try again.')
+                  }
                 }}
               />
+              {error && (
+                <p role="alert" className="font-ui text-xs text-coral">
+                  {error}
+                </p>
+              )}
             </div>
           </Sheet>
         )}

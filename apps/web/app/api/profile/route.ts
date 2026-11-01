@@ -62,14 +62,15 @@ export async function PATCH(req: NextRequest) {
   if ((body as { refresh_city?: unknown }).refresh_city === true) {
     const { data: member } = await supabase.from('memberships').select('access_until').eq('user_id', user.id).maybeSingle()
     const city = cityFromHeader(req.headers.get('x-vercel-ip-city'))
-    if (city && member && new Date(member.access_until) > new Date()) {
+    const stored = !!city && !!member && new Date(member.access_until) > new Date()
+    if (stored) {
       const { error } = await createServiceClient()
         .from('profiles')
         .update({ city, city_updated_at: new Date().toISOString() })
         .eq('id', user.id)
       if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
     }
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ stored })
   }
 
   const { timezone, email_notifications, current } = body as {

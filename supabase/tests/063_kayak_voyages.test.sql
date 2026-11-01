@@ -937,6 +937,128 @@ BEGIN
   PERFORM pg_temp.clear();
 END $$;
 
+-- ─── fixes from review (064) ────────────────────────────────────────────────
+DO $$
+DECLARE
+  v  UUID;
+  k  UUID;
+  vi UUID;
+  c  UUID;
+  n1 UUID;
+  n2 UUID;
+BEGIN
+  -- Refill dates, including clamped month ends.
+  IF public.kayak_next_refill('2031-01-31 10:00+00', '2031-02-28 11:00+00') <> '2031-03-31 10:00+00'
+     OR public.kayak_next_refill('2031-01-31 10:00+00', '2031-02-28 09:00+00') <> '2031-02-28 10:00+00'
+     OR public.kayak_next_refill('2031-01-15 10:00+00', '2031-01-15 10:00+00') <> '2031-02-15 10:00+00'
+     OR public.kayak_next_refill('2028-02-29 10:00+00', '2031-03-01 00:00+00') <> '2031-03-29 10:00+00' THEN
+    RAISE EXCEPTION 'BUG: wrong refill date';
+  END IF;
+  FOR i IN 0..400 LOOP
+    IF public.kayak_next_refill('2031-01-31 10:00+00', timestamptz '2031-01-31 10:00+00' + make_interval(days => i, hours => 1))
+       <= timestamptz '2031-01-31 10:00+00' + make_interval(days => i, hours => 1) THEN
+      RAISE EXCEPTION 'BUG: a refill date landed in the past on day %', i;
+    END IF;
+  END LOOP;
+
+  -- Extra keys in a look are refused, wherever they try to hide.
+  PERFORM pg_temp.as_user(1);
+  BEGIN
+    PERFORM public.save_kayak_look(NULL, pg_temp.look() || '{"x":"insta @me"}');
+    RAISE EXCEPTION 'BUG: free text got into a look';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
+  END;
+
+  -- A dismissed report brings the comment back and takes the strike away.
+  INSERT INTO public.admins (user_id) VALUES (pg_temp.u(10)) ON CONFLICT DO NOTHING;
+  UPDATE public.memberships SET access_until = now() - interval '10 days' WHERE user_id = pg_temp.u(10);
+  v := pg_temp.sail(1, 3);
+  k := (SELECT kayak_id FROM public.voyages WHERE id = v);
+  vi := pg_temp.arrive(v);
+  PERFORM public.leave_comment(vi, pg_temp.gem_of(v), 'A perfectly harmless comment.');
+  c := (SELECT id FROM public.kayak_comments WHERE visit_id = vi);
+  PERFORM public.apply_kayak_screen('kayak_comments', c, 'ok');
+  PERFORM pg_temp.as_user(1);
+  PERFORM public.report_comment(c, 'spam');
+  PERFORM pg_temp.as_user(10);
+  PERFORM public.admin_moderate((SELECT id FROM public.moderation_queue WHERE target_id = c), 'dismiss');
+  IF (SELECT reported_at FROM public.kayak_comments WHERE id = c) IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: a dismissed report still hides the comment';
+  END IF;
+  PERFORM pg_temp.as_user(1);
+  IF jsonb_array_length(public.get_kayak(k) -> 'log' -> 0 -> 'notes' -> 0 -> 'comments') <> 1 THEN
+    RAISE EXCEPTION 'BUG: the dismissed comment did not come back';
+  END IF;
+
+  -- A comment passing after the owner looked still counts as new.
+  UPDATE public.kayaks SET log_seen_at = now() - interval '1 minute' WHERE id = k;
+  UPDATE public.kayak_comments SET created_at = now() - interval '5 minutes', screened_at = now() WHERE id = c;
+  IF (public.get_harbour() -> 'kayaks' -> 0 ->> 'new_comments')::int <> 1 THEN
+    RAISE EXCEPTION 'BUG: a comment that passed after the last look was not counted';
+  END IF;
+  PERFORM pg_temp.clear();
+
+  -- Restoring an old held edit can't replace a newer note.
+  v := pg_temp.sail(1, 3);
+  k := (SELECT kayak_id FROM public.voyages WHERE id = v);
+  PERFORM pg_temp.as_user(1);
+  PERFORM public.edit_note(k, 'Edit A, needs a human');
+  n1 := (SELECT id FROM public.kayak_notes WHERE voyage_id = v AND screen IS NULL);
+  PERFORM public.apply_kayak_screen('kayak_notes', n1, 'held', 'review');
+  PERFORM public.edit_note(k, 'Edit B, the latest');
+  n2 := (SELECT id FROM public.kayak_notes WHERE voyage_id = v AND screen IS NULL);
+  UPDATE public.kayak_notes SET created_at = now() + interval '1 minute' WHERE id = n2;
+  PERFORM public.apply_kayak_screen('kayak_notes', n2, 'ok');
+  PERFORM pg_temp.as_user(10);
+  PERFORM public.admin_moderate((SELECT id FROM public.moderation_queue WHERE target_id = n1), 'restore');
+  IF public.kayak_current_note(v) <> n2 THEN
+    RAISE EXCEPTION 'BUG: an old restored edit replaced the newer note';
+  END IF;
+
+  -- A held notice says whether a moderator has decided yet.
+  PERFORM pg_temp.clear();
+  v := pg_temp.sail(1, 3);
+  vi := pg_temp.arrive(v);
+  PERFORM public.leave_comment(vi, pg_temp.gem_of(v), 'Ambiguous, needs a human.');
+  c := (SELECT id FROM public.kayak_comments WHERE visit_id = vi);
+  PERFORM public.apply_kayak_screen('kayak_comments', c, 'held', 'review');
+  PERFORM pg_temp.as_user(right((SELECT author_id FROM public.kayak_comments WHERE id = c)::text, 2)::int);
+  IF NOT (public.get_harbour() -> 'notices' -> 0 ->> 'waiting')::boolean THEN
+    RAISE EXCEPTION 'BUG: an undecided hold should say waiting';
+  END IF;
+  n1 := (SELECT author_id FROM public.kayak_comments WHERE id = c);
+  PERFORM pg_temp.as_user(10);
+  PERFORM public.admin_moderate((SELECT id FROM public.moderation_queue WHERE target_id = c), 'remove');
+  PERFORM pg_temp.as_user(right(n1::text, 2)::int);
+  IF (public.get_harbour() -> 'notices' -> 0 ->> 'waiting')::boolean THEN
+    RAISE EXCEPTION 'BUG: a decided hold still says waiting';
+  END IF;
+  PERFORM pg_temp.clear();
+
+  -- A moved Kayak ignores a late next leg, and keeps its course.
+  v := pg_temp.sail(1, 3);
+  vi := pg_temp.arrive(v);
+  PERFORM pg_temp.as_user(1);
+  PERFORM public.recall_kayak((SELECT kayak_id FROM public.voyages WHERE id = v));
+  PERFORM public.kayak_next_leg(v);
+  IF (SELECT state FROM public.voyages WHERE id = v) <> 'returning' THEN
+    RAISE EXCEPTION 'BUG: a late next leg overrode a recall';
+  END IF;
+  PERFORM pg_temp.clear();
+
+  -- No comments on a Kayak whose owner is out, even before the cron gets there.
+  v := pg_temp.sail(1, 3);
+  vi := pg_temp.arrive(v);
+  UPDATE public.profiles SET suspended_at = now() WHERE id = pg_temp.u(1);
+  BEGIN
+    PERFORM public.leave_comment(vi, pg_temp.gem_of(v), 'Commenting on a suspended owner.');
+    RAISE EXCEPTION 'BUG: commented on a suspended owner''s Kayak';
+  EXCEPTION WHEN no_data_found THEN NULL;
+  END;
+  RAISE NOTICE 'ok: refill dates, look keys, dismiss, new comments, old edits, notices, late legs';
+  PERFORM pg_temp.clear();
+END $$;
+
 -- ─── what a client can see ──────────────────────────────────────────────────
 DO $$
 DECLARE

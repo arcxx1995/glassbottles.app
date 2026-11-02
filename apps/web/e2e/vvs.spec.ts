@@ -113,6 +113,36 @@ test('an admin gets in with a password, and stays in', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Log' })).toBeVisible()
 })
 
+test('Log out signs the admin out and returns to the login, for good', async ({ page }) => {
+  const a = await makeAdmin()
+  await signInToConsole(page, a.email)
+  await page.getByRole('button', { name: 'Log out' }).click()
+  await expect(page).toHaveURL(/\/vvs\/login$/)
+  await expect(page.getByLabel('Password')).toBeVisible()
+  // No "doesn't have access": they did nothing wrong.
+  await expect(page.getByRole('alert').filter({ hasText: 'access' })).toHaveCount(0)
+
+  for (const path of ['/vvs', '/vvs/people', '/vvs/log']) {
+    await page.goto(`${VVS}${path}`)
+    await expect(page).toHaveURL(/\/vvs\/login$/)
+  }
+  // Back in, with the same password.
+  await signInToConsole(page, a.email)
+  await expect(page.getByRole('heading', { name: 'Reports & blocks' })).toBeVisible()
+})
+
+test('Log out and the tabs stay in view while scrolling', async ({ page }) => {
+  const a = await makeAdmin()
+  await signInToConsole(page, a.email)
+  await page.setViewportSize({ width: 390, height: 300 })
+  await page.goto(`${VVS}/vvs/people/${a.id}`)
+  await expect(page.getByRole('heading', { name: 'Flags' })).toBeAttached()
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  await expect(page.getByRole('button', { name: 'Log out' })).toBeInViewport()
+  await expect(page.getByRole('link', { name: 'People' })).toBeInViewport()
+})
+
 test('a report waits, hidden only from its reporter; removing it tells the reporter', async ({ page, baseURL }) => {
   const a = await makeAdmin()
   const { sender, reporter, bottle, words } = await reported()

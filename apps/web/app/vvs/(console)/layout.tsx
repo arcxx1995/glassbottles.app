@@ -15,7 +15,7 @@ export default async function VvsLayout({ children }: { children: React.ReactNod
   const { data: isAdmin } = await createClient().rpc('is_admin')
   if (isAdmin !== true) notFound()
   return (
-    <div className="min-h-[100svh] overflow-y-auto bg-ocean-deep text-sand">
+    <div className="min-h-[100svh] bg-ocean-deep text-sand">
       <VvsNav />
       <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pb-16 pt-5">{children}</main>
     </div>

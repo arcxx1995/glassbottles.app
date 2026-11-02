@@ -75,7 +75,7 @@ export default function ConsentGate() {
             That didn&rsquo;t save. Check your connection and try again.
           </p>
         )}
-        <button type="button" onClick={accept} disabled={busy} className={AUTH_PRIMARY_BTN_CLASS}>
+        <button type="button" onClick={accept} disabled={busy} className={`${AUTH_PRIMARY_BTN_CLASS} w-full px-4`}>
           I&rsquo;m 18 or older &mdash; I agree
         </button>
         <button

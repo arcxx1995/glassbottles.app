@@ -74,6 +74,10 @@ export default function RealtimeBottleListener() {
           // A letter to yourself washed back (047).
           dispatch(bottleApi.util.invalidateTags(['Future']))
         })
+        .on('broadcast', { event: 'notices' }, () => {
+          // An admin decided something that concerns this person (065).
+          dispatch(bottleApi.util.invalidateTags(['Notices']))
+        })
         .on('broadcast', { event: 'kayak_update' }, () => {
           // A Kayak moved, or a note or comment got its verdict (063).
           dispatch(bottleApi.util.invalidateTags(['Harbour', 'Kayak', 'Visit', 'Treasure']))

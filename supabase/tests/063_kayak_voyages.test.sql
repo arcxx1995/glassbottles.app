@@ -39,6 +39,7 @@ CREATE FUNCTION pg_temp.clear() RETURNS VOID LANGUAGE sql AS $$
   DELETE FROM public.kayak_allowances;
   DELETE FROM public.kayak_blocks;
   DELETE FROM public.kayak_reports;
+  DELETE FROM public.user_reports;
   DELETE FROM public.moderation_queue;
   UPDATE public.memberships SET access_until = now() + interval '30 days';
   UPDATE public.profiles SET suspended_at = NULL, suspension_reason = NULL;
@@ -828,22 +829,19 @@ DECLARE
   c    UUID;
   n    UUID;
 BEGIN
-  -- Reporting a note: home, queued, and that owner never reaches this reporter again.
+  -- Reporting a note: it leaves this harbour and that owner never reaches this
+  -- reporter again. Everything else waits for an admin (065).
   v := pg_temp.sail(1, 3);
   vi := pg_temp.arrive(v);
   who := (SELECT recipient_id FROM public.kayak_visits WHERE id = vi);
   n := (SELECT id FROM public.kayak_notes WHERE voyage_id = v);
   PERFORM public.report_note(vi, 'harassment');
-  IF (SELECT state FROM public.voyages WHERE id = v) <> 'returning'
-     OR (SELECT end_reason FROM public.voyages WHERE id = v) <> 'reported' THEN
-    RAISE EXCEPTION 'BUG: a reported note kept sailing';
+  IF (SELECT state FROM public.voyages WHERE id = v) <> 'sailing'
+     OR (SELECT reported_at FROM public.kayak_notes WHERE id = n) IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: a report acted before an admin decided';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.moderation_queue WHERE kind = 'kayak_note' AND target_id = n AND source = 'report') THEN
-    RAISE EXCEPTION 'BUG: a reported note was not queued';
-  END IF;
-  PERFORM pg_temp.as_user(1);
-  IF EXISTS (SELECT 1 FROM public.kayak_reports WHERE reporter_id = pg_temp.u(1)) THEN
-    RAISE EXCEPTION 'BUG: report recorded the wrong way round';
+  IF NOT EXISTS (SELECT 1 FROM public.user_reports WHERE kind = 'kayak_note' AND target_id = n AND status = 'open') THEN
+    RAISE EXCEPTION 'BUG: a reported note did not reach the console';
   END IF;
   PERFORM pg_temp.server();
   UPDATE public.memberships SET access_until = now() - interval '10 days'
@@ -851,22 +849,22 @@ BEGIN
   IF public.kayak_pick_recipient(gen_random_uuid(), pg_temp.u(1)) IS NOT NULL THEN
     RAISE EXCEPTION 'BUG: the reporter can still receive this owner';
   END IF;
-  RAISE NOTICE 'ok: note report sends it home, queues it, excludes the reporter';
+  RAISE NOTICE 'ok: note report leaves the reporter, waits for an admin, excludes the reporter';
   PERFORM pg_temp.clear();
 
-  -- A note reported 3 times in 30 days suspends, the same as bottles.
+  -- Reports alone no longer strike or suspend.
   FOR i IN 1..3 LOOP
     v := pg_temp.sail(1, 1);
     vi := pg_temp.arrive(v);
     PERFORM public.report_note(vi, 'spam');
   END LOOP;
-  IF (SELECT suspended_at FROM public.profiles WHERE id = pg_temp.u(1)) IS NULL THEN
-    RAISE EXCEPTION 'BUG: 3 reported notes did not suspend';
+  IF (SELECT suspended_at FROM public.profiles WHERE id = pg_temp.u(1)) IS NOT NULL THEN
+    RAISE EXCEPTION 'BUG: undecided reports suspended someone';
   END IF;
-  RAISE NOTICE 'ok: 3 strikes from notes suspend';
+  RAISE NOTICE 'ok: reports alone never suspend';
   PERFORM pg_temp.clear();
 
-  -- Reporting a comment: hidden from everyone, queued, and the gem stays.
+  -- Reporting a comment: hidden from the reporter only, and the gem stays.
   v := pg_temp.sail(1, 3);
   vi := pg_temp.arrive(v);
   who := (SELECT recipient_id FROM public.kayak_visits WHERE id = vi);
@@ -886,19 +884,19 @@ BEGIN
     RAISE EXCEPTION 'BUG: the owner could not report a comment';
   END IF;
   IF jsonb_array_length(public.get_kayak((SELECT kayak_id FROM public.voyages WHERE id = v)) -> 'log' -> 0 -> 'notes' -> 0 -> 'comments') <> 0 THEN
-    RAISE EXCEPTION 'BUG: a reported comment is still showing';
+    RAISE EXCEPTION 'BUG: a comment still shows to the person who reported it';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.kayak_blocks WHERE blocker_id = pg_temp.u(1) AND blocked_id = who) THEN
     RAISE EXCEPTION 'BUG: an owner''s report did not keep that commenter away';
   END IF;
   PERFORM pg_temp.as_user(right((SELECT recipient_id FROM public.kayak_visits WHERE id = vi)::text, 2)::int);
-  IF jsonb_array_length(public.get_visit(vi) -> 'guestbook') <> 0 THEN
-    RAISE EXCEPTION 'BUG: a reported comment is still in the guestbook';
+  IF jsonb_array_length(public.get_visit(vi) -> 'guestbook') <> 1 THEN
+    RAISE EXCEPTION 'BUG: someone else''s report hid the comment before an admin decided';
   END IF;
   IF (SELECT state FROM public.gems WHERE comment_id = c) <> 'kept' THEN
     RAISE EXCEPTION 'BUG: reporting took the gem back';
   END IF;
-  RAISE NOTICE 'ok: comment report hides it for all, keeps the gem, owner report blocks';
+  RAISE NOTICE 'ok: comment report hides it for the reporter only, keeps the gem, owner report blocks';
   PERFORM pg_temp.clear();
 
   -- Block: sails on, both ways, and undoing clears it.
@@ -969,7 +967,7 @@ BEGIN
   EXCEPTION WHEN invalid_parameter_value THEN NULL;
   END;
 
-  -- A dismissed report brings the comment back and takes the strike away.
+  -- A comment removed by a moderator counts for nobody; a dismissed report changes nothing for others.
   INSERT INTO public.admins (user_id) VALUES (pg_temp.u(10)) ON CONFLICT DO NOTHING;
   UPDATE public.memberships SET access_until = now() - interval '10 days' WHERE user_id = pg_temp.u(10);
   v := pg_temp.sail(1, 3);
@@ -979,16 +977,6 @@ BEGIN
   c := (SELECT id FROM public.kayak_comments WHERE visit_id = vi);
   PERFORM public.apply_kayak_screen('kayak_comments', c, 'ok');
   PERFORM pg_temp.as_user(1);
-  PERFORM public.report_comment(c, 'spam');
-  PERFORM pg_temp.as_user(10);
-  PERFORM public.admin_moderate((SELECT id FROM public.moderation_queue WHERE target_id = c), 'dismiss');
-  IF (SELECT reported_at FROM public.kayak_comments WHERE id = c) IS NOT NULL THEN
-    RAISE EXCEPTION 'BUG: a dismissed report still hides the comment';
-  END IF;
-  PERFORM pg_temp.as_user(1);
-  IF jsonb_array_length(public.get_kayak(k) -> 'log' -> 0 -> 'notes' -> 0 -> 'comments') <> 1 THEN
-    RAISE EXCEPTION 'BUG: the dismissed comment did not come back';
-  END IF;
 
   -- A comment passing after the owner looked still counts as new.
   UPDATE public.kayaks SET log_seen_at = now() - interval '1 minute' WHERE id = k;

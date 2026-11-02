@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 interface QueueItem {
   id: string
   kind: 'bottle' | 'kayak_note' | 'kayak_comment' | 'user'
-  source: 'screen' | 'report' | 'suspension'
+  source: 'screen' | 'suspension'
   reason: string | null
   reports: number
   created_at: string
@@ -18,7 +18,7 @@ type Action = 'remove' | 'restore' | 'suspend' | 'dismiss'
 
 const BTN = 'px-3 py-1.5 rounded-xl font-ui text-xs font-medium transition-colors disabled:opacity-40'
 
-// Supabase-direct (admin_queue / admin_moderate RPCs). Loads once and after
+// Supabase-direct (admin_ai_queue / admin_moderate RPCs). Loads once and after
 // each action — no polling; the alert email says when to come back.
 export default function ModerationQueue() {
   const [items, setItems] = useState<QueueItem[] | null>(null)
@@ -26,7 +26,7 @@ export default function ModerationQueue() {
   const [busy, setBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error } = await createClient().rpc('admin_queue')
+    const { data, error } = await createClient().rpc('admin_ai_queue')
     if (error) setError(error.message)
     else setItems(data as QueueItem[])
   }, [])
@@ -46,16 +46,16 @@ export default function ModerationQueue() {
   }
 
   return (
-    <main className="relative z-10 min-h-screen px-4 py-12">
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+    <>
+      <div className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-3xl text-sand">Moderation</h1>
+          <h1 className="font-display text-2xl text-sand">AI holds</h1>
           <button type="button" onClick={() => void load()} className={`${BTN} text-sand/50 hover:text-sand/80`}>
             Refresh
           </button>
         </div>
         <p className="font-ui text-xs text-sand/45">
-          Content only — authors are never shown. &ldquo;Suspend&rdquo; removes the content and suspends whoever wrote it.
+          What the AI screen held, and accounts it suspended. User reports are under Reports &amp; blocks. &ldquo;Suspend&rdquo; removes the content and suspends whoever wrote it.
         </p>
         {error && (
           <p className="font-ui text-xs text-coral" role="alert">
@@ -100,6 +100,6 @@ export default function ModerationQueue() {
           </article>
         ))}
       </div>
-    </main>
+    </>
   )
 }

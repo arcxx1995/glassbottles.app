@@ -67,6 +67,11 @@ export default function TermsPage() {
               Three days after a membership ends, Kayaks at sea sail home and must be launched
               again. Gems you&rsquo;ve kept stay in your treasure room.
             </li>
+            <li>
+              If we close your account for breaking these terms, any renewing membership is
+              cancelled. Fees already paid aren&rsquo;t refunded automatically; write to us if you
+              think that&rsquo;s wrong.
+            </li>
             <li>Deleting your account cancels any renewing membership.</li>
             <li>
               If a charge looks wrong, email us and we&rsquo;ll put it right; refunds are issued

@@ -25,18 +25,11 @@ import {
 } from '@/store/api/bottleApi'
 import { useCurrentSea } from '@/components/shared/useCurrentSea'
 import WeatherLayer from '@/components/shared/WeatherLayer'
+import { REPORT_REASONS } from '@/lib/reportReasons'
 import type { ReportReason } from '@/types'
 
 // A Kayak in your harbour (063): its note, its guestbook and its gems. One gem
 // for a few words, and it sails on to the next harbour. Nobody is named here.
-
-const REPORT_REASONS: [ReportReason, string][] = [
-  ['sexual', 'Sexual'],
-  ['harassment', 'Abusive'],
-  ['spam', 'Spam'],
-  ['contact', 'Contact info'],
-  ['other', 'Other'],
-]
 
 const ERRORS: Record<string, string> = {
   content_not_allowed: 'That comment isn’t allowed here.',
@@ -252,7 +245,7 @@ export default function VisitPage({ params }: { params: { id: string } }) {
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <p className="font-ui text-xs text-sand/60">
-                  Report the note: the Kayak goes home, a moderator looks, and it won&rsquo;t come back to you.
+                  Report the note: it leaves your harbour and won&rsquo;t come back, and a moderator takes a look.
                 </p>
                 <ReportReasons onPick={(reason) => act(() => reportNote({ visit: params.id, reason }).unwrap())} />
               </div>
@@ -277,7 +270,7 @@ export default function VisitPage({ params }: { params: { id: string } }) {
         {sheet && sheet !== 'actions' && (
           <Sheet title="Report this comment" onClose={() => setSheet(null)}>
             <div className="flex flex-col gap-2">
-              <p className="font-ui text-xs text-sand/60">It disappears for everyone while a moderator looks.</p>
+              <p className="font-ui text-xs text-sand/60">It disappears for you, and a moderator takes a look.</p>
               <ReportReasons
                 onPick={async (reason) => {
                   setError(null)

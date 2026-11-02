@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Bookmark, Flag, CheckCheck, Sparkles } from 'lucide-react'
 import {
+  useBlockBottleSenderMutation,
   useGetAtelierQuery,
   useGetKeeperQuery,
   useMarkBottleReadMutation,
@@ -17,6 +18,7 @@ import KeeperPlans from '@/components/keeper/KeeperPlans'
 import Sheet from '@/components/ui/Sheet'
 import { feel } from '@/lib/feel'
 import { easeOut, springFlick } from '@/components/ui/springs'
+import { REPORT_REASONS } from '@/lib/reportReasons'
 import type { Bottle, ReportReason } from '@/types'
 
 interface ReceivedBottleProps {
@@ -25,14 +27,7 @@ interface ReceivedBottleProps {
   onReported?: (ok: boolean) => void
 }
 
-// Picking a reason IS the confirm step: one tap reports and removes.
-const REPORT_REASONS: [ReportReason, string][] = [
-  ['sexual', 'Sexual'],
-  ['harassment', 'Abusive'],
-  ['spam', 'Spam'],
-  ['contact', 'Contact info'],
-  ['other', 'Other'],
-]
+// Picking a reason IS the confirm step: one tap reports it.
 
 // uncorking → open. A bottle opened for the first time loses its cork, then its
 // note unrolls and the words arrive; opening IS reading, so there is no "Mark
@@ -45,6 +40,8 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
   const [markRead] = useMarkBottleReadMutation()
   const [reportBottle, { isLoading: isReporting }] = useReportBottleMutation()
   const [ripple] = useRippleBottleMutation()
+  const [blockSender] = useBlockBottleSenderMutation()
+  const [blocked, setBlocked] = useState<null | 'done' | 'failed'>(null)
   const [keep] = useKeepBottleMutation()
   const kept = !!bottle.kept_at
   // Only Keepers get `style` from the server (057); theirs is bottleLook's
@@ -220,7 +217,7 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
         {confirmingReport ? (
           <div className="flex w-full flex-col gap-2 py-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-ui text-xs text-sand/60">Report and remove — what&rsquo;s wrong?</p>
+              <p className="font-ui text-xs text-sand/60">Report it &mdash; it leaves your shelf and a moderator looks. What&rsquo;s wrong?</p>
               <button
                 type="button"
                 onClick={() => setConfirmingReport(false)}
@@ -240,6 +237,29 @@ export default function ReceivedBottle({ bottle, onReported }: ReceivedBottlePro
                   {label}
                 </button>
               ))}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-2">
+              <p role={blocked ? 'status' : undefined} className="font-ui text-xs text-sand/60">
+                {blocked === 'done'
+                  ? 'Blocked. You won’t get bottles or Kayaks from this person, and they won’t get yours.'
+                  : blocked === 'failed'
+                    ? 'That didn’t go through. Try again.'
+                    : 'Or block this sender. They aren’t told.'}
+              </p>
+              {blocked !== 'done' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    blockSender(bottle.id)
+                      .unwrap()
+                      .then((ok) => setBlocked(ok ? 'done' : 'failed'))
+                      .catch(() => setBlocked('failed'))
+                  }
+                  className="press shrink-0 rounded-full bg-white/10 px-3 py-1.5 font-ui text-xs text-sand"
+                >
+                  Block sender
+                </button>
+              )}
             </div>
           </div>
         ) : (

@@ -101,6 +101,13 @@ export interface KeeperState {
   foundingSpotsLeft: number
 }
 
+export interface AccountNotice {
+  id: string
+  kind: 'warn' | 'suspended' | 'banned' | 'lifted' | 'report_outcome'
+  body: string
+  at: string
+}
+
 /** Every Kayak call: one Supabase RPC, with its error message as the error. */
 async function kayakRpc<T>(fn: string, args?: Record<string, unknown>) {
   const { data, error } = await createClient().rpc(fn, args)
@@ -111,7 +118,7 @@ async function kayakRpc<T>(fn: string, args?: Record<string, unknown>) {
 export const bottleApi = createApi({
   reducerPath: 'bottleApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Harbour', 'Kayak', 'Visit', 'Treasure'],
+  tagTypes: ['BottleStatus', 'ReceivedBottles', 'BottleCount', 'Membership', 'Future', 'Harbour', 'Kayak', 'Visit', 'Treasure', 'Notices'],
   endpoints: (builder) => ({
     // Reads go straight to Supabase via SECURITY DEFINER RPCs (migration 014) —
     // no Vercel Function in the path, so polling costs zero compute. The RPCs
@@ -318,7 +325,8 @@ export const bottleApi = createApi({
     reportBottle: builder.mutation<void, { bottleId: string; reason: ReportReason }>({
       queryFn: async ({ bottleId, reason }) => {
         const supabase = createClient()
-        const { data, error } = await supabase.rpc('report_bottle', {
+        // 065: waits for an admin. The live site keeps report_bottle until cutover.
+        const { data, error } = await supabase.rpc('report_bottle_for_review', {
           p_bottle_id: bottleId,
           p_reason: reason,
         })
@@ -552,6 +560,17 @@ export const bottleApi = createApi({
       queryFn: (visit) => kayakRpc<boolean>('block_visit', { p_visit: visit }),
       invalidatesTags: ['Harbour'],
     }),
+    blockBottleSender: builder.mutation<boolean, string>({
+      queryFn: (bottle) => kayakRpc<boolean>('block_bottle_sender', { p_bottle_id: bottle }),
+    }),
+    getMyNotices: builder.query<AccountNotice[], void>({
+      queryFn: () => kayakRpc<AccountNotice[]>('my_notices'),
+      providesTags: ['Notices'],
+    }),
+    ackNotice: builder.mutation<boolean, string>({
+      queryFn: (id) => kayakRpc<boolean>('ack_notice', { p_id: id }),
+      invalidatesTags: ['Notices'],
+    }),
     unblockAllKayaks: builder.mutation<number, void>({
       queryFn: () => kayakRpc<number>('unblock_all_kayaks'),
     }),
@@ -598,5 +617,8 @@ export const {
   useReportCommentMutation,
   useBlockVisitMutation,
   useUnblockAllKayaksMutation,
+  useBlockBottleSenderMutation,
+  useGetMyNoticesQuery,
+  useAckNoticeMutation,
   useAckKayakNoticeMutation,
 } = bottleApi

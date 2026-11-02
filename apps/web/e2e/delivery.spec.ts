@@ -102,14 +102,14 @@ test('reporting asks why, then removes the bottle for good', async ({ page }) =>
   await expect(page.getByText(unkind)).toHaveCount(0)
   await expect(page.getByText(/Reported\./)).toBeVisible()
 
-  // 051: the report reaches the moderation queue with its reason.
+  // 065: the report waits for an admin, with its reason and the words as evidence.
   const { data: bottle } = await admin.from('bottles').select('id').eq('message', unkind).single()
   const { data: item } = await admin
-    .from('moderation_queue')
-    .select('source, reason, reports')
+    .from('user_reports')
+    .select('kind, reason, status, evidence')
     .eq('target_id', bottle!.id)
     .single()
-  expect(item).toEqual({ source: 'report', reason: 'harassment', reports: 1 })
+  expect(item).toEqual({ kind: 'bottle', reason: 'harassment', status: 'open', evidence: unkind })
 
   await page.reload()
   await expect(page.getByText('No bottles yet')).toBeVisible()

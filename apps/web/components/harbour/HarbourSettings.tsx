@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useUnblockAllKayaksMutation } from '@/store/api/bottleApi'
 
-// Settings → Kayaks you've blocked (063). Owners have no names to list, so
+// Settings → Blocks (063, 065: bottles too). People have no names to list, so
 // undoing is all or nothing.
 export default function HarbourSettings() {
   const [unblock, { isLoading }] = useUnblockAllKayaksMutation()
@@ -12,7 +12,7 @@ export default function HarbourSettings() {
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <span className="font-ui text-sm text-sand/70">
         {done === null
-          ? 'Kayaks from people you’ve blocked stay away from your harbour.'
+          ? 'Bottles and Kayaks from people you’ve blocked stay away from you.'
           : done === 0
             ? 'You haven’t blocked anyone.'
             : `Unblocked ${done}.`}

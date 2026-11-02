@@ -187,10 +187,12 @@ test('let it sail, report and block each send the Kayak on its way', async ({ pa
   await page.getByRole('button', { name: 'Report or block' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Abusive' }).click()
   await expect(page).toHaveURL(/\/harbour$/)
+  // 065: it leaves this harbour and keeps sailing; the rest waits for an admin.
   expect(ok(await admin.from('voyages').select('state, end_reason').eq('id', b.voyage).single())).toEqual({
-    state: 'returning',
-    end_reason: 'reported',
+    state: 'sailing',
+    end_reason: null,
   })
+  expect(ok(await admin.from('kayak_visits').select('left_reason').eq('id', b.visit).single()).left_reason).toBe('reported')
 
   const c = await visiting(owner.id, me.id)
   await page.goto(`/harbour/visit/${c.visit}`)

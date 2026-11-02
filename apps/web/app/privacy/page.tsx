@@ -93,8 +93,13 @@ export default function PrivacyPolicyPage() {
         you may be in danger. The check runs through OpenRouter, which we instruct to use only AI
         providers that neither store the text nor train on it; it is processed only to return that
         check. Messages that are held by the check or reported by another user may be read by a
-        moderator, who sees the message but not who wrote it. We keep moderation records (the
-        verdict, reports and any action taken) to enforce our rules and prevent abuse.
+        moderator, who normally sees the message but not who wrote it. If a moderator needs to act on
+        an account or answer an appeal, they can reveal its email address, and every reveal is
+        permanently logged. They can&rsquo;t read messages that weren&rsquo;t held or reported. We
+        keep moderation records (the verdict, reports and any action taken) to enforce our rules and
+        prevent abuse. The words of a reported message are erased 12 months after a decision, except
+        where a report involving a minor was upheld. If we close an account, we keep a one-way hash
+        of its email address so it can&rsquo;t be used to register again.
       </p>
 
       <LegalH2>Anonymity between users</LegalH2>

@@ -34,6 +34,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // The admin console lives only on its own host. Elsewhere /vvs doesn't exist.
+  const host = request.headers.get('host')?.split(':')[0]
+  const onVvs = host === (process.env.VVS_HOST ?? 'vvs.glassbottles.app')
+  const inVvs = request.nextUrl.pathname === '/vvs' || request.nextUrl.pathname.startsWith('/vvs/')
+  if (inVvs && !onVvs) {
+    return new NextResponse('Not found', { status: 404 })
+  }
+  // And the console host has nothing else on it but signing in.
+  if (onVvs && (request.nextUrl.pathname === '/' || (isAppPath(request.nextUrl.pathname) && !inVvs))) {
+    return NextResponse.redirect(new URL('/vvs', request.url))
+  }
+
   // Landing page: anonymous visitors (no session cookie) pass straight through
   // with no Auth work; only returning users pay for getClaims().
   if (request.nextUrl.pathname === '/' && !hasAuthCookie(request)) {
@@ -93,6 +105,9 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
+  // The console's sign-in page shouldn't turn up in search results either.
+  if (onVvs) supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow')
+
   // Redirect unauthenticated users away from protected app routes, keeping
   // where they were headed so sign-in can send them back.
   if (isAppRoute && !user) {
@@ -133,7 +148,8 @@ export const config = {
     '/inbox/:path*',
     '/settings/:path*',
     '/logbook',
-    '/admin/:path*',
+    '/vvs',
+    '/vvs/:path*',
     '/api/:path*',
     '/sign-in',
     '/sign-up',

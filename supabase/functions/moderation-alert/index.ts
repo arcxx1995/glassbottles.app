@@ -11,6 +11,8 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const ADMIN_ALERT_EMAIL = Deno.env.get('ADMIN_ALERT_EMAIL')
 const FROM_ADDRESS = Deno.env.get('RESEND_FROM_ADDRESS') ?? 'glassbottles <hello@glassbottles.app>'
 
+const CONSOLE = 'https://vvs.glassbottles.app'
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -22,7 +24,8 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
   if (!RESEND_API_KEY || !ADMIN_ALERT_EMAIL) return json({ error: 'alert email not configured' }, 500)
 
-  const body = (await req.json().catch(() => ({}))) as { new?: number; open?: number }
+  const body = (await req.json().catch(() => ({}))) as { new?: number; open?: number; urgent?: boolean }
+  const urgent = body.urgent === true
   const fresh = Number(body.new) || 0
   const open = Number(body.open) || 0
 
@@ -32,17 +35,20 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: FROM_ADDRESS,
       to: [ADMIN_ALERT_EMAIL],
-      subject: `Moderation: ${fresh} new item${fresh === 1 ? '' : 's'} to review`,
+      subject: urgent ? 'Urgent: a report needs you' : `Moderation: ${fresh} new item${fresh === 1 ? '' : 's'} to review`,
       html: emailHtml({
-        title: 'Moderation queue',
-        preheader: `${fresh} new in the moderation queue, ${open} open.`,
-        eyebrow: 'Moderation',
-        heading: `${fresh} new item${fresh === 1 ? '' : 's'} to review.`,
-        stats: [[String(fresh), 'new'], [String(open), 'open in queue']],
-        cta: { label: 'Open moderation queue', href: 'https://glassbottles.app/admin/moderation' },
-        footer: 'Sent to admins when new reports or flagged content land in the queue.',
+        title: urgent ? 'Urgent report' : 'Moderation queue',
+        preheader: urgent ? 'Someone flagged a safety concern, or a person reached 3 strikes.' : `${fresh} new to review, ${open} open.`,
+        eyebrow: urgent ? 'Urgent' : 'Moderation',
+        heading: urgent ? 'A report needs you.' : `${fresh} new item${fresh === 1 ? '' : 's'} to review.`,
+        paragraphs: urgent ? ['It involves a possible safety concern or a minor, or someone has reached 3 strikes. It’s pinned to the top of your queue.'] : undefined,
+        stats: [[String(fresh), 'new'], [String(open), 'open']],
+        cta: { label: 'Open the console', href: CONSOLE },
+        footer: 'Sent to admins when new reports or held messages need review. The words stay in the console.',
       }),
-      text: `${fresh} new in the moderation queue (${open} open). https://glassbottles.app/admin/moderation`,
+      text: urgent
+        ? `A report needs you. ${CONSOLE}`
+        : `${fresh} new to review (${open} open). ${CONSOLE}`,
     }),
   })
   if (!res.ok) {

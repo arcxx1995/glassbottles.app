@@ -94,9 +94,10 @@ export default function GuidelinesPage() {
 
       <LegalH2>Reporting</LegalH2>
       <p>
-        Every bottle you receive has a report flag. Reporting removes it from your shelf at once
-        and sends it to a moderator, who can remove it and act on the sender&rsquo;s account. The
-        sender is never told who reported them.
+        Everything you receive has a report flag. Reporting takes it away from you at once and
+        sends it to a moderator, who decides whether to remove it and act on the writer&rsquo;s
+        account. Reports do nothing else until a moderator has looked. Nobody is ever told who
+        reported them. You can also block someone, and neither of you will reach the other again.
       </p>
 
       <LegalH2>Enforcement</LegalH2>
@@ -104,7 +105,7 @@ export default function GuidelinesPage() {
         <li>A held bottle isn&rsquo;t delivered; you can rewrite it once the same day.</li>
         <li>
           Three violations within 30 days &mdash; held sexual or abusive messages, or reports
-          against you &mdash; suspend your account automatically, pending review.
+          upheld against you &mdash; suspend your account automatically, pending review.
         </li>
         <li>Any content sexualising a minor suspends the account immediately.</li>
         <li>
@@ -117,7 +118,9 @@ export default function GuidelinesPage() {
         <a href={`mailto:${CONTACT}`} className="text-seafoam hover:underline">
           {CONTACT}
         </a>{' '}
-        from your account&rsquo;s address and a person will look again.
+        from your account&rsquo;s address and a person will look again. A moderator can warn you,
+        suspend your account for 7 or 30 days, or close it. A closed account can&rsquo;t sign in, and
+        the same email can&rsquo;t be used to create a new one.
       </p>
 
       <p>

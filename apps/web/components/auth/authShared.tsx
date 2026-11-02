@@ -49,9 +49,15 @@ export function mapAuthError(
     case 'over_email_send_rate_limit':
     case 'over_request_rate_limit':
       return 'Too many attempts. Please wait a moment and try again.'
+    case 'user_banned':
+      return 'This account has been closed. If you think that’s a mistake, write to hello@glassbottles.app.'
     case 'same_password':
       return 'Your new password must be different from the old one.'
     default:
+      // A database refusal at sign-up: that email belongs to a closed account (065).
+      if (context === 'sign-up' && error.message === 'Database error saving new user') {
+        return 'This email can’t be used to create an account. If you think that’s a mistake, write to hello@glassbottles.app.'
+      }
       if (context === 'sign-up') return GENERIC_FALLBACK
       return error.message || 'Something went wrong. Please try again.'
   }

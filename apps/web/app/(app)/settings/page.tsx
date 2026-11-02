@@ -730,7 +730,7 @@ export default function SettingsPage() {
         )}
         {process.env.NEXT_PUBLIC_KEEPER === 'on' && (
           <motion.section {...staggerItem(4)}>
-            <SectionLabel>Kayaks you&rsquo;ve blocked</SectionLabel>
+            <SectionLabel>People you&rsquo;ve blocked</SectionLabel>
             <div className={CARD}>
               <HarbourSettings />
             </div>

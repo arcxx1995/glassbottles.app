@@ -9,6 +9,7 @@ import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
 import { useGetKeeperQuery } from '@/store/api/bottleApi'
 import BottomNav from './BottomNav'
+import AccountNotices from '@/components/shared/AccountNotices'
 
 export const CURRENT_KEY = 'gb:current'
 const KEEPER_ON = process.env.NEXT_PUBLIC_KEEPER === 'on'
@@ -83,6 +84,7 @@ export default function AppShell({
         <main className="relative z-10 h-app-main overflow-hidden pt-safe print:h-auto print:overflow-visible">
           {children}
         </main>
+        <AccountNotices />
         <BottomNav />
       </div>
     </SlotContext.Provider>

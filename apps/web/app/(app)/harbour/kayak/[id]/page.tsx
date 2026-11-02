@@ -42,7 +42,7 @@ import {
 } from '@/store/api/bottleApi'
 import { useCurrentSea } from '@/components/shared/useCurrentSea'
 import WeatherLayer from '@/components/shared/WeatherLayer'
-import type { ReportReason } from '@/types'
+import { REPORT_REASONS } from '@/lib/reportReasons'
 
 // One of your Kayaks (063). At the mast: dress it, fill it with gems, write its
 // note and launch. At sea: where it is, the note, calling it home. Its log stays.
@@ -521,14 +521,6 @@ function AtSea({ kayak }: { kayak: KayakDetail }) {
 }
 
 // ── The log ─────────────────────────────────────────────────────────────────
-const REPORT_REASONS: [ReportReason, string][] = [
-  ['sexual', 'Sexual'],
-  ['harassment', 'Abusive'],
-  ['spam', 'Spam'],
-  ['contact', 'Contact info'],
-  ['other', 'Other'],
-]
-
 function Log({ kayak }: { kayak: KayakDetail }) {
   const [report] = useReportCommentMutation()
   const [reporting, setReporting] = useState<string | null>(null)
@@ -568,7 +560,7 @@ function Log({ kayak }: { kayak: KayakDetail }) {
           <Sheet title="Report this comment" onClose={() => setReporting(null)}>
             <div className="flex flex-col gap-2">
               <p className="font-ui text-xs text-sand/60">
-                It disappears for everyone while a moderator looks, and whoever wrote it won&rsquo;t get your Kayaks again.
+                It disappears for you and a moderator takes a look. Whoever wrote it won&rsquo;t get your Kayaks again.
               </p>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Report reason">
                 {REPORT_REASONS.map(([reason, label]) => (

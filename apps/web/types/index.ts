@@ -15,7 +15,7 @@ export interface Profile {
 }
 
 /** Reasons a receiver can give when reporting a bottle (051 report_bottle). */
-export type ReportReason = 'sexual' | 'harassment' | 'spam' | 'contact' | 'other'
+export type ReportReason = 'sexual' | 'harassment' | 'spam' | 'contact' | 'other' | 'minor' | 'danger'
 
 export interface Bottle {
   id: string

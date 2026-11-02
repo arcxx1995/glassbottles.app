@@ -32,12 +32,12 @@ import CareCard from '@/components/shared/CareCard'
 import PushNudge from '@/components/shared/PushNudge'
 import Whale from '@/components/bottle/Whale'
 import CurrentPicker from '@/components/shared/CurrentPicker'
-import { HeaderSlot } from '@/components/layout/AppShell'
+import { HeaderSlot, PageTitle } from '@/components/layout/AppShell'
 import { looksLikeCrisis } from '@/lib/care'
 import { cn } from '@/lib/utils'
 import { buildSeaBottles } from './seaBottles'
 import { feel } from '@/lib/feel'
-import { spring, springFlick } from '@/components/ui/springs'
+import { spring } from '@/components/ui/springs'
 import { allowedStyle, resolveLook } from '@/lib/dressing'
 import { useCurrentSea } from '@/components/shared/useCurrentSea'
 
@@ -299,36 +299,20 @@ export default function HomePage() {
         />
       )}
 
-      {/* Beside the shell's wordmark (AppShell HeaderSlot). Tides on the
-          left; the right corner holds the current, kept clear of the
-          throwable bottle pinned top-right (mr-14 ≈ its 52px + gap). */}
-      <h1 className="sr-only">The Sea</h1>
+      {/* Tides: a quiet run-of-days count. No warnings, no loss copy: a missed
+          day just starts a new tide. */}
+      <PageTitle
+        title="The Sea"
+        line={
+          [(todayStatus?.tides ?? 0) >= 2 && `${todayStatus!.tides} tides`, hasSent && 'Sent today ✓']
+            .filter(Boolean)
+            .join(' · ') || null
+        }
+      />
+      {/* The right corner holds the current, kept clear of the throwable bottle
+          pinned top-right (mr-14 ≈ its 52px + gap). */}
       <HeaderSlot>
-        <div className="flex min-w-0 items-center gap-2">
-          {/* Tides: a quiet run-of-days count. No warnings, no loss copy: a
-              missed day just starts a new tide. */}
-          {(todayStatus?.tides ?? 0) >= 2 && (
-            <span
-              className="whitespace-nowrap font-mono text-[11px] text-sand/55 bg-white/5 px-2.5 py-0.5 rounded-full"
-              title="Days in a row you've thrown a bottle"
-            >
-              {todayStatus!.tides} tides
-            </span>
-          )}
-        </div>
-        <div className={cn('flex shrink-0 items-center gap-2', bottleShown && 'mr-14')}>
-          <AnimatePresence>
-            {hasSent && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={springFlick}
-                className="hidden whitespace-nowrap font-mono text-xs text-seafoam bg-seafoam/10 px-3 py-1 rounded-full sm:inline"
-              >
-                Sent today ✓
-              </motion.span>
-            )}
-          </AnimatePresence>
+        <div className={cn('shrink-0', bottleShown && 'mr-14')}>
           <CurrentPicker isKeeper={isKeeper} />
         </div>
       </HeaderSlot>
@@ -381,7 +365,8 @@ export default function HomePage() {
                     // 720px screen, and safe-center pushed Seal & Throw under the footer.
                     'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center',
                     // The lift clears the footer; a held notice needs the room instead.
-                    !heldBottle && '-translate-y-8 sm:-translate-y-10',
+                    // Not on a short screen: it would ride up under the title.
+                    !heldBottle && '-translate-y-8 sm:-translate-y-10 [@media(max-height:640px)]:translate-y-0',
                   )}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -404,14 +389,14 @@ export default function HomePage() {
                         <HeldNotice held={heldBottle} canRethrow />
                       </div>
                     ) : (
-                      <div className="text-center">
-                        <p className="font-display text-xl text-sand">Your bottle awaits</p>
-                        <p className="font-ui text-xs text-sand/55 max-w-[240px] mx-auto leading-relaxed mt-1">
+                      <div className="w-[94%] max-w-[420px] rounded-2xl bg-black/20 px-4 py-2.5 text-center backdrop-blur-md">
+                        <p className="font-display text-xl text-white">Your bottle awaits</p>
+                        <p className="mx-auto mt-0.5 font-ui text-[13px] leading-snug text-white/85 [text-wrap:balance] sm:text-sm">
                           Write something for a stranger. They won&apos;t know it&apos;s you.
                         </p>
                         {sendError && (
                           <p
-                            className="font-ui text-xs text-coral max-w-[240px] mx-auto leading-relaxed mt-2"
+                            className="font-ui text-xs text-coral mx-auto leading-relaxed mt-2"
                             role="alert"
                           >
                             {sendError === 'content' ? (

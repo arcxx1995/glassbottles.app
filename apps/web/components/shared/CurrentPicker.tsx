@@ -59,10 +59,11 @@ export default function CurrentPicker({ isKeeper }: { isKeeper: boolean }) {
         aria-haspopup="dialog"
         aria-label={`Your current: ${shownName}`}
         onClick={() => setOpen(true)}
-        className="press glass-fill pointer-events-auto flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 font-ui text-xs text-sand/80 transition-[background-color,transform] hover:text-sand"
+        className="press glass-fill pointer-events-auto flex h-8 w-8 items-center justify-center gap-1.5 rounded-full font-ui text-xs text-sand/80 transition-[background-color,transform] hover:text-sand sm:h-auto sm:w-auto sm:py-1 sm:pl-2.5 sm:pr-3"
       >
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: shownDot }} aria-hidden="true" />
-        <span className="whitespace-nowrap">Your current</span>
+        <span className="h-3 w-3 shrink-0 rounded-full sm:h-2 sm:w-2" style={{ background: shownDot }} aria-hidden="true" />
+        {/* Phones: the dot alone, so the centred title has room. */}
+        <span className="hidden whitespace-nowrap sm:inline">Your current</span>
       </button>
 
       <AnimatePresence>

@@ -244,3 +244,63 @@ test('a lapsed Keeper keeps their treasure room and Kayak, but can’t launch', 
   await page.goto('/harbour/treasure')
   await expect(page.getByText(/^Found /)).toBeVisible()
 })
+
+test.describe('the layout', () => {
+  const box = async (l: import('@playwright/test').Locator) => {
+    const b = await l.boundingBox()
+    if (!b) throw new Error('not on screen')
+    return b
+  }
+
+  for (const [width, height] of [[320, 568], [390, 844], [1440, 900]] as const) {
+    test(`at ${width}px the title is centred, clear of the wordmark; the mast sits above the button; treasure on the right`, async ({ page, isMobile }) => {
+      test.skip(isMobile && width > 500, 'no phone is this wide')
+      const u = await makeUser('harbour-layout')
+      await signIn(page, u.email)
+      await page.setViewportSize({ width, height })
+      for (const [path, title] of [['/harbour', 'The Harbour'], ['/sea', 'The Sea'], ['/shelf', 'The Shelf']]) {
+        await page.goto(path)
+        const heading = await box(page.getByRole('heading', { name: title, exact: true }))
+        expect(Math.abs(heading.x + heading.width / 2 - width / 2)).toBeLessThanOrEqual(1)
+        const mark = await box(page.getByText('glassbottles', { exact: true }))
+        expect(mark.x + mark.width).toBeLessThan(heading.x)
+        expect(Math.abs(mark.y + mark.height / 2 - (heading.y + heading.height / 2))).toBeLessThanOrEqual(4)
+      }
+
+      await page.goto('/harbour')
+      const build = await box(page.getByRole('button', { name: 'Build your Kayak' }))
+      const mast = await box(page.getByTestId('mast'))
+      expect(Math.abs(mast.x + mast.width / 2 - (build.x + build.width / 2))).toBeLessThanOrEqual(1)
+      const gap = build.y - (mast.y + mast.height)
+      expect(gap).toBeGreaterThanOrEqual(0)
+      expect(gap).toBeLessThan(80)
+
+      const chest = await box(page.getByRole('link', { name: /treasure room/ }))
+      expect(width - (chest.x + chest.width)).toBeLessThanOrEqual(24)
+      expect(chest.y).toBeGreaterThanOrEqual(56)
+    })
+  }
+
+  test('a Kayak’s screen fills the window, and the close button goes back to the Harbour', async ({ page }) => {
+    const u = await keeper('kayak-frame')
+    await signIn(page, u.email)
+    await page.goto('/harbour/kayak/new')
+    await expect(page.getByRole('heading', { name: 'Build your Kayak' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Harbour' })).toHaveCount(0)
+    await expect(page.getByText('glassbottles', { exact: true })).toHaveCount(0)
+    await page.getByRole('link', { name: 'Close' }).click()
+    await expect(page).toHaveURL(/\/harbour$/)
+    await expect(page.getByRole('link', { name: 'Harbour' })).toBeVisible()
+  })
+
+  test('the plans fill the screen', async ({ page }) => {
+    const u = await makeUser('harbour-plans')
+    await signIn(page, u.email)
+    await page.goto('/harbour')
+    await page.getByRole('button', { name: 'Build your Kayak' }).click()
+    const size = page.viewportSize()!
+    // Polled: it scales up as it opens.
+    await expect.poll(async () => (await box(page.getByRole('dialog'))).width).toBe(size.width)
+    await expect.poll(async () => (await box(page.getByRole('dialog'))).height).toBe(size.height)
+  })
+})

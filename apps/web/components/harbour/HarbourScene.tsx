@@ -7,27 +7,25 @@ import { MAST, atMast, bowOf, mastMooring, seeded, visitorMooring, type MyKayak,
 import type { KayakLook } from '@/lib/kayakLook'
 import KayakArt, { KayakShadow } from './KayakArt'
 
-// The harbour from above: a mast in the water, your Kayaks roped to it when
-// they're home, and up to 3 visitors floating free. The same scene for everyone;
-// a free member's mast just has nothing tied to it. Each Kayak is its own
-// positioned element so a tapped one can morph through a view transition.
+// The harbour from above: a mast low in the water, your Kayaks roped to it when
+// they're home, and up to 3 visitors floating free above. The same scene for
+// everyone; a free member's mast just has nothing tied to it. Each Kayak is its
+// own positioned element so a tapped one can morph through a view transition.
 
 const ASPECT = 260 / 316 // drawKayak's viewBox
 
 export default function HarbourScene({
   kayaks,
   visitors,
-  treasure,
 }: {
   kayaks: MyKayak[]
   visitors: Visitor[]
-  treasure: number
 }) {
   const home = kayaks.filter(atMast)
   return (
-    <div className="absolute inset-x-0 top-20 flex justify-center">
-      {/* Room below for the status cards and the nav; on a phone the width decides. */}
-      <div className="relative aspect-square" style={{ width: 'min(100vw, calc(100svh - 19rem), 820px)' }}>
+    // Bottom-anchored square: the biggest that fits the room the page leaves it.
+    <div className="flex h-full items-end justify-center [container-type:size]">
+      <div className="relative aspect-square shrink-0" style={{ width: 'min(100cqw, 100cqh, 820px)' }}>
         <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
           {home.map((k, i) => {
             const bow = bowOf(mastMooring(i))
@@ -71,25 +69,36 @@ export default function HarbourScene({
             label="A visitor"
           />
         ))}
-
-        <TransitionLink
-          href={'/harbour/treasure' as Route}
-          aria-label={treasure > 0 ? `Your treasure room, ${treasure} ${treasure === 1 ? 'item' : 'items'}` : 'Your treasure room'}
-          className="press absolute left-[86%] top-[6%] flex -translate-x-1/2 flex-col items-center rounded-2xl p-1 outline-none focus-visible:ring-2 focus-visible:ring-sand/70"
-        >
-          <Chest />
-          <span className="mt-0.5 rounded-full bg-black/25 px-2 py-0.5 font-ui text-[10px] text-white/90 backdrop-blur-sm">
-            {treasure > 0 ? treasure : 'Treasure'}
-          </span>
-        </TransitionLink>
       </div>
     </div>
+  )
+}
+
+/** Like a shortcut on a desktop: on the screen's right edge, not in the water. */
+export function TreasureIcon({ count }: { count: number }) {
+  return (
+    <TransitionLink
+      href={'/harbour/treasure' as Route}
+      aria-label={count > 0 ? `Your treasure room, ${count} ${count === 1 ? 'item' : 'items'}` : 'Your treasure room'}
+      className="press absolute right-2 top-16 z-10 flex w-[4.5rem] flex-col items-center rounded-2xl p-1 outline-none focus-visible:ring-2 focus-visible:ring-sand/70 sm:right-5"
+    >
+      <span className="relative">
+        <Chest />
+        {count > 0 && (
+          <span className="absolute -right-2 -top-1.5 min-w-[1.125rem] rounded-full bg-seafoam px-1 text-center font-ui text-[10px] font-semibold leading-[1.125rem] text-ocean-deep">
+            {count}
+          </span>
+        )}
+      </span>
+      <span className="mt-1 font-ui text-[11px] font-medium text-white [text-shadow:0_1px_3px_rgba(0,20,30,0.8)]">Treasure</span>
+    </TransitionLink>
   )
 }
 
 function Mast({ tied }: { tied: boolean }) {
   return (
     <div
+      data-testid="mast"
       className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
       style={{ left: `${MAST.x * 100}%`, top: `${MAST.y * 100}%`, width: '13%' }}
     >
@@ -155,6 +164,9 @@ function Moored({
   const place = `translate(-50%, -50%) rotate(${at.rotate}deg)`
   const bob = reduced ? undefined : { rotate: [0, 1.4, -1.1, 0], x: [0, 1.6, -1.2, 0], y: [0, -1.4, 1.1, 0] }
   const duration = 7 + seeded(seed) * 5
+  // How far the Kayak reaches below its centre at this angle, for the label.
+  const rad = (at.rotate * Math.PI) / 180
+  const reach = at.length * (0.46 * Math.abs(Math.cos(rad)) + 0.2 * Math.abs(Math.sin(rad)))
 
   return (
     <>
@@ -186,7 +198,7 @@ function Moored({
       {label && (
         <span
           className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/25 px-2 py-0.5 font-ui text-[10px] font-medium tracking-wide text-white/90 backdrop-blur-sm sm:text-[11px]"
-          style={{ left: `${at.x * 100}%`, top: `${Math.min(at.y + at.length * 0.54, 0.97) * 100}%` }}
+          style={{ left: `${at.x * 100}%`, top: `${Math.min(at.y + reach + 0.015, 0.97) * 100}%` }}
         >
           {label}
         </span>

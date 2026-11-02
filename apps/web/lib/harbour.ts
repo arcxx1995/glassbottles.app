@@ -135,12 +135,14 @@ export interface Mooring {
   length: number
 }
 
-export const MAST = { x: 0.5, y: 0.34 }
-const SPOTS: [number, number][] = [[0.24, 0.27], [0.76, 0.27], [0.5, 0.66]]
+// The mast sits at the bottom of the stage, just above the Build button. The
+// first Kayak ties up straight above it, the next two either side.
+export const MAST = { x: 0.5, y: 0.88 }
+const SPOTS: [number, number][] = [[0.5, 0.59], [0.2, 0.78], [0.8, 0.78]]
 const VISITING: Mooring[] = [
-  { x: 0.2, y: 0.74, rotate: -14, length: 0.27 },
-  { x: 0.8, y: 0.74, rotate: 16, length: 0.27 },
-  { x: 0.5, y: 0.87, rotate: 82, length: 0.24 },
+  { x: 0.2, y: 0.34, rotate: -14, length: 0.27 },
+  { x: 0.8, y: 0.34, rotate: 16, length: 0.27 },
+  { x: 0.5, y: 0.2, rotate: 82, length: 0.24 },
 ]
 
 /** Where the owner's Kayaks tie up, bows toward the mast. */

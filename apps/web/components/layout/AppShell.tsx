@@ -10,6 +10,7 @@ import { selectUser } from '@/store/authSlice'
 import { useGetKeeperQuery } from '@/store/api/bottleApi'
 import BottomNav from './BottomNav'
 import AccountNotices from '@/components/shared/AccountNotices'
+import { cn } from '@/lib/utils'
 
 export const CURRENT_KEY = 'gb:current'
 const KEEPER_ON = process.env.NEXT_PUBLIC_KEEPER === 'on'
@@ -47,6 +48,21 @@ export function HeaderSlot({ children }: { children: React.ReactNode }) {
   return slot ? createPortal(children, slot) : null
 }
 
+// A page's name, exactly centred in the same row as the wordmark whatever else
+// is in that row. A second line, when there is one, hangs below the row.
+const TitleContext = createContext<HTMLElement | null>(null)
+export function PageTitle({ title, line }: { title: string; line?: string | null }) {
+  const slot = useContext(TitleContext)
+  if (!slot) return null
+  return createPortal(
+    <div className="whitespace-nowrap rounded-2xl bg-black/20 px-3 py-1.5 text-center backdrop-blur-md min-[360px]:px-3.5">
+      <h1 className="font-display text-base leading-7 text-white min-[360px]:text-lg min-[360px]:leading-7 sm:text-xl sm:leading-7">{title}</h1>
+      {line && <p className="font-ui text-[11px] leading-4 text-white/75">{line}</p>}
+    </div>,
+    slot,
+  )
+}
+
 export default function AppShell({
   children,
 }: {
@@ -54,12 +70,16 @@ export default function AppShell({
 }) {
   const path = usePathname()
   const [slot, setSlot] = useState<HTMLElement | null>(null)
+  const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null)
   useViewTransitionSettle()
   useCurrentTheme()
   // The Sea and the Harbour paint their own full-screen water.
   const ownWater = path === '/sea' || path === '/harbour' || path.startsWith('/harbour/')
+  // A Kayak's own screens take the whole screen and bring their own close button.
+  const immersive = path.startsWith('/harbour/kayak/')
   return (
     <SlotContext.Provider value={slot}>
+    <TitleContext.Provider value={titleSlot}>
       <div className="relative h-[100svh] overflow-hidden print:h-auto print:overflow-visible">
         {/* Paints the stored current before anything below it, so a reload
             doesn't flash teal first. Runs once, from the server HTML. */}
@@ -72,21 +92,25 @@ export default function AppShell({
         {!ownWater && <div className="print:hidden"><WaveBackground /></div>}
         {/* The wordmark, in the same place on every page; pages start below
             it with pt-14. Own layer in route transitions, like the nav. */}
-        <header
-          className="print:hidden pointer-events-none fixed inset-x-0 top-0 z-40 pt-safe"
-          style={{ viewTransitionName: 'app-header' }}
-        >
-          <div className="flex h-14 items-center gap-2.5 px-5">
-            <p className="shrink-0 font-display text-2xl tracking-tight text-sand">glassbottles</p>
-            <div ref={setSlot} className="flex min-w-0 flex-1 items-center justify-between gap-2" />
-          </div>
-        </header>
-        <main className="relative z-10 h-app-main overflow-hidden pt-safe print:h-auto print:overflow-visible">
+        {!immersive && (
+          <header
+            className="print:hidden pointer-events-none fixed inset-x-0 top-0 z-40 pt-safe"
+            style={{ viewTransitionName: 'app-header' }}
+          >
+            <div className="relative flex h-14 items-center gap-2.5 px-3 min-[360px]:px-5">
+              <p className="shrink-0 font-display text-[15px] tracking-tight text-sand min-[360px]:text-lg sm:text-2xl">glassbottles</p>
+              <div ref={setSlot} className="flex min-w-0 flex-1 items-center justify-end gap-2" />
+              <div ref={setTitleSlot} className="absolute left-1/2 top-2 -translate-x-1/2" />
+            </div>
+          </header>
+        )}
+        <main className={cn('relative z-10 overflow-hidden pt-safe print:h-auto print:overflow-visible', immersive ? 'h-[100svh]' : 'h-app-main')}>
           {children}
         </main>
         <AccountNotices />
-        <BottomNav />
+        {!immersive && <BottomNav />}
       </div>
+    </TitleContext.Provider>
     </SlotContext.Provider>
   )
 }

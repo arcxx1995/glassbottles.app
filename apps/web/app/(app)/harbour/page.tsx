@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { Anchor } from 'lucide-react'
 import HarbourWater from '@/components/harbour/HarbourWater'
-import HarbourScene from '@/components/harbour/HarbourScene'
+import HarbourScene, { TreasureIcon } from '@/components/harbour/HarbourScene'
 import { heldCopy } from '@/components/harbour/CheckedText'
 import KayakArt from '@/components/harbour/KayakArt'
 import KeeperPlans from '@/components/keeper/KeeperPlans'
 import CrisisSupport from '@/components/bottle/CrisisSupport'
+import { PageTitle } from '@/components/layout/AppShell'
 import Sheet from '@/components/ui/Sheet'
 import { TransitionLink } from '@/components/ui/TransitionLink'
 import { spring } from '@/components/ui/springs'
@@ -40,24 +41,27 @@ export default function HarbourPage() {
   const canBuild = kayaks.length < MAX_KAYAKS
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative flex h-full flex-col overflow-hidden">
       <HarbourWater light={light} tint={tint} />
+      <PageTitle
+        title="The Harbour"
+        line={
+          !data?.visitors.length
+            ? null
+            : data.visitors.length === 1
+              ? 'A Kayak is visiting'
+              : `${data.visitors.length} Kayaks are visiting`
+        }
+      />
 
-      {data && <HarbourScene kayaks={kayaks} visitors={data.visitors} treasure={data.treasure} />}
+      {/* The water takes what's left, so the mast always sits right above what's below it. */}
+      <div className="relative min-h-0 flex-1 pt-16">
+        {data && <HarbourScene kayaks={kayaks} visitors={data.visitors} />}
+      </div>
       {tint && <WeatherLayer weather={tint.weather} />}
+      {data && <TreasureIcon count={data.treasure} />}
 
-      <header className="pointer-events-none relative z-10 px-5 pt-16">
-        <div className="inline-block rounded-2xl bg-black/20 px-3.5 py-2 backdrop-blur-md">
-          <h1 className="font-display text-xl text-white">The Harbour</h1>
-          {data && data.visitors.length > 0 && (
-            <p className="font-ui text-[11px] text-white/70">
-              {data.visitors.length === 1 ? 'A Kayak is visiting' : `${data.visitors.length} Kayaks are visiting`}
-            </p>
-          )}
-        </div>
-      </header>
-
-      <div className="absolute inset-x-0 bottom-0 z-10 flex max-h-[60%] flex-col items-center gap-2 overflow-y-auto px-5 pb-6">
+      <div className="relative z-10 flex shrink-0 flex-col items-center gap-2 px-5 pb-4">
         {isError ? (
           <Card>
             <p className="font-ui text-sm text-sand/80">The harbour didn&rsquo;t load.</p>
@@ -67,24 +71,29 @@ export default function HarbourPage() {
           </Card>
         ) : isLoading || !data ? null : (
           <>
-            {data.notices.map((n) => (
-              <Notice key={n.id} notice={n} />
-            ))}
-            {atSea.map((k) => (
-              <TransitionLink
-                key={k.id}
-                href={`/harbour/kayak/${k.id}` as Route}
-                className="press flex w-full max-w-sm items-center gap-3 rounded-2xl bg-black/30 py-2 pl-2 pr-4 backdrop-blur-md"
-              >
-                <KayakArt look={k.look} className="h-10 w-8 shrink-0" />
-                <span className="flex-1 font-ui text-xs text-white/90">{kayakStatus(k)}</span>
-                {k.new_comments > 0 && (
-                  <span className="rounded-full bg-seafoam px-1.5 py-0.5 font-ui text-[10px] font-semibold text-ocean-deep">
-                    {k.new_comments}
-                  </span>
-                )}
-              </TransitionLink>
-            ))}
+            {(data.notices.length > 0 || atSea.length > 0) && (
+              // Scrolls by itself, so a long notice can't push the button off screen.
+              <div className="flex max-h-[30svh] w-full flex-col items-center gap-2 overflow-y-auto">
+                {data.notices.map((n) => (
+                  <Notice key={n.id} notice={n} />
+                ))}
+                {atSea.map((k) => (
+                  <TransitionLink
+                    key={k.id}
+                    href={`/harbour/kayak/${k.id}` as Route}
+                    className="press flex w-full max-w-sm shrink-0 items-center gap-3 rounded-2xl bg-black/30 py-2 pl-2 pr-4 backdrop-blur-md"
+                  >
+                    <KayakArt look={k.look} className="h-10 w-8 shrink-0" />
+                    <span className="flex-1 font-ui text-xs text-white/90">{kayakStatus(k)}</span>
+                    {k.new_comments > 0 && (
+                      <span className="rounded-full bg-seafoam px-1.5 py-0.5 font-ui text-[10px] font-semibold text-ocean-deep">
+                        {k.new_comments}
+                      </span>
+                    )}
+                  </TransitionLink>
+                ))}
+              </div>
+            )}
             {canBuild && (
               <motion.button
                 type="button"
@@ -103,7 +112,7 @@ export default function HarbourPage() {
 
       <AnimatePresence>
         {plans && (
-          <Sheet title="Kayaks are for Keepers" onClose={() => setPlans(false)}>
+          <Sheet title="Kayaks are for Keepers" onClose={() => setPlans(false)} fullscreen>
             <div className="flex flex-col gap-4">
               <p className="font-ui text-sm leading-relaxed text-sand/70">
                 Build a Kayak, fill it with one-of-a-kind gems, and send it out with a note. It visits one Keeper at a

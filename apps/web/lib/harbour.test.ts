@@ -28,6 +28,14 @@ describe('moorings', () => {
     expect(dist(bow)).toBeLessThan(dist(m))
   })
 
+  it('keeps tied-up Kayaks apart, and the mast low enough to sit by the Build button', () => {
+    const tied = [0, 1, 2].map(mastMooring)
+    tied.forEach((a, i) => tied.slice(i + 1).forEach((b) => expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(0.3)))
+    expect(MAST.x).toBe(0.5)
+    expect(MAST.y).toBeGreaterThan(0.8)
+    for (const m of tied) expect(Math.hypot(m.x - MAST.x, m.y - MAST.y)).toBeGreaterThan(0.2)
+  })
+
   it('never puts a visitor on top of a tied-up Kayak', () => {
     for (const a of [0, 1, 2].map(mastMooring)) {
       for (const b of [0, 1, 2].map(visitorMooring)) {

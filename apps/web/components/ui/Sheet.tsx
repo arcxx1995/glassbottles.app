@@ -27,6 +27,7 @@ export default function Sheet({
   children,
   className,
   centered = false,
+  fullscreen = false,
 }: {
   title: ReactNode
   onClose: () => void
@@ -34,6 +35,8 @@ export default function Sheet({
   className?: string
   /** A centred dialog on every screen, with no drag-to-dismiss. */
   centered?: boolean
+  /** Fills the screen at every size, with the content in a centred column. */
+  fullscreen?: boolean
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -97,10 +100,11 @@ export default function Sheet({
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
-          'relative flex w-full max-w-md max-h-[88dvh] flex-col overflow-hidden',
-          centered ? 'rounded-3xl' : 'rounded-t-[1.75rem] sm:rounded-3xl',
+          'relative flex w-full flex-col overflow-hidden',
+          fullscreen ? 'h-[100dvh] pt-safe' : 'max-w-md max-h-[88dvh]',
+          !fullscreen && (centered ? 'rounded-3xl' : 'rounded-t-[1.75rem] sm:rounded-3xl'),
           'glass-strong shadow-2xl',
-          centered && 'bg-ocean-deep/90',
+          (centered || fullscreen) && 'bg-ocean-deep/90',
         )}
         style={phone ? { y } : undefined}
         // Opacity rides along so reduced motion (transforms off) still cross-fades.
@@ -152,11 +156,12 @@ export default function Sheet({
         <div
           className={cn(
             'min-h-0 flex-1 overflow-y-auto overscroll-contain no-scrollbar',
+            fullscreen && 'flex flex-col',
             'px-5 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))]',
             className,
           )}
         >
-          {children}
+          {fullscreen ? <div className="m-auto w-full max-w-md">{children}</div> : children}
         </div>
       </motion.div>
     </div>,

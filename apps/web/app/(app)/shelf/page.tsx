@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { TransitionLink, viewTransition } from '@/components/ui/TransitionLink'
-import { spring, springFlick } from '@/components/ui/springs'
+import { spring } from '@/components/ui/springs'
+import { PageTitle } from '@/components/layout/AppShell'
 import { BookOpen } from 'lucide-react'
 import { useAppSelector } from '@/store'
 import { selectUser } from '@/store/authSlice'
@@ -121,34 +122,23 @@ export default function ShelfPage() {
   }, [])
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden pt-16">
+    <div className="relative flex h-full flex-col overflow-hidden pt-[4.5rem]">
       <div className="shelf-scene" aria-hidden />
       {/* Header — fixed; only the shelf below scrolls */}
       <div className="relative px-5 mb-6">
+        <PageTitle title="The Shelf" line={unreadCount > 0 ? `${unreadCount} unread` : null} />
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-headline text-sand">Shelf</h1>
-          {unreadCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={springFlick}
-              className="w-5 h-5 rounded-full bg-coral text-ocean-deep font-ui
-                         font-semibold text-[10px] flex items-center justify-center"
-            >
-              {unreadCount}
-            </motion.span>
-          )}
+          <p className="font-ui text-sm text-sand/40">Bottles that found you</p>
           {keeperOn && (
             <TransitionLink
               href="/logbook"
-              className="press ml-auto flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-ui text-xs text-sand/50 hover:text-sand/85 transition-[color,transform]"
+              className="press ml-auto flex items-center gap-1.5 rounded-xl bg-black/20 px-2.5 py-1.5 font-ui text-xs text-white/85 backdrop-blur-md hover:text-white transition-[color,transform]"
             >
               <BookOpen size={14} strokeWidth={1.5} />
               Logbook
             </TransitionLink>
           )}
         </div>
-        <p className="font-ui text-sm text-sand/40 mt-1">Bottles that found you</p>
         {waiting > 0 && (
           <p className="font-ui text-xs text-seafoam/60 mt-1">
             {waiting} letter{waiting === 1 ? '' : 's'} to yourself drifting back

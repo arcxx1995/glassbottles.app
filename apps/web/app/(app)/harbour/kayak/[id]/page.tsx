@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import type { Route } from 'next'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'motion/react'
-import { Check, ChevronLeft, Flag, Minus, Plus, X } from 'lucide-react'
+import { Check, Flag, Minus, Plus, X } from 'lucide-react'
 import CheckedText, { useLiveCheck } from '@/components/harbour/CheckedText'
 import GemArt from '@/components/harbour/GemArt'
 import HarbourWater from '@/components/harbour/HarbourWater'
@@ -91,29 +91,59 @@ export default function KayakPage({ params }: { params: { id: string } }) {
   useEffect(() => setLight(lightAt(new Date().getHours())), [])
 
   const home = isNew || data?.state === 'home'
+  const ready = data && !isLoading
+  const log = ready && data.log.some((v) => v.state === 'home' || v.notes.length > 0) ? <Log kayak={data} /> : null
 
   return (
     <div className="relative h-full overflow-hidden">
       <HarbourWater light={light} zoom={2.6} tint={tint} />
       {tint && <WeatherLayer weather={tint.weather} />}
-      <div className="absolute inset-0 overflow-y-auto px-4 pb-32 pt-16">
-        <div className="mx-auto flex max-w-lg flex-col gap-4">
-          <TransitionLink
-            href="/harbour"
-            className="press inline-flex h-9 w-fit items-center gap-1 rounded-full bg-black/25 pl-2 pr-4 font-ui text-xs text-white backdrop-blur-md"
-          >
-            <ChevronLeft size={16} aria-hidden="true" /> Harbour
-          </TransitionLink>
-
+      {(isNew || ready) && home ? (
+        <AtMast key={params.id} id={isNew ? null : params.id} kayak={data ?? null}>
+          {log}
+        </AtMast>
+      ) : ready ? (
+        <AtSea kayak={data}>{log}</AtSea>
+      ) : (
+        <KayakFrame title="Your Kayak">
           {isError && (
             <div className="rounded-3xl glass-strong px-5 py-4 text-center font-ui text-sm text-sand/80">
               We couldn&rsquo;t find this Kayak.
             </div>
           )}
+        </KayakFrame>
+      )}
+    </div>
+  )
+}
 
-          {(isNew || (data && !isLoading)) && home && <AtMast key={params.id} id={isNew ? null : params.id} kayak={data ?? null} />}
-          {data && !isLoading && !home && <AtSea kayak={data} />}
-          {data && !isLoading && data.log.some((v) => v.state === 'home' || v.notes.length > 0) && <Log kayak={data} />}
+// Every Kayak screen: edge to edge, the Kayak in view on one side (on top on a
+// phone) and everything else scrolling beside it.
+function KayakFrame({ title, look, aboard, children }: { title: string; look?: Partial<KayakLook> | null; aboard?: number; children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-0 flex flex-col">
+      <header className="flex h-14 shrink-0 items-center justify-between px-4 md:h-16 md:px-6">
+        <h1 className="rounded-2xl bg-black/20 px-3.5 py-1.5 font-display text-lg text-white backdrop-blur-md sm:text-xl">{title}</h1>
+        <TransitionLink
+          href="/harbour"
+          aria-label="Close"
+          className="press flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md"
+        >
+          <X size={18} aria-hidden="true" />
+        </TransitionLink>
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        {look !== undefined && (
+          <div className="flex h-[26svh] shrink-0 items-center justify-center pb-2 md:h-auto md:w-1/2 md:p-8 md:pt-0">
+            <KayakArt
+              look={look}
+              aboard={aboard}
+              className="aspect-[260/316] h-full max-h-[720px] max-w-full drop-shadow-[0_8px_18px_rgba(0,20,30,0.45)]"
+            />
+          </div>
+        )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] md:px-8">
+          <div className="mx-auto flex max-w-xl flex-col gap-4">{children}</div>
         </div>
       </div>
     </div>
@@ -121,7 +151,7 @@ export default function KayakPage({ params }: { params: { id: string } }) {
 }
 
 // ── At the mast ─────────────────────────────────────────────────────────────
-function AtMast({ id, kayak }: { id: string | null; kayak: KayakDetail | null }) {
+function AtMast({ id, kayak, children }: { id: string | null; kayak: KayakDetail | null; children?: React.ReactNode }) {
   const router = useRouter()
   const { data: harbour } = useGetHarbourQuery()
   const [look, setLook] = useState<KayakLook>({ ...DEFAULT_LOOK, ...kayak?.look })
@@ -173,14 +203,8 @@ function AtMast({ id, kayak }: { id: string | null; kayak: KayakDetail | null })
     })
 
   return (
-    <>
-      <div className="flex justify-center">
-        <KayakArt look={look} aboard={gems.length} className="h-64 w-52 drop-shadow-[0_8px_18px_rgba(0,20,30,0.45)]" />
-      </div>
-
+    <KayakFrame title={id ? 'Your Kayak' : 'Build your Kayak'} look={look} aboard={gems.length}>
       <section className="flex flex-col gap-5 rounded-3xl glass-strong p-4">
-        <h1 className="font-display text-xl text-sand">{id ? 'Your Kayak' : 'Build your Kayak'}</h1>
-
         <Choice label="Vessel">
           <div className="grid grid-cols-5 gap-1.5">
             {VESSELS.map((v) => (
@@ -360,7 +384,8 @@ function AtMast({ id, kayak }: { id: string | null; kayak: KayakDetail | null })
           </ConfirmButton>
         </div>
       )}
-    </>
+      {children}
+    </KayakFrame>
   )
 }
 
@@ -417,7 +442,7 @@ function DeckPicker({ slot, value, onPick }: { slot: DeckSlot; value: DeckItem |
 }
 
 // ── At sea ──────────────────────────────────────────────────────────────────
-function AtSea({ kayak }: { kayak: KayakDetail }) {
+function AtSea({ kayak, children }: { kayak: KayakDetail; children?: React.ReactNode }) {
   const [recall, { isLoading: recalling }] = useRecallKayakMutation()
   const [edit] = useEditNoteMutation()
   const [editing, setEditing] = useState(false)
@@ -444,12 +469,9 @@ function AtSea({ kayak }: { kayak: KayakDetail }) {
   }
 
   return (
-    <>
-      <div className="flex justify-center">
-        <KayakArt look={kayak.look} aboard={kayak.gems.length} className="h-56 w-44 drop-shadow-[0_8px_18px_rgba(0,20,30,0.45)]" />
-      </div>
+    <KayakFrame title="Your Kayak" look={kayak.look} aboard={kayak.gems.length}>
       <section className="flex flex-col gap-3 rounded-3xl glass-strong p-4">
-        <h1 className="font-display text-xl text-sand">{kayakStatus(kayak)}</h1>
+        <h2 className="font-display text-xl text-sand">{kayakStatus(kayak)}</h2>
         {kayak.note && (
           <blockquote className="rounded-lg bg-[#FBF3E4] px-4 py-3 font-display text-base leading-snug text-[#2A2622]">{kayak.note}</blockquote>
         )}
@@ -516,7 +538,8 @@ function AtSea({ kayak }: { kayak: KayakDetail }) {
           </Sheet>
         )}
       </AnimatePresence>
-    </>
+      {children}
+    </KayakFrame>
   )
 }
 

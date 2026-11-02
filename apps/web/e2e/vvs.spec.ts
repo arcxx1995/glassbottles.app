@@ -52,7 +52,13 @@ async function reported(reason = 'harassment') {
   return { sender, reporter, bottle, words }
 }
 
-const signInToConsole = (page: Page, email: string) => signIn(page, email, `${VVS}/sign-in?next=/vvs`)
+async function signInToConsole(page: Page, email: string) {
+  await page.goto(`${VVS}/vvs/login`)
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.waitForURL((u) => u.pathname === '/vvs' || u.search.includes('denied'))
+}
 const caseCard = (page: Page, words: string) => page.getByRole('article').filter({ hasText: words })
 
 async function decide(page: Page, words: string, outcome: string, reason = 'Checked it') {
@@ -62,18 +68,49 @@ async function decide(page: Page, words: string, outcome: string, reason = 'Chec
   return card
 }
 
-test('it isn’t on the public site, sign-in is required, and only admins get in', async ({ page, baseURL }) => {
+test('it isn’t on the public site, and everything on its host leads to its own login', async ({ page, baseURL }) => {
   const res = await page.goto(`${baseURL}/vvs`)
   expect(res?.status()).toBe(404)
 
-  await page.goto(VVS)
-  await expect(page).toHaveURL(/\/sign-in\?next=%2Fvvs/)
+  for (const path of ['/', '/vvs', '/vvs/people', '/sign-in', '/sign-up', '/sea']) {
+    await page.goto(`${VVS}${path}`)
+    await expect(page).toHaveURL(/\/vvs\/login$/)
+  }
+  // Email and password only.
+  await expect(page.getByLabel('Password')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /account/i })).toHaveCount(0)
+})
 
+test('a wrong password is refused, and an account without access goes back to the login', async ({ page }) => {
   const u = await makeUser('vvs-nobody')
-  await signIn(page, u.email, `${VVS}/sign-in?next=/vvs`)
-  const r = await page.goto(`${VVS}/vvs`)
-  expect(r?.status()).toBe(404)
+
+  await page.goto(`${VVS}/vvs/login`)
+  await page.getByLabel('Email').fill(u.email)
+  await page.getByLabel('Password').fill('not-the-password')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Incorrect email or password.' })).toBeVisible()
+
+  await signInToConsole(page, u.email)
+  await expect(page).toHaveURL(/\/vvs\/login\?denied=1$/)
+  await expect(page.getByRole('alert').filter({ hasText: 'doesn’t have access' })).toBeVisible()
   await expect(page.getByText('Reports & blocks')).toHaveCount(0)
+
+  // And they were signed out: trying again goes to the login, not round a loop.
+  await page.goto(`${VVS}/vvs`)
+  await expect(page).toHaveURL(/\/vvs\/login$/)
+  await expect(page.getByLabel('Password')).toBeVisible()
+})
+
+test('an admin gets in with a password, and stays in', async ({ page }) => {
+  const a = await makeAdmin()
+  await signInToConsole(page, a.email)
+  await expect(page).toHaveURL(/\/vvs$/)
+  await expect(page.getByRole('heading', { name: 'Reports & blocks' })).toBeVisible()
+  await page.goto(`${VVS}/vvs/login`)
+  await expect(page).toHaveURL(/\/vvs$/)
+  await page.goto(`${VVS}/vvs/log`)
+  await expect(page.getByRole('heading', { name: 'Log' })).toBeVisible()
 })
 
 test('a report waits, hidden only from its reporter; removing it tells the reporter', async ({ page, baseURL }) => {

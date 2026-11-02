@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-// The admin console (065). Non-admins get a plain 404, so its existence isn't
-// advertised; middleware also 404s it on any other host. Every RPC re-checks
-// is_admin() regardless, so this is the door, not the lock.
+// The admin console (065). Middleware signs out anyone who isn't an admin and
+// sends them to the login screen, and 404s /vvs on any other host. This check and
+// every RPC's is_admin() are there regardless, so no single layer is the lock.
 export default async function VvsLayout({ children }: { children: React.ReactNode }) {
   const { data: isAdmin } = await createClient().rpc('is_admin')
   if (isAdmin !== true) notFound()

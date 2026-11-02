@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAppRoute as isAppPath } from '@/lib/routes'
+import { canUseConsole } from '@/lib/consoleAccess'
 
 const hasAuthCookie = (request: NextRequest) =>
   request.cookies
@@ -41,8 +42,9 @@ export async function middleware(request: NextRequest) {
   if (inVvs && !onVvs) {
     return new NextResponse('Not found', { status: 404 })
   }
-  // And the console host has nothing else on it but signing in.
-  if (onVvs && (request.nextUrl.pathname === '/' || (isAppPath(request.nextUrl.pathname) && !inVvs))) {
+  // And the console host has nothing else on it. Its own login replaces the app's.
+  if (onVvs && !inVvs && (request.nextUrl.pathname === '/' || isAppPath(request.nextUrl.pathname) ||
+      request.nextUrl.pathname === '/sign-in' || request.nextUrl.pathname === '/sign-up')) {
     return NextResponse.redirect(new URL('/vvs', request.url))
   }
 
@@ -89,13 +91,6 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getClaims()
   const user = claimsData?.claims ?? null
 
-  const isAppRoute = isAppPath(request.nextUrl.pathname)
-
-  const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
-    request.nextUrl.pathname === '/sign-up'
-
-  const isLanding = request.nextUrl.pathname === '/'
-
   // A redirect is a fresh response: copy over any cookies getClaims() just
   // rotated, or the browser keeps the spent refresh token and the next
   // request signs the user out.
@@ -105,8 +100,34 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  // The console's sign-in page shouldn't turn up in search results either.
-  if (onVvs) supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow')
+  // The console: an admin, signed in with a password. Anyone else is signed out
+  // and sent back to the login screen. This session's cookies belong to this host
+  // alone, so their session in the main app isn't touched.
+  if (onVvs) {
+    const isLogin = request.nextUrl.pathname === '/vvs/login'
+    if (!user) {
+      if (isLogin) {
+        supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow')
+        return supabaseResponse
+      }
+      return redirectTo(new URL('/vvs/login', request.url))
+    }
+    const { data: isAdmin } = await supabase.rpc('is_admin')
+    if (!canUseConsole(user.amr, isAdmin)) {
+      await supabase.auth.signOut({ scope: 'local' })
+      return redirectTo(new URL('/vvs/login?denied=1', request.url))
+    }
+    if (isLogin) return redirectTo(new URL('/vvs', request.url))
+    supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow')
+    return supabaseResponse
+  }
+
+  const isAppRoute = isAppPath(request.nextUrl.pathname)
+
+  const isAuthRoute = request.nextUrl.pathname === '/sign-in' ||
+    request.nextUrl.pathname === '/sign-up'
+
+  const isLanding = request.nextUrl.pathname === '/'
 
   // Redirect unauthenticated users away from protected app routes, keeping
   // where they were headed so sign-in can send them back.

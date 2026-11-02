@@ -47,6 +47,23 @@ test('the live filter blocks a prohibited draft while typing — nothing is subm
   expect(data).toHaveLength(0)
 })
 
+test('editing a held draft brings the throw button back without waiting for the re-check', async ({ page }) => {
+  const u = await makeUser('live-edit', { timezone: 'UTC' })
+  await signIn(page, u.email)
+  await stubCheck(page, { verdict: 'held', reason: 'sexual' })
+  const editor = page.getByLabel('Message to place in your bottle')
+  await editor.fill('an explicit draft')
+  const alert = page.getByRole('alert').filter({ hasText: 'be thrown' })
+  await expect(alert).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('button', { name: /Seal & Throw/ })).toHaveCount(0)
+
+  // Under the 800ms debounce: the old verdict doesn't apply to new text.
+  await stubCheck(page, { verdict: 'ok' })
+  await editor.fill('the tide came in slow today')
+  await expect(page.getByRole('button', { name: /Seal & Throw/ })).toBeVisible({ timeout: 500 })
+  await expect(alert).toHaveCount(0)
+})
+
 test('a crisis draft shows helplines instead of the throw button', async ({ page }) => {
   const u = await makeUser('live-crisis', { timezone: 'UTC' })
   await signIn(page, u.email)

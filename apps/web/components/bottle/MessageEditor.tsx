@@ -62,8 +62,9 @@ export default function MessageEditor({
   const dispatch = useAppDispatch()
   const message = useAppSelector(selectMessage)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // Latest verdict; a hold stays up until a re-check of the edited text clears it.
-  const [check, setCheck] = useState<CheckResult | null>(null)
+  // Latest verdict and the text it judged; any edit sets it aside, so the
+  // button is back at once and the throw's own check still gates it.
+  const [check, setCheck] = useState<{ text: string; result: CheckResult } | null>(null)
   const [gating, setGating] = useState(false)
 
   const spark = useSpark()
@@ -72,7 +73,8 @@ export default function MessageEditor({
   const isNearLimit = remaining <= 100
   const isOverLimit = remaining < 0
   const draft = message.trim()
-  const blocked = draft.length > 0 && (check?.verdict === 'held' || check?.verdict === 'crisis')
+  const verdict = check?.text === draft ? check.result : null
+  const blocked = verdict?.verdict === 'held' || verdict?.verdict === 'crisis'
   const canSend = draft.length > 0 && !isOverLimit && !blocked
 
   // Check while typing: once the writer pauses.
@@ -81,7 +83,7 @@ export default function MessageEditor({
     let stale = false
     const t = setTimeout(async () => {
       const result = await checkMessage(draft)
-      if (!stale) setCheck(result)
+      if (!stale) setCheck({ text: draft, result })
     }, CHECK_DEBOUNCE_MS)
     return () => {
       stale = true
@@ -96,7 +98,7 @@ export default function MessageEditor({
     setGating(true)
     const result = await checkMessage(draft)
     setGating(false)
-    setCheck(result)
+    setCheck({ text: draft, result })
     if (result.verdict === 'ok') onReady()
   }
 
@@ -180,10 +182,10 @@ export default function MessageEditor({
 
       {/* The live filter's answer: why this can't be thrown, or, for someone
           who may be in danger, people to talk to instead. */}
-      {blocked && check?.verdict === 'held' && (
+      {verdict?.verdict === 'held' && (
         <p role="alert" className="px-1 font-ui text-xs text-coral leading-relaxed">
-          This can&rsquo;t be thrown. {HELD_COPY[check.reason ?? ''] ?? HELD_COPY.review}{' '}
-          {check.reason === 'account_suspended' || check.reason === 'age_unconfirmed'
+          This can&rsquo;t be thrown. {HELD_COPY[verdict.reason ?? ''] ?? HELD_COPY.review}{' '}
+          {verdict.reason === 'account_suspended' || verdict.reason === 'age_unconfirmed'
             ? 'See our '
             : 'Edit it to continue — '}
           <a href="/guidelines" target="_blank" className="underline">
@@ -192,9 +194,9 @@ export default function MessageEditor({
           .
         </p>
       )}
-      {draft.length > 0 && check?.verdict === 'unknown' && (
+      {verdict?.verdict === 'unknown' && (
         <p role="alert" className="px-1 font-ui text-xs text-sand/60 leading-relaxed">
-          {check.reason === 'rate_limited' ? (
+          {verdict.reason === 'rate_limited' ? (
             <>
               That&rsquo;s a lot of checks in a short time. Wait a few minutes, then tap Seal &amp;
               Throw.
@@ -207,7 +209,7 @@ export default function MessageEditor({
           )}
         </p>
       )}
-      {blocked && check?.verdict === 'crisis' && (
+      {verdict?.verdict === 'crisis' && (
         <CrisisSupport lead="This bottle won’t be sent to a stranger." />
       )}
 
